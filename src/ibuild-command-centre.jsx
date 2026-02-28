@@ -103,53 +103,44 @@ const ts=()=>new Date().toLocaleTimeString("en-AU",{hour:"numeric",minute:"2-dig
 const mkScope=()=>{const s={};Object.entries(RATES).forEach(([c,i])=>{s[c]=i.map(x=>({...x,on:false,actual:0}))});return s};
 const pName=(pr)=>pr.client?(pr.suburb?`${pr.client} \u2014 ${pr.suburb}`:pr.client):"New Project";
 const sIdx=s=>STAGES.indexOf(s);
-const mkProject=()=>({id:uid(),status:"Lead",created:ds(),client:"",email:"",phone:"",address:"",suburb:"",assignedTo:"",type:"New Build",stories:"Single Storey",area:"",validDays:30,scope:mkScope(),margin:18,contingency:5,notes:"",variations:[],invoices:[],milestones:MILESTONES.map(m=>({name:m.name,wk:m.wk,done:false,date:"",planned:""})),trades:[],diary:[],defects:[],sigData:null,activity:[{action:"Project created",time:ts(),date:ds()}]});
+const mkProject=()=>({id:uid(),status:"Lead",created:ds(),client:"",email:"",phone:"",address:"",suburb:"",assignedTo:"",type:"New Build",stories:"Single Storey",area:"",validDays:30,scope:mkScope(),margin:18,contingency:5,notes:"",variations:[],invoices:[],proposals:[],milestones:MILESTONES.map(m=>({name:m.name,wk:m.wk,done:false,date:"",planned:""})),trades:[],diary:[],defects:[],sigData:null,activity:[{action:"Project created",time:ts(),date:ds()}]});
 
 // ═══════════════════════════════════════════════
-// DESIGN SYSTEM — "Builder OS"
-// Warm neutrals. Deep copper accent. Generous space.
-// Every element earns its place.
+// DESIGN SYSTEM — Apple / Xero clean minimal
+// Maximum whitespace, minimal borders, nothing heavy.
 // ═══════════════════════════════════════════════
 const _ = {
-  // Canvas
-  bg:"#faf8f6",         // warm parchment — NOT grey
+  bg:"#f5f5f7",
   surface:"#ffffff",
-  raised:"#fefdfb",     // barely-there lift
-  well:"#f4f1ed",       // sunken background
-  // Borders — use sparingly
-  line:"#ebe7e1",       // subtle warm separator
-  line2:"#ddd8d0",      // stronger when needed
-  // Text — warm charcoal scale
-  ink:"#1c1917",        // stone-900 primary
-  body:"#57534e",       // stone-600 body
-  muted:"#a8a29e",      // stone-400 labels
-  faint:"#d6d3d1",      // stone-300 disabled
-  // Accent — deep copper/burnt orange
-  ac:"#c2662d",         // primary accent
-  acDark:"#9a4a1e",     // hover/pressed
-  acLight:"#fdf0e8",    // surface tint
-  acBorder:"#f5d0b5",   // accent border
-  // Semantic
-  green:"#15803d",greenBg:"#f0fdf4",
-  red:"#dc2626",redBg:"#fef2f2",
-  amber:"#b45309",amberBg:"#fffbeb",
-  blue:"#1d4ed8",blueBg:"#eff6ff",
+  raised:"#ffffff",
+  well:"#f9f9fb",
+  line:"#e5e5e7",
+  line2:"#d1d1d6",
+  ink:"#1d1d1f",
+  body:"#6e6e73",
+  muted:"#aeaeb2",
+  faint:"#d1d1d6",
+  ac:"#1a73e8",
+  acDark:"#1557b0",
+  acLight:"#e8f0fe",
+  acBorder:"#c5d9f5",
+  green:"#34c759",greenBg:"#eafbef",
+  red:"#ff3b30",redBg:"#fff5f5",
+  amber:"#ff9f0a",amberBg:"#fff8eb",
+  blue:"#1a73e8",blueBg:"#e8f0fe",
   violet:"#6d28d9",
-  // Spacing scale (4px base)
   s1:4,s2:8,s3:12,s4:16,s5:20,s6:24,s7:32,s8:40,s9:48,s10:64,
-  // Radius
-  r:"16px",rSm:"10px",rXs:"8px",rFull:"999px",
+  r:"12px",rSm:"10px",rXs:"8px",rFull:"999px",
 };
 
-// Shared component styles
 const input = {
-  width:"100%",padding:"10px 14px",background:_.well,border:"1.5px solid transparent",
+  width:"100%",padding:"10px 14px",background:"#fff",border:"1px solid #e5e5e7",
   borderRadius:_.rXs,color:_.ink,fontSize:14,fontFamily:"inherit",outline:"none",
   transition:"all 0.2s ease",letterSpacing:"-0.005em",
 };
 const label = {
   fontSize:11,color:_.muted,marginBottom:4,display:"block",fontWeight:600,
-  letterSpacing:"0.06em",textTransform:"uppercase",
+  letterSpacing:"0.04em",textTransform:"uppercase",
 };
 const btnPrimary = {
   padding:"10px 22px",background:_.ac,color:"#fff",border:"none",borderRadius:_.rFull,
@@ -157,13 +148,13 @@ const btnPrimary = {
   display:"inline-flex",alignItems:"center",gap:6,letterSpacing:"-0.01em",
 };
 const btnSecondary = {
-  ...btnPrimary,background:_.well,color:_.body,border:`1.5px solid ${_.line}`,
+  ...btnPrimary,background:_.well,color:_.body,border:`1px solid ${_.line}`,
 };
 const btnGhost = {
   ...btnPrimary,background:"transparent",color:_.body,padding:"10px 16px",
 };
 const stCol=s=>s==="Active"||s==="Invoiced"?_.green:s==="Approved"?_.blue:s==="Complete"?_.ac:s==="Quote"?_.violet:_.amber;
-const stBg=s=>s==="Active"||s==="Invoiced"?_.greenBg:s==="Approved"?_.blueBg:s==="Complete"?_.acLight:s==="Quote"?"#f5f3ff":_.amberBg;
+const stBg=s=>s==="Active"||s==="Invoiced"?_.greenBg:s==="Approved"?_.blueBg:s==="Complete"?_.acLight:s==="Quote"?"#f3f0ff":_.amberBg;
 const badge=(c,bg)=>({fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:_.rFull,background:bg||`${c}10`,color:c,letterSpacing:"0.01em"});
 
 // ═══ Stable components — MUST live outside IBuild to avoid remount on every keystroke ═══
@@ -210,6 +201,7 @@ export default function IBuild(){
   const [voView,setVoView]=useState(null);
   const [voSignAs,setVoSignAs]=useState("builder");
   const [invView,setInvView]=useState(null);
+  const [propView,setPropView]=useState(null);
   const [sw,setSw]=useState(false);
   const [voForm,setVoForm]=useState({desc:"",cat:"",amount:"",reason:""});
   const [trForm,setTrForm]=useState({trade:"",company:"",contact:"",phone:""});
@@ -227,7 +219,7 @@ export default function IBuild(){
   const up=fn=>setProjects(pv=>pv.map((x,i)=>i===ai?fn(JSON.parse(JSON.stringify(x))):x));
   const T=calc(p);
   const notify=(msg,type="ok")=>{setToast({msg,type});setTimeout(()=>setToast(null),2200)};
-  const go=t2=>{setTab(t2);setVoView(null);setInvView(null);setAnim(a=>a+1)};
+  const go=t2=>{setTab(t2);setVoView(null);setInvView(null);setPropView(null);setAnim(a=>a+1)};
   const log=action=>up(pr=>{pr.activity.unshift({action,time:ts(),date:ds()});if(pr.activity.length>30)pr.activity=pr.activity.slice(0,30);return pr});
 
   useEffect(()=>{(async()=>{try{const r=await window.storage.get("ibt8");if(r?.value)setTpl(JSON.parse(r.value))}catch{}})()},[]);
@@ -249,7 +241,7 @@ export default function IBuild(){
     }catch(e){setPlanData({error:"Analysis failed — try a clearer image."})}setPlanLoad(false);
   };
   const printEl=ref=>{if(!ref.current)return;const w=window.open("","_blank");w.document.write('<!DOCTYPE html><html><head><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>*{margin:0;padding:0;box-sizing:border-box}@media print{body{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}@page{margin:0;size:A4}}</style></head><body>'+ref.current.outerHTML+'</body></html>');w.document.close();setTimeout(()=>w.print(),600)};
-  const dupeProject=idx=>{const src=JSON.parse(JSON.stringify(projects[idx]));src.id=uid();src.status="Lead";src.created=ds();src.client+=" (Copy)";src.invoices=[];src.variations=[];src.milestones=MILESTONES.map(m=>({name:m.name,wk:m.wk,done:false,date:"",planned:""}));src.diary=[];src.defects=[];src.sigData=null;src.activity=[{action:"Duplicated from "+pName(projects[idx]),time:ts(),date:ds()}];setProjects(pv=>[...pv,src]);setAi(projects.length);setSw(false);go("quote");notify("Project duplicated")};
+  const dupeProject=idx=>{const src=JSON.parse(JSON.stringify(projects[idx]));src.id=uid();src.status="Lead";src.created=ds();src.client+=" (Copy)";src.invoices=[];src.variations=[];src.milestones=MILESTONES.map(m=>({name:m.name,wk:m.wk,done:false,date:"",planned:""}));src.diary=[];src.defects=[];src.sigData=null;src.proposals=[];src.activity=[{action:"Duplicated from "+pName(projects[idx]),time:ts(),date:ds()}];setProjects(pv=>[...pv,src]);setAi(projects.length);setSw(false);go("quote");notify("Project duplicated")};
 
   const alerts=[];
   projects.forEach((pr,idx)=>{pr.invoices.forEach(inv=>{if(inv.status==="pending")alerts.push({text:`${pName(pr)}: ${inv.desc} — ${fmt(inv.amount)}`,c:_.red,bg:_.redBg,idx,tab:"invoices"})});pr.variations.forEach(v=>{if(v.status==="draft"||v.status==="pending")alerts.push({text:`${pName(pr)}: ${v.id} needs signature`,c:_.amber,bg:_.amberBg,idx,tab:"variations"})});pr.defects.forEach(d=>{if(!d.done)alerts.push({text:`${pName(pr)}: ${d.desc}`,c:_.blue,bg:_.blueBg,idx,tab:"defects"})})});
@@ -273,7 +265,7 @@ export default function IBuild(){
       {toast&&<div style={{position:"fixed",top:16,left:"50%",transform:"translateX(-50%)",zIndex:999,padding:"10px 22px",borderRadius:_.rFull,fontSize:13,fontWeight:600,color:"#fff",background:toast.type==="error"?_.red:_.ink,boxShadow:"0 8px 30px rgba(0,0,0,0.12)",animation:"fadeUp 0.2s ease"}}>{toast.msg}</div>}
 
       {/* ═══ HEADER — minimal, sticky ═══ */}
-      <header style={{padding:`${_.s3}px ${_.s5}px`,background:"rgba(250,248,246,0.85)",backdropFilter:"blur(16px)",WebkitBackdropFilter:"blur(16px)",borderBottom:`1px solid ${_.line}`,display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,zIndex:50}}>
+      <header style={{padding:`${_.s3}px ${_.s5}px`,background:"rgba(245,245,247,0.85)",backdropFilter:"blur(16px)",WebkitBackdropFilter:"blur(16px)",borderBottom:`1px solid ${_.line}`,display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,zIndex:50}}>
         <div style={{display:"flex",alignItems:"center",gap:_.s3}}>
           <div style={{width:28,height:28,background:_.ink,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:_.bg}}>i</div>
           <span style={{fontSize:15,fontWeight:700,letterSpacing:"-0.02em"}}>iBuild</span>
@@ -305,7 +297,7 @@ export default function IBuild(){
           <div key={t2.id} onClick={()=>go(t2.id)} style={{
             padding:`${_.s3}px ${_.s4}px`,cursor:"pointer",fontSize:13,fontWeight:tab===t2.id?600:400,
             color:tab===t2.id?_.ink:_.muted,
-            borderBottom:tab===t2.id?`2px solid ${_.ink}`:"2px solid transparent",
+            borderBottom:tab===t2.id?`2px solid ${_.ac}`:"2px solid transparent",
             whiteSpace:"nowrap",flexShrink:0,transition:"all 0.15s ease",marginBottom:-1,
           }}>{t2.l}</div>
         ))}
@@ -323,35 +315,35 @@ export default function IBuild(){
             <div style={{fontSize:14,color:_.muted,fontWeight:500,marginBottom:_.s2}}>
               {ds()} · {projects.length} project{projects.length!==1?"s":""}
             </div>
-            <h1 style={{fontSize:44,fontWeight:300,letterSpacing:"-0.04em",lineHeight:1,marginBottom:_.s2}}>
+            <h1 style={{fontSize:38,fontWeight:600,letterSpacing:"-0.03em",lineHeight:1,marginBottom:_.s2}}>
               Good {new Date().getHours()<12?"morning":new Date().getHours()<17?"afternoon":"evening"}.
             </h1>
             {p.client&&<div style={{fontSize:18,color:_.body,fontWeight:400,letterSpacing:"-0.01em"}}>{pName(p)}</div>}
           </div>
 
-          {/* Hero project card — emotional value, stage progress */}
-          <div style={{background:`linear-gradient(145deg,${_.ink} 0%,#2c2520 100%)`,borderRadius:_.r,padding:`${_.s7}px`,color:"#f8f8f6",marginBottom:_.s7}}>
+          {/* Hero project card — white with blue left accent */}
+          <div style={{background:_.surface,borderRadius:_.r,padding:`${_.s7}px`,border:`1px solid ${_.line}`,borderLeft:`4px solid ${_.ac}`,boxShadow:"0 1px 3px rgba(0,0,0,0.04)",marginBottom:_.s7}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:_.s5}}>
               <div>
                 <div style={{fontSize:11,color:_.ac,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:_.s1}}>Current project</div>
-                <div style={{fontSize:20,fontWeight:600,letterSpacing:"-0.02em"}}>{pName(p)}</div>
-                {(p.address||p.assignedTo)&&<div style={{fontSize:13,color:"rgba(255,255,255,0.45)",marginTop:2}}>{p.type}{p.area?` · ${p.area}m²`:""}{p.assignedTo?` · ${p.assignedTo}`:""}</div>}
+                <div style={{fontSize:20,fontWeight:600,letterSpacing:"-0.02em",color:_.ink}}>{pName(p)}</div>
+                {(p.address||p.assignedTo)&&<div style={{fontSize:13,color:_.muted,marginTop:2}}>{p.type}{p.area?` · ${p.area}m²`:""}{p.assignedTo?` · ${p.assignedTo}`:""}</div>}
               </div>
               <span style={badge(stCol(p.status),stBg(p.status))}>{p.status}</span>
             </div>
-            <div style={{fontSize:48,fontWeight:700,letterSpacing:"-0.04em",lineHeight:1,fontVariantNumeric:"tabular-nums",marginBottom:_.s5}}>{fmt(T.curr)}</div>
+            <div style={{fontSize:48,fontWeight:600,letterSpacing:"-0.04em",lineHeight:1,fontVariantNumeric:"tabular-nums",marginBottom:_.s5,color:_.ink}}>{fmt(T.curr)}</div>
             {/* Stage progress bar */}
             <div style={{display:"flex",gap:2,marginBottom:_.s2}}>
-              {STAGES.map((s,i)=>(<div key={s} style={{flex:1,height:4,borderRadius:2,background:i<=sIdx(p.status)?"rgba(194,102,45,0.9)":"rgba(255,255,255,0.12)",transition:"background 0.3s"}} />))}
+              {STAGES.map((s,i)=>(<div key={s} style={{flex:1,height:4,borderRadius:2,background:i<=sIdx(p.status)?_.ac:_.line,transition:"background 0.3s"}} />))}
             </div>
             <div style={{display:"flex",justifyContent:"space-between",fontSize:10,marginBottom:_.s5}}>
-              {STAGES.map((s,i)=>(<span key={s} style={{color:i<=sIdx(p.status)?_.ac:"rgba(255,255,255,0.3)",fontWeight:i===sIdx(p.status)?700:500}}>{s}</span>))}
+              {STAGES.map((s,i)=>(<span key={s} style={{color:i<=sIdx(p.status)?_.ac:_.faint,fontWeight:i===sIdx(p.status)?700:500}}>{s}</span>))}
             </div>
             <div style={{display:"flex",gap:_.s2}}>
-              {!quoteReady&&<button onClick={()=>go("quote")} style={{...btnPrimary,background:"#fff",color:_.ink}}>Build quote <ArrowRight size={14} /></button>}
-              {quoteReady&&!quoteSent&&<button onClick={()=>go("proposal")} style={{...btnPrimary,background:"#fff",color:_.ink}}>Generate proposal <ArrowRight size={14} /></button>}
-              {quoteSent&&<button onClick={()=>go("invoices")} style={{...btnPrimary,background:"#fff",color:_.ink}}>Manage invoices <ArrowRight size={14} /></button>}
-              <button onClick={()=>go("quote")} style={{...btnGhost,color:"rgba(255,255,255,0.6)"}}>View quote</button>
+              {!quoteReady&&<button onClick={()=>go("quote")} style={btnPrimary}>Build quote <ArrowRight size={14} /></button>}
+              {quoteReady&&!quoteSent&&<button onClick={()=>go("proposal")} style={btnPrimary}>Generate proposal <ArrowRight size={14} /></button>}
+              {quoteSent&&<button onClick={()=>go("invoices")} style={btnPrimary}>Manage invoices <ArrowRight size={14} /></button>}
+              <button onClick={()=>go("quote")} style={btnGhost}>View quote</button>
             </div>
           </div>
 
@@ -410,7 +402,7 @@ export default function IBuild(){
 
         {/* ════ PIPELINE ════ */}
         {tab==="pipeline"&&<Section key={anim}>
-          <h1 style={{fontSize:36,fontWeight:300,letterSpacing:"-0.04em",marginBottom:_.s3}}>Pipeline</h1>
+          <h1 style={{fontSize:28,fontWeight:600,letterSpacing:"-0.02em",marginBottom:_.s3}}>Pipeline</h1>
           <div style={{fontSize:14,color:_.muted,marginBottom:_.s7}}>{projects.length} project{projects.length!==1?"s":""} · {fmt(allT.reduce((s,x)=>s+x.curr,0))} total value</div>
 
           {/* Stage flow header */}
@@ -433,7 +425,7 @@ export default function IBuild(){
                 <span style={{fontSize:12,color:_.muted}}>{inS.length} · {fmt(inS.reduce((t,x)=>t+x.curr,0))}</span>
               </div>
               {inS.map(pr=>{const si=sIdx(pr.status);const lastAct=pr.activity&&pr.activity[0];const updatedTxt=lastAct?`${lastAct.action} · ${lastAct.date}`:`Created ${pr.created}`;return(
-                <div key={pr.id} onClick={()=>{setAi(projects.findIndex(x=>x.id===pr.id));go("quote")}} style={{padding:`${_.s4}px ${_.s5}px`,cursor:"pointer",background:_.surface,borderRadius:_.rSm,marginBottom:_.s2,display:"flex",justifyContent:"space-between",alignItems:"center",transition:"all 0.15s ease",boxShadow:"0 1px 3px rgba(0,0,0,0.03)"}} onMouseEnter={e=>{e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,0.06)";e.currentTarget.style.transform="translateY(-1px)"}} onMouseLeave={e=>{e.currentTarget.style.boxShadow="0 1px 3px rgba(0,0,0,0.03)";e.currentTarget.style.transform="none"}}>
+                <div key={pr.id} onClick={()=>{setAi(projects.findIndex(x=>x.id===pr.id));go("quote")}} style={{padding:`${_.s4}px ${_.s5}px`,cursor:"pointer",background:_.surface,borderRadius:_.rSm,marginBottom:_.s2,display:"flex",justifyContent:"space-between",alignItems:"center",transition:"all 0.15s ease",boxShadow:"0 1px 3px rgba(0,0,0,0.03)"}} onMouseEnter={e=>{e.currentTarget.style.background=_.well}} onMouseLeave={e=>{e.currentTarget.style.background=_.surface}}>
                   <div style={{flex:1}}>
                     <div style={{fontSize:15,fontWeight:600,marginBottom:2}}>{pName(pr)}</div>
                     <div style={{fontSize:12,color:_.muted}}>{pr.type}{pr.area?` · ${pr.area}m²`:""}{pr.assignedTo?` · ${pr.assignedTo}`:""}</div>
@@ -453,7 +445,7 @@ export default function IBuild(){
 
         {/* ════ CLIENT — Contact info ════ */}
         {tab==="client"&&<Section key={anim}>
-          <h1 style={{fontSize:36,fontWeight:300,letterSpacing:"-0.04em",marginBottom:_.s6}}>Client</h1>
+          <h1 style={{fontSize:28,fontWeight:600,letterSpacing:"-0.02em",marginBottom:_.s6}}>Client</h1>
           <div style={{marginBottom:_.s8}}>
             <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:_.s4}}>Contact Information</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr",gap:_.s3}}>
@@ -470,7 +462,7 @@ export default function IBuild(){
         {/* ════ QUOTE — Clean guided flow ════ */}
         {tab==="quote"&&<Section key={anim}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:_.s2}}>
-            <h1 style={{fontSize:36,fontWeight:300,letterSpacing:"-0.04em"}}>Quote</h1>
+            <h1 style={{fontSize:28,fontWeight:600,letterSpacing:"-0.02em"}}>Quote</h1>
             {T.curr>0&&<span style={{fontSize:28,fontWeight:700,color:_.ac,letterSpacing:"-0.03em",fontVariantNumeric:"tabular-nums"}}>{fmt(T.curr)}</span>}
           </div>
 
@@ -542,22 +534,22 @@ export default function IBuild(){
           </div>
 
           {/* Summary */}
-          {T.curr>0&&<div style={{background:`linear-gradient(135deg,${_.ink},#2c2520)`,borderRadius:_.r,padding:`${_.s7}px ${_.s7}px`,color:"#fff",marginBottom:_.s6}}>
-            <div style={{fontSize:12,color:"rgba(255,255,255,0.5)",fontWeight:600,letterSpacing:"0.04em",textTransform:"uppercase",marginBottom:_.s3}}>Contract Total</div>
-            <div style={{fontSize:40,fontWeight:700,letterSpacing:"-0.04em",lineHeight:1,fontVariantNumeric:"tabular-nums"}}>{fmt(T.curr)}</div>
-            <div style={{fontSize:13,color:"rgba(255,255,255,0.5)",marginTop:_.s3,lineHeight:1.5}}>
+          {T.curr>0&&<div style={{background:_.surface,borderRadius:_.r,padding:`${_.s7}px`,border:`1px solid ${_.line}`,borderLeft:`4px solid ${_.ac}`,boxShadow:"0 1px 3px rgba(0,0,0,0.04)",marginBottom:_.s6}}>
+            <div style={{fontSize:12,color:_.muted,fontWeight:600,letterSpacing:"0.04em",textTransform:"uppercase",marginBottom:_.s3}}>Contract Total</div>
+            <div style={{fontSize:40,fontWeight:600,letterSpacing:"-0.04em",lineHeight:1,fontVariantNumeric:"tabular-nums",color:_.ink}}>{fmt(T.curr)}</div>
+            <div style={{fontSize:13,color:_.muted,marginTop:_.s3,lineHeight:1.5}}>
               Sub {fmt(T.sub)} + {p.margin}% margin + {p.contingency}% contingency + GST
             </div>
             <div style={{display:"flex",gap:_.s2,marginTop:_.s6}}>
-              <button onClick={()=>{go("proposal");log("Proposal generated");notify("Proposal ready")}} style={{...btnPrimary,background:"#fff",color:_.ink}}>Generate proposal <ArrowRight size={14} /></button>
-              <button onClick={()=>go("costs")} style={{...btnGhost,color:"rgba(255,255,255,0.7)"}}>Cost tracker</button>
+              <button onClick={()=>{go("proposal");log("Proposal generated");notify("Proposal ready")}} style={btnPrimary}>Generate proposal <ArrowRight size={14} /></button>
+              <button onClick={()=>go("costs")} style={btnGhost}>Cost tracker</button>
             </div>
           </div>}
         </Section>}
 
         {/* ════ PLANS AI ════ */}
         {tab==="plans"&&<Section key={anim}>
-          <h1 style={{fontSize:36,fontWeight:300,letterSpacing:"-0.04em",marginBottom:_.s7}}>Plans AI</h1>
+          <h1 style={{fontSize:28,fontWeight:600,letterSpacing:"-0.02em",marginBottom:_.s7}}>Plans AI</h1>
           <div style={{textAlign:"center",padding:`${_.s10}px ${_.s7}px`,border:`2px dashed ${_.line2}`,borderRadius:_.r,marginBottom:_.s5}}>
             <div style={{marginBottom:_.s3,display:"flex",justifyContent:"center"}}><Ruler size={36} strokeWidth={1} color={_.faint} /></div>
             <div style={{fontSize:15,color:_.muted,marginBottom:_.s5}}>Upload a floor plan to analyse rooms and areas</div>
@@ -576,7 +568,7 @@ export default function IBuild(){
 
         {/* ════ COSTS ════ */}
         {tab==="costs"&&<Section key={anim}>
-          <h1 style={{fontSize:36,fontWeight:300,letterSpacing:"-0.04em",marginBottom:_.s7}}>Cost Tracker</h1>
+          <h1 style={{fontSize:28,fontWeight:600,letterSpacing:"-0.02em",marginBottom:_.s7}}>Cost Tracker</h1>
           {T.cats.length===0&&<Empty icon={BarChart3} text="Add scope items in Quote to begin tracking" action={()=>go("quote")} actionText="Go to Quote" />}
           {T.cats.map(([cat,items])=>{const est=T.cT(p.scope,cat);const act=T.cA(p.scope,cat);const v2=act-est;
             return(<div key={cat} style={{marginBottom:_.s6,paddingBottom:_.s5,borderBottom:`1px solid ${_.line}`}}>
@@ -604,25 +596,25 @@ export default function IBuild(){
 
         {/* ════ SCHEDULE ════ */}
         {tab==="schedule"&&<Section key={anim}>
-          <h1 style={{fontSize:36,fontWeight:300,letterSpacing:"-0.04em",marginBottom:4}}>Progress Schedule</h1>
+          <h1 style={{fontSize:28,fontWeight:600,letterSpacing:"-0.02em",marginBottom:4}}>Progress Schedule</h1>
           <div style={{fontSize:14,color:_.muted,marginBottom:_.s7}}>{p.milestones.filter(m=>m.done).length} of {p.milestones.length} milestones · {p.milestones.length>0?Math.round((p.milestones.filter(m=>m.done).length/p.milestones.length)*100):0}% complete</div>
 
           {/* Progress hero */}
-          <div style={{background:"linear-gradient(145deg,#1c1917,#2c2520)",borderRadius:_.r,padding:"24px 28px",marginBottom:_.s7,color:"#f8f8f6"}}>
+          <div style={{background:_.surface,borderRadius:_.r,padding:"24px 28px",marginBottom:_.s7,border:`1px solid ${_.line}`,borderLeft:`4px solid ${_.ac}`,boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:16}}>
               <div>
                 <div style={{fontSize:11,color:_.ac,letterSpacing:"0.06em",fontWeight:600,textTransform:"uppercase",marginBottom:4}}>Build Progress</div>
-                <div style={{fontSize:48,fontWeight:200,letterSpacing:"-0.04em",lineHeight:1,fontVariantNumeric:"tabular-nums"}}>{p.milestones.length>0?Math.round((p.milestones.filter(m=>m.done).length/p.milestones.length)*100):0}<span style={{fontSize:20,color:"#999"}}>%</span></div>
+                <div style={{fontSize:48,fontWeight:600,letterSpacing:"-0.04em",lineHeight:1,fontVariantNumeric:"tabular-nums",color:_.ink}}>{p.milestones.length>0?Math.round((p.milestones.filter(m=>m.done).length/p.milestones.length)*100):0}<span style={{fontSize:20,color:_.muted}}>%</span></div>
               </div>
               <div style={{textAlign:"right"}}>
-                <div style={{fontSize:13,color:"#aaa"}}>{p.milestones.findIndex(m=>!m.done)>=0?p.milestones[p.milestones.findIndex(m=>!m.done)].name:"All complete"}</div>
-                <div style={{fontSize:11,color:"#777",marginTop:2}}>{p.milestones.findIndex(m=>!m.done)>=0?"Next milestone":"🎉"}</div>
+                <div style={{fontSize:13,color:_.body}}>{p.milestones.findIndex(m=>!m.done)>=0?p.milestones[p.milestones.findIndex(m=>!m.done)].name:"All complete"}</div>
+                <div style={{fontSize:11,color:_.muted,marginTop:2}}>{p.milestones.findIndex(m=>!m.done)>=0?"Next milestone":"🎉"}</div>
               </div>
             </div>
             {/* Stage progress bar */}
             <div style={{display:"flex",gap:3}}>
               {p.milestones.map((ms,i)=>(
-                <div key={i} style={{flex:1,height:6,borderRadius:3,background:ms.done?_.ac:"rgba(255,255,255,0.1)",transition:"background 0.3s"}} title={ms.name} />
+                <div key={i} style={{flex:1,height:6,borderRadius:3,background:ms.done?_.ac:_.line,transition:"background 0.3s"}} title={ms.name} />
               ))}
             </div>
           </div>
@@ -643,7 +635,7 @@ export default function IBuild(){
                     const lastDoneIdx=[...p.milestones].reverse().findIndex(m=>m.done);
                     const lastDone=lastDoneIdx>=0?p.milestones[p.milestones.length-1-lastDoneIdx]:null;
                     const pctDone=lastDone?((lastDone.wk||0)/maxWk)*100:0;
-                    return <div style={{position:"absolute",left:0,top:0,bottom:0,width:`${pctDone}%`,background:`linear-gradient(90deg,${_.ac},#d4854a)`,borderRadius:8,transition:"width 0.6s ease"}} />;
+                    return <div style={{position:"absolute",left:0,top:0,bottom:0,width:`${pctDone}%`,background:_.ac,borderRadius:8,transition:"width 0.6s ease"}} />;
                   })()}
                   {/* Milestone markers */}
                   {p.milestones.map((ms,i)=>{
@@ -671,7 +663,7 @@ export default function IBuild(){
                 {/* Timeline rail */}
                 <div style={{width:32,display:"flex",flexDirection:"column",alignItems:"center",flexShrink:0}}>
                   <div style={{width:2,flex:"1 1 0",background:i===0?"transparent":ms.done?_.ac:_.line,transition:"background 0.3s"}} />
-                  <div onClick={()=>{const wasDone=ms.done;up(pr=>{pr.milestones[i]={...ms,done:!ms.done,date:!ms.done?ds():ms.date};return pr});if(!wasDone)log("Milestone: "+ms.name)}} style={{width:ms.done?20:isNext?18:14,height:ms.done?20:isNext?18:14,borderRadius:"50%",border:ms.done?"none":`2px solid ${isNext?_.ac:_.line2}`,background:ms.done?_.ac:isNext?"rgba(194,102,45,0.1)":"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,cursor:"pointer",transition:"all 0.25s",zIndex:1}}>{ms.done&&<Check size={11} strokeWidth={3} color="#fff" />}</div>
+                  <div onClick={()=>{const wasDone=ms.done;up(pr=>{pr.milestones[i]={...ms,done:!ms.done,date:!ms.done?ds():ms.date};return pr});if(!wasDone)log("Milestone: "+ms.name)}} style={{width:ms.done?20:isNext?18:14,height:ms.done?20:isNext?18:14,borderRadius:"50%",border:ms.done?"none":`2px solid ${isNext?_.ac:_.line2}`,background:ms.done?_.ac:isNext?_.acLight:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,cursor:"pointer",transition:"all 0.25s",zIndex:1}}>{ms.done&&<Check size={11} strokeWidth={3} color="#fff" />}</div>
                   <div style={{width:2,flex:"1 1 0",background:i===p.milestones.length-1?"transparent":p.milestones[i+1]?.done||ms.done?_.ac:_.line,transition:"background 0.3s"}} />
                 </div>
                 {/* Content */}
@@ -704,14 +696,14 @@ export default function IBuild(){
           {/* Legend */}
           <div style={{display:"flex",gap:_.s5,marginTop:_.s5,fontSize:11,color:_.muted}}>
             <span style={{display:"flex",alignItems:"center",gap:4}}><div style={{width:8,height:8,borderRadius:4,background:_.ac}} /> Complete</span>
-            <span style={{display:"flex",alignItems:"center",gap:4}}><div style={{width:8,height:8,borderRadius:4,border:`2px solid ${_.ac}`,background:"rgba(194,102,45,0.1)"}} /> Next</span>
+            <span style={{display:"flex",alignItems:"center",gap:4}}><div style={{width:8,height:8,borderRadius:4,border:`2px solid ${_.ac}`,background:_.acLight}} /> Next</span>
             <span style={{display:"flex",alignItems:"center",gap:4}}><div style={{width:8,height:8,borderRadius:4,border:`2px solid ${_.line2}`}} /> Upcoming</span>
           </div>
         </Section>}
 
         {/* ════ VARIATIONS LIST ════ */}
         {tab==="variations"&&voView===null&&<Section key={anim}>
-          <h1 style={{fontSize:36,fontWeight:300,letterSpacing:"-0.04em",marginBottom:4}}>Variation Orders</h1>
+          <h1 style={{fontSize:28,fontWeight:600,letterSpacing:"-0.02em",marginBottom:4}}>Variation Orders</h1>
           <div style={{fontSize:14,color:_.muted,marginBottom:_.s7}}>Changes to original contract scope</div>
 
           {/* VO equation strip */}
@@ -764,7 +756,7 @@ export default function IBuild(){
               <div style={{flex:1}} /><button onClick={()=>printEl(voDocRef)} style={btnGhost}><Printer size={14} /> Print</button>
             </div>
             <div ref={voDocRef} style={{background:"#fff",fontFamily:"'Inter',sans-serif",borderRadius:_.r,overflow:"hidden",boxShadow:"0 4px 24px rgba(0,0,0,0.06)",border:`1px solid ${_.line}`}}>
-              <div style={{background:_.ink,color:"#f8f8f6",padding:"18px 28px",display:"flex",justifyContent:"space-between",alignItems:"center"}}><div style={{display:"flex",alignItems:"center",gap:8}}><div style={{width:22,height:22,background:"#fff",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:_.ink}}>i</div><span style={{fontSize:13,fontWeight:700}}>iBuild National</span></div><div style={{textAlign:"right"}}><div style={{fontSize:9,color:_.ac,letterSpacing:"0.1em",fontWeight:600}}>VARIATION ORDER</div><div style={{fontSize:16,fontWeight:700,color:_.ac}}>{v.id}</div></div></div>
+              <div style={{background:_.ink,color:"#fff",padding:"18px 28px",display:"flex",justifyContent:"space-between",alignItems:"center"}}><div style={{display:"flex",alignItems:"center",gap:8}}><div style={{width:22,height:22,background:"#fff",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:_.ink}}>i</div><span style={{fontSize:13,fontWeight:700}}>iBuild National</span></div><div style={{textAlign:"right"}}><div style={{fontSize:9,color:_.ac,letterSpacing:"0.1em",fontWeight:600}}>VARIATION ORDER</div><div style={{fontSize:16,fontWeight:700,color:_.ac}}>{v.id}</div></div></div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",borderBottom:`1px solid ${_.line}`}}>{[["Project",pName(p)],["Client",p.client],["Date",v.date]].map(([l2,v2])=>(<div key={l2} style={{padding:"10px 16px",borderRight:`1px solid ${_.line}`}}><div style={{fontSize:9,color:_.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.06em"}}>{l2}</div><div style={{fontSize:12,fontWeight:500,marginTop:1}}>{v2||"—"}</div></div>))}</div>
               <div style={{padding:"18px 28px",borderBottom:`1px solid ${_.line}`}}><div style={{fontSize:9,color:_.ac,letterSpacing:"0.06em",fontWeight:600,marginBottom:4}}>DESCRIPTION</div><div style={{fontSize:13,lineHeight:1.7}}>{v.description}</div>{v.reason&&<div style={{fontSize:11,color:_.muted,marginTop:3}}>Reason: {v.reason}</div>}</div>
               <div style={{padding:"18px 28px",borderBottom:`1px solid ${_.line}`}}><div style={{fontSize:9,color:_.ac,letterSpacing:"0.06em",fontWeight:600,marginBottom:10}}>CONTRACT IMPACT</div>
@@ -787,7 +779,7 @@ export default function IBuild(){
 
         {/* ════ INVOICES ════ */}
         {tab==="invoices"&&invView===null&&<Section key={anim}>
-          <h1 style={{fontSize:36,fontWeight:300,letterSpacing:"-0.04em",marginBottom:_.s7}}>Invoices</h1>
+          <h1 style={{fontSize:28,fontWeight:600,letterSpacing:"-0.02em",marginBottom:_.s7}}>Invoices</h1>
           <div style={{display:"flex",gap:_.s9,marginBottom:_.s5,alignItems:"baseline"}}>
             <div><div style={label}>Contract</div><div style={{fontSize:24,fontWeight:700}}>{fmt(T.curr)}</div></div>
             <div><div style={{...label,color:_.ac}}>Claimed</div><div style={{fontSize:24,fontWeight:700,color:_.ac}}>{fmt(T.inv)}</div></div>
@@ -824,7 +816,7 @@ export default function IBuild(){
           return(<Section key={anim}>
             <div style={{display:"flex",alignItems:"center",gap:_.s2,marginBottom:_.s7}}><button onClick={()=>setInvView(null)} style={btnGhost}><ArrowRight size={14} style={{transform:"rotate(180deg)"}} /> Back</button><span style={{fontSize:22,fontWeight:600}}>{inv.id}</span><div style={{flex:1}} /><button onClick={()=>printEl(invDocRef)} style={btnGhost}><Printer size={14} /> Print</button></div>
             <div ref={invDocRef} style={{background:"#fff",fontFamily:"'Inter',sans-serif",borderRadius:_.r,overflow:"hidden",boxShadow:"0 4px 24px rgba(0,0,0,0.06)",border:`1px solid ${_.line}`}}>
-              <div style={{background:_.ink,color:"#f8f8f6",padding:"18px 28px",display:"flex",justifyContent:"space-between",alignItems:"center"}}><div style={{display:"flex",alignItems:"center",gap:8}}><div style={{width:22,height:22,background:"#fff",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:_.ink}}>i</div><span style={{fontSize:13,fontWeight:700}}>iBuild National</span></div><div style={{textAlign:"right"}}><div style={{fontSize:9,color:_.ac,letterSpacing:"0.1em",fontWeight:600}}>TAX INVOICE</div><div style={{fontSize:16,fontWeight:700,color:_.ac}}>{inv.id}</div></div></div>
+              <div style={{background:_.ink,color:"#fff",padding:"18px 28px",display:"flex",justifyContent:"space-between",alignItems:"center"}}><div style={{display:"flex",alignItems:"center",gap:8}}><div style={{width:22,height:22,background:"#fff",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:_.ink}}>i</div><span style={{fontSize:13,fontWeight:700}}>iBuild National</span></div><div style={{textAlign:"right"}}><div style={{fontSize:9,color:_.ac,letterSpacing:"0.1em",fontWeight:600}}>TAX INVOICE</div><div style={{fontSize:16,fontWeight:700,color:_.ac}}>{inv.id}</div></div></div>
               <div style={{padding:"16px 28px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,borderBottom:`1px solid ${_.line}`}}><div><div style={{fontSize:9,color:_.muted,fontWeight:600,textTransform:"uppercase"}}>From</div><div style={{fontSize:12,fontWeight:600,marginTop:1}}>iBuild National Pty Ltd</div><div style={{fontSize:11,color:_.muted}}>ABN 12 345 678 901</div></div><div><div style={{fontSize:9,color:_.muted,fontWeight:600,textTransform:"uppercase"}}>To</div><div style={{fontSize:12,fontWeight:600,marginTop:1}}>{p.client||"Client"}</div><div style={{fontSize:11,color:_.muted}}>{p.address}{p.suburb?`, ${p.suburb}`:""}</div></div></div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",borderBottom:`1px solid ${_.line}`}}>{[["Date",inv.date],["Project",pName(p)],["Due","14 days"]].map(([l2,v2])=>(<div key={l2} style={{padding:"10px 16px",borderRight:`1px solid ${_.line}`}}><div style={{fontSize:9,color:_.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.06em"}}>{l2}</div><div style={{fontSize:12,fontWeight:500,marginTop:1}}>{v2}</div></div>))}</div>
               <div style={{padding:"18px 28px"}}><div style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:`2px solid ${_.ink}`,fontSize:10,color:_.muted,fontWeight:600,textTransform:"uppercase"}}><span>Description</span><span>Amount</span></div><div style={{display:"flex",justifyContent:"space-between",padding:"12px 0",borderBottom:`1px solid ${_.line}`}}><div><div style={{fontSize:13,fontWeight:500}}>{inv.desc}</div><div style={{fontSize:11,color:_.muted,marginTop:2}}>{inv.pct}% of {fmt(T.curr)}</div></div><span style={{fontSize:13,fontWeight:600}}>{fmt(inv.amount)}</span></div>
@@ -836,7 +828,7 @@ export default function IBuild(){
 
         {/* ════ DIARY ════ */}
         {tab==="diary"&&<Section key={anim}>
-          <h1 style={{fontSize:36,fontWeight:300,letterSpacing:"-0.04em",marginBottom:_.s7}}>Site Diary</h1>
+          <h1 style={{fontSize:28,fontWeight:600,letterSpacing:"-0.02em",marginBottom:_.s7}}>Site Diary</h1>
           <div style={{marginBottom:_.s7,paddingBottom:_.s6,borderBottom:`1px solid ${_.line}`}}>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:`${_.s3}px ${_.s4}px`,marginBottom:_.s3}}>
               <div><label style={label}>Weather</label><select style={{...input,cursor:"pointer"}} value={diaryForm.weather} onChange={e=>setDiaryForm({...diaryForm,weather:e.target.value})}>{WEATHER.map(w=><option key={w}>{w}</option>)}</select></div>
@@ -860,7 +852,7 @@ export default function IBuild(){
 
         {/* ════ DEFECTS ════ */}
         {tab==="defects"&&<Section key={anim}>
-          <h1 style={{fontSize:36,fontWeight:300,letterSpacing:"-0.04em",marginBottom:4}}>Defects</h1>
+          <h1 style={{fontSize:28,fontWeight:600,letterSpacing:"-0.02em",marginBottom:4}}>Defects</h1>
           <div style={{fontSize:14,color:_.muted,marginBottom:_.s7}}>{p.defects.filter(d=>d.done).length} of {p.defects.length} resolved</div>
           <div style={{marginBottom:_.s7,paddingBottom:_.s6,borderBottom:`1px solid ${_.line}`}}>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:_.s4,marginBottom:_.s3}}>
@@ -881,7 +873,7 @@ export default function IBuild(){
 
         {/* ════ TRADES ════ */}
         {tab==="trades"&&<Section key={anim}>
-          <h1 style={{fontSize:36,fontWeight:300,letterSpacing:"-0.04em",marginBottom:_.s7}}>Trades</h1>
+          <h1 style={{fontSize:28,fontWeight:600,letterSpacing:"-0.02em",marginBottom:_.s7}}>Trades</h1>
           <div style={{marginBottom:_.s7,paddingBottom:_.s6,borderBottom:`1px solid ${_.line}`}}>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:_.s4}}>
               {[["Trade","trade","Electrician"],["Company","company","Spark Bros"],["Contact","contact","Dave"],["Phone","phone","0412..."]].map(([l2,k,ph])=>(<div key={k}><label style={label}>{l2}</label><input style={input} value={trForm[k]} onChange={e=>setTrForm({...trForm,[k]:e.target.value})} placeholder={ph} /></div>))}
@@ -897,39 +889,67 @@ export default function IBuild(){
           ))}
         </Section>}
 
-        {/* ════ PROPOSAL ════ */}
-        {tab==="proposal"&&<Section key={anim}>
+        {/* ════ PROPOSAL LIST ════ */}
+        {tab==="proposal"&&propView===null&&<Section key={anim}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:_.s7}}>
-            <h1 style={{fontSize:36,fontWeight:300,letterSpacing:"-0.04em"}}>Proposal</h1>
-            {quoteReady&&<button onClick={()=>printEl(propRef)} style={btnPrimary}><Printer size={14} /> Print</button>}
+            <h1 style={{fontSize:28,fontWeight:600,letterSpacing:"-0.02em"}}>Proposals</h1>
+            {quoteReady&&<button onClick={()=>{const name=prompt("Proposal name",`Proposal v${p.proposals.length+1}`);if(!name)return;up(pr=>{pr.proposals.push({id:`PROP-${uid()}`,name,date:ds(),scope:JSON.parse(JSON.stringify(pr.scope)),client:pr.client,address:pr.address,suburb:pr.suburb,type:pr.type,stories:pr.stories,area:pr.area,notes:pr.notes,validDays:pr.validDays,pricing:{sub:T.sub,mar:T.mar,con:T.con,gst:T.gst,total:T.curr,margin:pr.margin,contingency:pr.contingency},sigData:null,status:"draft"});return pr});log("Proposal saved");notify("Proposal saved");setPropView(p.proposals.length)}} style={btnPrimary}><Plus size={14} /> New from current scope</button>}
           </div>
           {!quoteReady&&<Empty icon={FileText} text="Complete your quote first" action={()=>go("quote")} actionText="Go to Quote" />}
-          {quoteReady&&<>
-          <div ref={propRef} style={{background:"#fff",fontFamily:"'Inter',sans-serif",borderRadius:_.r,overflow:"hidden",boxShadow:"0 8px 32px rgba(0,0,0,0.06)",border:`1px solid ${_.line}`}}>
-            <div style={{minHeight:280,background:`linear-gradient(145deg,${_.ink} 0%,#2c2520 100%)`,color:"#f8f8f6",display:"flex",flexDirection:"column",position:"relative"}}>
-              <div style={{position:"absolute",bottom:0,left:0,right:0,height:2,background:`linear-gradient(90deg,${_.ac},#e8a065)`}} />
-              <div style={{padding:"18px 32px",display:"flex",justifyContent:"space-between",alignItems:"center"}}><div style={{display:"flex",alignItems:"center",gap:8}}><div style={{width:22,height:22,background:"#fff",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:_.ink}}>i</div><span style={{fontSize:13,fontWeight:700}}>iBuild National</span></div><span style={{fontSize:9,color:_.ac,letterSpacing:"0.08em",fontWeight:600}}>{pName(p)}</span></div>
-              <div style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"center",padding:"0 32px 28px"}}><div style={{fontSize:10,color:_.ac,marginBottom:8,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase"}}>Prepared for</div><div style={{fontSize:30,fontWeight:300,letterSpacing:"-0.03em",lineHeight:1.15}}>{p.client}</div><div style={{fontSize:14,color:"rgba(255,255,255,0.6)",marginTop:4}}>{p.address}{p.suburb?`, ${p.suburb}`:""}</div></div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",borderTop:"1px solid rgba(255,255,255,0.1)"}}>{[["Date",p.created],["Project",pName(p)],["Valid",`${p.validDays}d`],["Value",fmt(T.curr)]].map(([l2,v2],i)=>(<div key={l2} style={{padding:"10px 14px",borderRight:i<3?"1px solid rgba(255,255,255,0.1)":"none"}}><div style={{fontSize:8,color:"rgba(255,255,255,0.4)",fontWeight:600,textTransform:"uppercase",letterSpacing:"0.06em"}}>{l2}</div><div style={{fontSize:12,fontWeight:500,color:i===3?_.ac:"rgba(255,255,255,0.9)",marginTop:1}}>{v2}</div></div>))}</div>
+          {quoteReady&&p.proposals.length===0&&<Empty icon={FileText} text="No proposals yet — save one from your current scope" />}
+          {p.proposals.map((prop,i)=>(
+            <div key={i} onClick={()=>setPropView(i)} style={{padding:`${_.s4}px 0`,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:`1px solid ${_.line}`,transition:"all 0.15s"}} onMouseEnter={e=>e.currentTarget.style.paddingLeft="4px"} onMouseLeave={e=>e.currentTarget.style.paddingLeft="0"}>
+              <div><div style={{fontSize:14,fontWeight:500}}>{prop.name}</div><div style={{fontSize:12,color:_.muted,marginTop:1}}>{prop.id} · {prop.date}</div></div>
+              <div style={{display:"flex",alignItems:"center",gap:_.s3}}>
+                <span style={{fontSize:16,fontWeight:700,fontVariantNumeric:"tabular-nums"}}>{fmt(prop.pricing.total)}</span>
+                <span style={badge(prop.status==="signed"?_.green:prop.status==="declined"?_.red:prop.status==="sent"?_.blue:_.amber,prop.status==="signed"?_.greenBg:prop.status==="declined"?_.redBg:prop.status==="sent"?_.blueBg:_.amberBg)}>{prop.status}</span>
+                <ChevronRight size={14} color={_.faint} />
+              </div>
             </div>
-            {p.notes&&<div style={{padding:"16px 32px",borderBottom:`1px solid ${_.line}`}}><div style={{fontSize:9,color:_.ac,letterSpacing:"0.06em",fontWeight:600,marginBottom:3}}>BRIEF</div><div style={{fontSize:12,lineHeight:1.7,color:_.body}}>{p.type} · {p.stories}{p.area?` · ${p.area}m\xB2`:""}. {p.notes}</div></div>}
-            <div style={{padding:"20px 32px"}}><div style={{fontSize:9,color:_.ac,letterSpacing:"0.06em",fontWeight:600,marginBottom:10,paddingBottom:4,borderBottom:`2px solid ${_.ink}`}}>SCOPE</div>
-              {T.cats.map(([cat,items],ci)=>(<div key={cat} style={{marginBottom:10}}><div style={{display:"flex",justifyContent:"space-between",padding:"5px 8px",background:_.ink,color:"#f8f8f6",fontSize:10,borderRadius:4,fontWeight:600}}><span>{String(ci+1).padStart(2,"0")}. {cat}</span><span style={{color:_.ac}}>{fmt(T.cT(p.scope,cat))}</span></div>{items.filter(i2=>i2.on).map((item,idx)=>(<div key={idx} style={{display:"grid",gridTemplateColumns:"1fr 36px 48px 24px 48px",gap:2,padding:"3px 8px",fontSize:9,borderBottom:`1px solid ${_.line}`,color:_.body}}><span style={{color:_.ink}}>{item.item}</span><span>{item.unit}</span><span style={{textAlign:"right"}}>{fmt(item.rate)}</span><span style={{textAlign:"center"}}>x{item.qty}</span><span style={{textAlign:"right",fontWeight:600,color:_.ink}}>{fmt(item.rate*item.qty)}</span></div>))}</div>))}</div>
-            <div style={{padding:"0 32px 20px",display:"flex",justifyContent:"flex-end"}}><div style={{width:220}}>{[["Subtotal",T.sub],[`Margin ${p.margin}%`,T.mar],[`Contingency ${p.contingency}%`,T.con],["GST",T.gst]].map(([l2,v2])=>(<div key={l2} style={{display:"flex",justifyContent:"space-between",padding:"2px 0",fontSize:10,color:_.muted,borderBottom:`1px solid ${_.line}`}}><span>{l2}</span><span>{fmt(v2)}</span></div>))}<div style={{display:"flex",justifyContent:"space-between",padding:"6px 0",fontSize:15,fontWeight:700,borderTop:`2px solid ${_.ink}`,marginTop:2}}><span>Total</span><span>{fmt(T.curr)}</span></div></div></div>
-            <div style={{padding:"14px 32px",borderTop:`1px solid ${_.line}`,fontSize:9,color:_.muted,lineHeight:1.7}}><div style={{fontSize:9,color:_.ac,letterSpacing:"0.06em",fontWeight:600,marginBottom:3}}>TERMS</div>{["Valid "+p.validDays+" days","5% deposit","Progress claims 7 days","Variations via VO","Full insurance","13-week defects"].join(" · ")}</div>
-            <div style={{padding:"14px 32px",borderTop:`1px solid ${_.line}`}}><div style={{fontSize:9,color:_.ac,letterSpacing:"0.06em",fontWeight:600,marginBottom:6}}>ACCEPTANCE</div><div style={{fontSize:10,color:_.muted,marginBottom:8}}>I/We accept and authorise iBuild National to proceed.</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>{["Client","Builder"].map(r=>(<div key={r}><div style={{fontSize:10,fontWeight:600,marginBottom:3}}>{r}</div>{p.sigData&&r==="Client"?<div><img src={p.sigData} alt="" style={{maxHeight:28}} /><div style={{fontSize:8,color:_.muted,marginTop:1}}>Signed {ds()}</div></div>:<div style={{borderBottom:`1px solid ${_.line2}`,height:28}} />}</div>))}</div></div>
-            <div style={{padding:"8px 32px",background:_.ink,fontSize:9,color:_.muted,display:"flex",justifyContent:"space-between"}}><span>iBuild National Pty Ltd · ABN 12 345 678 901</span><span>(03) 8510 5472</span></div>
-          </div>
-          <div style={{marginTop:_.s5}}>
-            <div style={{fontSize:14,fontWeight:600,marginBottom:_.s2}}>Client signature</div>
-            <div style={{background:"#fff",borderRadius:_.rXs,touchAction:"none",overflow:"hidden",border:`1.5px solid ${_.line2}`}}><canvas ref={mkCv(sigRef,sigCtx)} width={600} height={100} style={{width:"100%",height:100,cursor:"crosshair"}} {...cvH(sigRef,sigCtx,sigDr,()=>{up(pr=>{pr.sigData=sigRef.current.toDataURL();return pr});log("Proposal signed by client");notify("Signed")})} /></div>
-            <div style={{display:"flex",gap:_.s2,marginTop:_.s2,alignItems:"center"}}><button onClick={()=>{clr(sigRef,sigCtx);up(pr=>{pr.sigData=null;return pr})}} style={btnSecondary}>Clear</button>{p.sigData&&<span style={{...badge(_.green,_.greenBg),display:"inline-flex",alignItems:"center",gap:3}}><Check size={11} /> Signed</span>}</div>
-          </div></>}
+          ))}
         </Section>}
+
+        {/* ════ PROPOSAL DETAIL ════ */}
+        {tab==="proposal"&&propView!==null&&p.proposals[propView]&&(()=>{
+          const prop=p.proposals[propView];
+          const propCats=Object.entries(prop.scope).filter(([,items])=>items.some(x=>x.on));
+          const propCT=(sc,cat)=>sc[cat].filter(i=>i.on).reduce((t,i)=>t+i.rate*i.qty,0);
+          return(<Section key={anim}>
+            <div style={{display:"flex",alignItems:"center",gap:_.s2,marginBottom:_.s5}}>
+              <button onClick={()=>setPropView(null)} style={btnGhost}><ArrowRight size={14} style={{transform:"rotate(180deg)"}} /> Back</button>
+              <span style={{fontSize:22,fontWeight:600}}>{prop.name}</span>
+              <span style={badge(prop.status==="signed"?_.green:prop.status==="declined"?_.red:prop.status==="sent"?_.blue:_.amber,prop.status==="signed"?_.greenBg:prop.status==="declined"?_.redBg:prop.status==="sent"?_.blueBg:_.amberBg)}>{prop.status}</span>
+              <div style={{flex:1}} />
+              <button onClick={()=>printEl(propRef)} style={btnGhost}><Printer size={14} /> Print</button>
+            </div>
+            <div style={{display:"flex",gap:_.s2,marginBottom:_.s5}}>
+              {["draft","sent","signed","declined"].map(s=>(
+                <div key={s} onClick={()=>{up(pr=>{pr.proposals[propView].status=s;return pr});log(`Proposal → ${s}`);notify(`Marked ${s}`)}} style={{padding:"6px 14px",borderRadius:_.rFull,fontSize:12,fontWeight:600,cursor:"pointer",background:prop.status===s?(s==="signed"?_.greenBg:s==="declined"?_.redBg:s==="sent"?_.blueBg:_.amberBg):_.well,color:prop.status===s?(s==="signed"?_.green:s==="declined"?_.red:s==="sent"?_.blue:_.amber):_.muted,transition:"all 0.15s"}}>{s}</div>
+              ))}
+            </div>
+            <div ref={propRef} style={{background:"#fff",fontFamily:"'Inter',sans-serif",borderRadius:_.r,overflow:"hidden",boxShadow:"0 1px 3px rgba(0,0,0,0.04)",border:`1px solid ${_.line}`}}>
+              <div style={{padding:"24px 32px",borderBottom:`1px solid ${_.line}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}><div style={{display:"flex",alignItems:"center",gap:8}}><div style={{width:28,height:28,background:_.ac,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:"#fff"}}>i</div><span style={{fontSize:15,fontWeight:700,color:_.ink}}>iBuild National</span></div><div style={{textAlign:"right"}}><div style={{fontSize:9,color:_.ac,letterSpacing:"0.1em",fontWeight:600}}>PROPOSAL</div><div style={{fontSize:14,fontWeight:600,color:_.ink}}>{prop.name}</div></div></div>
+              <div style={{padding:"32px",borderBottom:`1px solid ${_.line}`,borderLeft:`4px solid ${_.ac}`}}><div style={{fontSize:10,color:_.ac,marginBottom:8,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase"}}>Prepared for</div><div style={{fontSize:28,fontWeight:600,letterSpacing:"-0.02em",color:_.ink,lineHeight:1.15}}>{prop.client}</div><div style={{fontSize:14,color:_.body,marginTop:4}}>{prop.address}{prop.suburb?`, ${prop.suburb}`:""}</div></div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",borderBottom:`1px solid ${_.line}`}}>{[["Date",prop.date],["Project",prop.client+(prop.suburb?` — ${prop.suburb}`:"")],["Valid",`${prop.validDays||30}d`],["Value",fmt(prop.pricing.total)]].map(([l2,v2],i)=>(<div key={l2} style={{padding:"12px 16px",borderRight:i<3?`1px solid ${_.line}`:"none"}}><div style={{fontSize:9,color:_.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.06em"}}>{l2}</div><div style={{fontSize:12,fontWeight:500,color:i===3?_.ac:_.ink,marginTop:2}}>{v2}</div></div>))}</div>
+              {prop.notes&&<div style={{padding:"16px 32px",borderBottom:`1px solid ${_.line}`}}><div style={{fontSize:9,color:_.ac,letterSpacing:"0.06em",fontWeight:600,marginBottom:3}}>BRIEF</div><div style={{fontSize:12,lineHeight:1.7,color:_.body}}>{prop.type} · {prop.stories}{prop.area?` · ${prop.area}m²`:""}. {prop.notes}</div></div>}
+              <div style={{padding:"20px 32px"}}><div style={{fontSize:9,color:_.ac,letterSpacing:"0.06em",fontWeight:600,marginBottom:10,paddingBottom:4,borderBottom:`2px solid ${_.ink}`}}>SCOPE</div>
+                {propCats.map(([cat,items],ci)=>(<div key={cat} style={{marginBottom:10}}><div style={{display:"flex",justifyContent:"space-between",padding:"5px 8px",background:_.ac,color:"#fff",fontSize:10,borderRadius:4,fontWeight:600}}><span>{String(ci+1).padStart(2,"0")}. {cat}</span><span>{fmt(propCT(prop.scope,cat))}</span></div>{items.filter(i2=>i2.on).map((item,idx)=>(<div key={idx} style={{display:"grid",gridTemplateColumns:"1fr 36px 48px 24px 48px",gap:2,padding:"3px 8px",fontSize:9,borderBottom:`1px solid ${_.line}`,color:_.body}}><span style={{color:_.ink}}>{item.item}</span><span>{item.unit}</span><span style={{textAlign:"right"}}>{fmt(item.rate)}</span><span style={{textAlign:"center"}}>x{item.qty}</span><span style={{textAlign:"right",fontWeight:600,color:_.ink}}>{fmt(item.rate*item.qty)}</span></div>))}</div>))}</div>
+              <div style={{padding:"0 32px 20px",display:"flex",justifyContent:"flex-end"}}><div style={{width:220}}>{[["Subtotal",prop.pricing.sub],[`Margin ${prop.pricing.margin}%`,prop.pricing.mar],[`Contingency ${prop.pricing.contingency}%`,prop.pricing.con],["GST",prop.pricing.gst]].map(([l2,v2])=>(<div key={l2} style={{display:"flex",justifyContent:"space-between",padding:"2px 0",fontSize:10,color:_.muted,borderBottom:`1px solid ${_.line}`}}><span>{l2}</span><span>{fmt(v2)}</span></div>))}<div style={{display:"flex",justifyContent:"space-between",padding:"6px 0",fontSize:15,fontWeight:700,borderTop:`2px solid ${_.ink}`,marginTop:2}}><span>Total</span><span>{fmt(prop.pricing.total)}</span></div></div></div>
+              <div style={{padding:"14px 32px",borderTop:`1px solid ${_.line}`,fontSize:9,color:_.muted,lineHeight:1.7}}><div style={{fontSize:9,color:_.ac,letterSpacing:"0.06em",fontWeight:600,marginBottom:3}}>TERMS</div>{`Valid ${prop.validDays||30} days · 5% deposit · Progress claims 7 days · Variations via VO · Full insurance · 13-week defects`}</div>
+              <div style={{padding:"14px 32px",borderTop:`1px solid ${_.line}`}}><div style={{fontSize:9,color:_.ac,letterSpacing:"0.06em",fontWeight:600,marginBottom:6}}>ACCEPTANCE</div><div style={{fontSize:10,color:_.muted,marginBottom:8}}>I/We accept and authorise iBuild National to proceed.</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>{["Client","Builder"].map(r=>(<div key={r}><div style={{fontSize:10,fontWeight:600,marginBottom:3}}>{r}</div>{prop.sigData&&r==="Client"?<div><img src={prop.sigData} alt="" style={{maxHeight:28}} /><div style={{fontSize:8,color:_.muted,marginTop:1}}>Signed</div></div>:<div style={{borderBottom:`1px solid ${_.line2}`,height:28}} />}</div>))}</div></div>
+              <div style={{padding:"10px 32px",background:_.ink,fontSize:9,color:"#999",display:"flex",justifyContent:"space-between"}}><span>iBuild National Pty Ltd · ABN 12 345 678 901</span><span>(03) 8510 5472</span></div>
+            </div>
+            {!prop.sigData&&<div style={{marginTop:_.s5}}>
+              <div style={{fontSize:14,fontWeight:600,marginBottom:_.s2}}>Client signature</div>
+              <div style={{background:"#fff",borderRadius:_.rXs,touchAction:"none",overflow:"hidden",border:`1.5px solid ${_.line2}`}}><canvas ref={mkCv(sigRef,sigCtx)} width={600} height={100} style={{width:"100%",height:100,cursor:"crosshair"}} {...cvH(sigRef,sigCtx,sigDr,()=>{up(pr=>{pr.proposals[propView].sigData=sigRef.current.toDataURL();pr.proposals[propView].status="signed";return pr});log("Proposal signed");notify("Signed")})} /></div>
+              <div style={{display:"flex",gap:_.s2,marginTop:_.s2}}><button onClick={()=>{clr(sigRef,sigCtx)}} style={btnSecondary}>Clear</button></div>
+            </div>}
+            {prop.sigData&&<div style={{marginTop:_.s5,padding:`${_.s3}px`,background:_.greenBg,borderRadius:_.rXs,fontSize:13,color:_.green,fontWeight:500,display:"flex",alignItems:"center",gap:4}}><Check size={13} /> Client signed</div>}
+          </Section>)})()}
 
         {/* ════ TEMPLATES ════ */}
         {tab==="templates"&&<Section key={anim}>
-          <h1 style={{fontSize:36,fontWeight:300,letterSpacing:"-0.04em",marginBottom:_.s7}}>Templates</h1>
+          <h1 style={{fontSize:28,fontWeight:600,letterSpacing:"-0.02em",marginBottom:_.s7}}>Templates</h1>
           <div style={{display:"flex",gap:_.s2,alignItems:"end",marginBottom:_.s7,paddingBottom:_.s6,borderBottom:`1px solid ${_.line}`}}>
             <div style={{flex:1}}><label style={label}>Name</label><input style={input} value={tplName} onChange={e=>setTplName(e.target.value)} placeholder="Standard 4-bed new build" /></div>
             <button onClick={()=>{if(!tplName.trim()){notify("Enter name","error");return}saveTpl([...tpl,{name:tplName,scope:JSON.parse(JSON.stringify(p.scope)),margin:p.margin,contingency:p.contingency}]);log("Template saved: "+tplName);setTplName("");notify("Saved")}} style={btnPrimary}>Save current</button>
@@ -946,8 +966,8 @@ export default function IBuild(){
 
       <style>{`
         *{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;box-sizing:border-box}
-        ::selection{background:#fde68a;color:#1c1917}
-        select option{background:#fff;color:#1c1917}
+        ::selection{background:${_.acLight};color:${_.ink}}
+        select option{background:#fff;color:${_.ink}}
         input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none}
         input[type=number]{-moz-appearance:textfield}
         textarea{font-family:inherit}
