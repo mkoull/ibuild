@@ -224,7 +224,7 @@ export default function IBuild(){
   const [sw,setSw]=useState(false);
   const [voForm,setVoForm]=useState({desc:"",cat:"",amount:"",reason:""});
   const [trForm,setTrForm]=useState({trade:"",company:"",contact:"",phone:""});
-  const [diaryForm,setDiaryForm]=useState({weather:"Clear",trades:"",notes:""});
+  const [diaryForm,setDiaryForm]=useState({date:"",weather:"Clear",trades:"",notes:""});
   const [defectForm,setDefectForm]=useState({location:"",desc:"",assignee:""});
   const [toast,setToast]=useState(null);
   const [anim,setAnim]=useState(0); // for tab transitions
@@ -261,6 +261,14 @@ export default function IBuild(){
   };
   const printEl=ref=>{if(!ref.current)return;const w=window.open("","_blank");w.document.write('<!DOCTYPE html><html><head><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>*{margin:0;padding:0;box-sizing:border-box}@media print{body{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}@page{margin:0;size:A4}}</style></head><body>'+ref.current.outerHTML+'</body></html>');w.document.close();setTimeout(()=>w.print(),600)};
   const dupeProject=idx=>{const src=JSON.parse(JSON.stringify(projects[idx]));src.id=uid();src.status="Lead";src.created=ds();src.client+=" (Copy)";src.invoices=[];src.variations=[];src.milestones=MILESTONES.map(m=>({name:m.name,wk:m.wk,done:false,date:"",planned:""}));src.diary=[];src.defects=[];src.sigData=null;src.proposals=[];src.activity=[{action:"Duplicated from "+pName(projects[idx]),time:ts(),date:ds()}];setProjects(pv=>[...pv,src]);setAi(projects.length);setSw(false);go("quote");notify("Project duplicated")};
+
+  const createProp=(name)=>{
+    if(!name)name=`Proposal v${p.proposals.length+1}`;
+    const newIdx=p.proposals.length;
+    up(pr=>{pr.proposals.push({id:`PROP-${uid()}`,name,date:ds(),scope:JSON.parse(JSON.stringify(pr.scope)),client:pr.client,address:pr.address,suburb:pr.suburb,type:pr.type,stories:pr.stories,area:pr.area,notes:pr.notes,validDays:pr.validDays,pricing:{sub:T.sub,mar:T.mar,con:T.con,gst:T.gst,total:T.curr,margin:pr.margin,contingency:pr.contingency},sigData:null,status:"draft"});return pr});
+    log("Proposal saved: "+name);notify("Proposal saved");
+    setTab("proposal");setVoView(null);setInvView(null);setPropView(newIdx);setAnim(a=>a+1);
+  };
 
   const alerts=[];
   projects.forEach((pr,idx)=>{pr.invoices.forEach(inv=>{if(inv.status==="pending")alerts.push({text:`${pName(pr)}: ${inv.desc} — ${fmt(inv.amount)}`,c:_.red,bg:_.redBg,idx,tab:"invoices"})});pr.variations.forEach(v=>{if(v.status==="draft"||v.status==="pending")alerts.push({text:`${pName(pr)}: ${v.id} needs signature`,c:_.amber,bg:_.amberBg,idx,tab:"variations"})});pr.defects.forEach(d=>{if(!d.done)alerts.push({text:`${pName(pr)}: ${d.desc}`,c:_.blue,bg:_.blueBg,idx,tab:"defects"})})});
@@ -400,7 +408,7 @@ export default function IBuild(){
             </div>
             <div style={{display:"flex",gap:_.s2}}>
               {!quoteReady&&<button onClick={()=>go("quote")} style={btnPrimary}>Build quote <ArrowRight size={14} /></button>}
-              {quoteReady&&!quoteSent&&<button onClick={()=>go("proposal")} style={btnPrimary}>Generate proposal <ArrowRight size={14} /></button>}
+              {quoteReady&&!quoteSent&&<button onClick={()=>createProp()} style={btnPrimary}>Generate proposal <ArrowRight size={14} /></button>}
               {quoteSent&&<button onClick={()=>go("invoices")} style={btnPrimary}>Manage invoices <ArrowRight size={14} /></button>}
               <button onClick={()=>go("quote")} style={btnGhost}>View quote</button>
             </div>
@@ -526,7 +534,7 @@ export default function IBuild(){
               Sub {fmt(T.sub)} + {p.margin}% margin + {p.contingency}% contingency + GST
             </div>
             <div style={{display:"flex",gap:_.s2,marginTop:_.s6}}>
-              <button onClick={()=>{go("proposal");log("Proposal generated");notify("Proposal ready")}} style={btnPrimary}>Generate proposal <ArrowRight size={14} /></button>
+              <button onClick={()=>createProp()} style={btnPrimary}>Generate proposal <ArrowRight size={14} /></button>
               <button onClick={()=>go("costs")} style={btnGhost}>Cost tracker</button>
             </div>
           </div>}
@@ -692,9 +700,9 @@ export default function IBuild(){
           <div style={{marginBottom:_.s7,paddingBottom:_.s7,borderBottom:`1px solid ${_.line}`}}>
             <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:_.s4}}>New Variation</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:`${_.s3}px ${_.s4}px`,marginBottom:_.s3}}>
-              <div><label style={label}>Description *</label><input style={{...input,borderColor:voForm._err&&!voForm.desc?_.red:"transparent"}} value={voForm.desc} onChange={e=>setVoForm({...voForm,desc:e.target.value,_err:false})} placeholder="Upgraded stone benchtop" /></div>
+              <div><label style={label}>Description *</label><input style={{...input,borderColor:voForm._err&&!voForm.desc?_.red:_.line}} value={voForm.desc} onChange={e=>setVoForm({...voForm,desc:e.target.value,_err:false})} placeholder="Upgraded stone benchtop" /></div>
               <div><label style={label}>Category</label><input style={input} value={voForm.cat} onChange={e=>setVoForm({...voForm,cat:e.target.value})} placeholder="Kitchen" /></div>
-              <div><label style={label}>Amount (inc GST) *</label><input type="number" style={{...input,borderColor:voForm._err&&!voForm.amount?_.red:"transparent"}} value={voForm.amount} onChange={e=>setVoForm({...voForm,amount:e.target.value,_err:false})} placeholder="3500" /></div>
+              <div><label style={label}>Amount (inc GST) *</label><input type="number" style={{...input,borderColor:voForm._err&&!voForm.amount?_.red:_.line}} value={voForm.amount} onChange={e=>setVoForm({...voForm,amount:e.target.value,_err:false})} placeholder="3500" /></div>
               <div><label style={label}>Reason</label><input style={input} value={voForm.reason} onChange={e=>setVoForm({...voForm,reason:e.target.value})} placeholder="Owner selection change" /></div>
             </div>
             {voForm._err&&<div style={{fontSize:13,color:_.red,marginBottom:_.s2}}>Description and amount are required</div>}
@@ -800,12 +808,13 @@ export default function IBuild(){
         {tab==="diary"&&<Section key={anim}>
           <h1 style={{fontSize:28,fontWeight:600,letterSpacing:"-0.02em",marginBottom:_.s7}}>Site Diary</h1>
           <div style={{marginBottom:_.s7,paddingBottom:_.s6,borderBottom:`1px solid ${_.line}`}}>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:`${_.s3}px ${_.s4}px`,marginBottom:_.s3}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:`${_.s3}px ${_.s4}px`,marginBottom:_.s3}}>
+              <div><label style={label}>Date</label><input type="date" style={{...input,cursor:"pointer"}} value={diaryForm.date} onChange={e=>setDiaryForm({...diaryForm,date:e.target.value})} /></div>
               <div><label style={label}>Weather</label><select style={{...input,cursor:"pointer"}} value={diaryForm.weather} onChange={e=>setDiaryForm({...diaryForm,weather:e.target.value})}>{WEATHER.map(w=><option key={w}>{w}</option>)}</select></div>
               <div><label style={label}>Trades on site</label><input style={input} value={diaryForm.trades} onChange={e=>setDiaryForm({...diaryForm,trades:e.target.value})} placeholder="Plumber, Sparky" /></div>
             </div>
             <div><label style={label}>Notes</label><textarea style={{...input,minHeight:64,resize:"vertical"}} value={diaryForm.notes} onChange={e=>setDiaryForm({...diaryForm,notes:e.target.value})} placeholder="What happened on site today..." /></div>
-            <button onClick={()=>{if(!diaryForm.notes&&!diaryForm.trades){notify("Add notes","error");return}up(pr=>{pr.diary.unshift({date:ds(),...diaryForm});return pr});log("Diary: "+diaryForm.weather+(diaryForm.trades?", "+diaryForm.trades:""));setDiaryForm({weather:"Clear",trades:"",notes:""});notify("Logged")}} style={{...btnPrimary,marginTop:_.s3}}>Log entry</button>
+            <button onClick={()=>{if(!diaryForm.notes&&!diaryForm.trades){notify("Add notes","error");return}const entryDate=diaryForm.date?new Date(diaryForm.date+"T00:00:00").toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric"}):ds();up(pr=>{pr.diary.unshift({date:entryDate,weather:diaryForm.weather,trades:diaryForm.trades,notes:diaryForm.notes});return pr});log("Diary: "+diaryForm.weather+(diaryForm.trades?", "+diaryForm.trades:""));setDiaryForm({date:"",weather:"Clear",trades:"",notes:""});notify("Logged")}} style={{...btnPrimary,marginTop:_.s3}}>Log entry</button>
           </div>
           {p.diary.length===0&&<Empty icon={BookOpen} text="No entries yet" />}
           {p.diary.map((d,i)=>(
@@ -863,7 +872,7 @@ export default function IBuild(){
         {tab==="proposal"&&propView===null&&<Section key={anim}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:_.s7}}>
             <h1 style={{fontSize:28,fontWeight:600,letterSpacing:"-0.02em"}}>Proposals</h1>
-            {quoteReady&&<button onClick={()=>{const name=prompt("Proposal name",`Proposal v${p.proposals.length+1}`);if(!name)return;up(pr=>{pr.proposals.push({id:`PROP-${uid()}`,name,date:ds(),scope:JSON.parse(JSON.stringify(pr.scope)),client:pr.client,address:pr.address,suburb:pr.suburb,type:pr.type,stories:pr.stories,area:pr.area,notes:pr.notes,validDays:pr.validDays,pricing:{sub:T.sub,mar:T.mar,con:T.con,gst:T.gst,total:T.curr,margin:pr.margin,contingency:pr.contingency},sigData:null,status:"draft"});return pr});log("Proposal saved");notify("Proposal saved");setPropView(p.proposals.length)}} style={btnPrimary}><Plus size={14} /> New from current scope</button>}
+            {quoteReady&&<button onClick={()=>createProp()} style={btnPrimary}><Plus size={14} /> New from current scope</button>}
           </div>
           {!quoteReady&&<Empty icon={FileText} text="Complete your quote first" action={()=>go("quote")} actionText="Go to Quote" />}
           {quoteReady&&p.proposals.length===0&&<Empty icon={FileText} text="No proposals yet — save one from your current scope" />}
