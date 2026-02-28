@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { FileText, Ruler, Receipt, BookOpen, BarChart3, ClipboardList, Search, Wrench, FolderOpen, PenLine, Upload, Plus, ChevronRight, ChevronDown, X, Check, AlertTriangle, ArrowRight, Printer, ArrowUpRight, DollarSign } from "lucide-react";
+import { FileText, Ruler, Receipt, BookOpen, BarChart3, ClipboardList, Search, Wrench, FolderOpen, PenLine, Upload, Plus, ChevronRight, ChevronDown, X, Check, AlertTriangle, ArrowRight, Printer, ArrowUpRight, DollarSign, Menu } from "lucide-react";
 
 // ═══ RATE DATA ═══
 const RATES = {
@@ -229,6 +229,8 @@ export default function IBuild(){
   const [toast,setToast]=useState(null);
   const [anim,setAnim]=useState(0); // for tab transitions
   const [newMs,setNewMs]=useState("");
+  const [mobile,setMobile]=useState(window.innerWidth<768);
+  const [moreMenu,setMoreMenu]=useState(false);
 
   const sigRef=useRef(null),sigCtx=useRef(null),sigDr=useRef(false);
   const voSigRef=useRef(null),voSigCtx=useRef(null),voSigDr=useRef(false);
@@ -241,6 +243,7 @@ export default function IBuild(){
   const go=t2=>{setTab(t2);setVoView(null);setInvView(null);setPropView(null);setAnim(a=>a+1)};
   const log=action=>up(pr=>{pr.activity.unshift({action,time:ts(),date:ds()});if(pr.activity.length>30)pr.activity=pr.activity.slice(0,30);return pr});
 
+  useEffect(()=>{const h=()=>setMobile(window.innerWidth<768);window.addEventListener("resize",h);return()=>window.removeEventListener("resize",h)},[]);
   useEffect(()=>{(async()=>{try{const r=await window.storage.get("ibt8");if(r?.value)setTpl(JSON.parse(r.value))}catch{}})()},[]);
   const saveTpl=async t2=>{setTpl(t2);try{await window.storage.set("ibt8",JSON.stringify(t2))}catch{}};
   const uI=(cat,idx,k,v)=>up(pr=>{pr.scope[cat][idx][k]=v;if(k==="on"&&v&&!pr.scope[cat][idx].qty)pr.scope[cat][idx].qty=1;return pr});
@@ -304,7 +307,7 @@ export default function IBuild(){
       {toast&&<div style={{position:"fixed",top:16,left:"50%",transform:"translateX(-50%)",zIndex:999,padding:"10px 22px",borderRadius:_.rSm,fontSize:13,fontWeight:600,color:"#fff",background:toast.type==="error"?_.red:_.ac,boxShadow:"0 4px 12px rgba(0,0,0,0.15)",animation:"fadeUp 0.2s ease"}}>{toast.msg}</div>}
 
       {/* ═══ SIDEBAR ═══ */}
-      <aside style={{width:240,flexShrink:0,background:_.surface,borderRight:`1px solid ${_.line}`,display:"flex",flexDirection:"column"}}>
+      <aside style={{width:240,flexShrink:0,background:_.surface,borderRight:`1px solid ${_.line}`,display:mobile?"none":"flex",flexDirection:"column"}}>
         {/* Logo */}
         <div style={{padding:"16px 20px",display:"flex",alignItems:"center",gap:10,borderBottom:`1px solid ${_.line}`}}>
           <div style={{width:28,height:28,background:_.ac,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:"#fff"}}>i</div>
@@ -355,8 +358,29 @@ export default function IBuild(){
         </div>
       </aside>
 
+      {/* ═══ MOBILE HEADER ═══ */}
+      {mobile&&<div style={{position:"fixed",top:0,left:0,right:0,zIndex:50,background:_.surface,borderBottom:`1px solid ${_.line}`,padding:"10px 16px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <div style={{width:28,height:28,background:_.ac,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:"#fff"}}>i</div>
+          <span style={{fontSize:15,fontWeight:700,color:_.ink}}>iBuild</span>
+        </div>
+        <div onClick={()=>setSw(!sw)} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",background:_.well,borderRadius:_.rSm,cursor:"pointer",maxWidth:"55%"}}>
+          <div style={{fontSize:13,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{pName(p)}</div>
+          <ChevronDown size={14} color={_.muted} style={{flexShrink:0,transform:sw?"rotate(180deg)":"none",transition:"transform 0.15s"}} />
+        </div>
+      </div>}
+      {mobile&&sw&&<div style={{position:"fixed",top:52,left:8,right:8,zIndex:100,background:_.surface,borderRadius:_.r,boxShadow:"0 12px 36px rgba(0,0,0,0.12),0 0 0 1px rgba(0,0,0,0.04)",maxHeight:360,overflowY:"auto"}}>
+        {projects.map((pr,i)=>(
+          <div key={pr.id} style={{padding:"12px 14px",cursor:"pointer",background:i===ai?_.acLight:_.surface,display:"flex",justifyContent:"space-between",alignItems:"center",minHeight:44}} onClick={()=>{setAi(i);setSw(false)}}>
+            <div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{pName(pr)}</div><div style={{fontSize:11,color:_.muted,marginTop:1}}>{pr.type}</div></div>
+            <span style={badge(stCol(pr.status),stBg(pr.status))}>{pr.status}</span>
+          </div>
+        ))}
+        <div onClick={()=>{setProjects(pv=>[...pv,mkProject()]);setAi(projects.length);setSw(false);go("quote")}} style={{padding:"12px 14px",cursor:"pointer",color:_.ac,fontSize:13,fontWeight:600,textAlign:"center",borderTop:`1px solid ${_.line}`,minHeight:44}}>+ New Project</div>
+      </div>}
+
       {/* ═══ MAIN CONTENT ═══ */}
-      <main style={{flex:1,overflowY:"auto",padding:"32px 40px 64px"}}>
+      <main style={{flex:1,overflowY:"auto",padding:mobile?"72px 16px 88px":"32px 40px 64px"}}>
 
         {/* ════════════════════════════════════
             DASHBOARD
@@ -371,7 +395,7 @@ export default function IBuild(){
           </div>
 
           {/* Stat cards row */}
-          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:_.s4,marginBottom:_.s7}}>
+          <div style={{display:"grid",gridTemplateColumns:mobile?"repeat(2,1fr)":"repeat(4,1fr)",gap:_.s4,marginBottom:_.s7}}>
             {[["Pipeline",fmt(pipeV),`${allT.filter(x=>["Quote","Approved"].includes(x.status)).length} quotes`,_.amber],
               ["Active",fmt(actV),`${allT.filter(x=>x.status==="Active").length} jobs`,_.green],
               ["Outstanding",fmt(allT.reduce((s,x)=>s+x.inv-x.paid,0)),`${allT.reduce((s,x)=>s+x.invoices.filter(i2=>i2.status==="pending").length,0)} unpaid`,_.red],
@@ -395,7 +419,7 @@ export default function IBuild(){
               </div>
               <span style={badge(stCol(p.status),stBg(p.status))}>{p.status}</span>
             </div>
-            <div style={{fontSize:40,fontWeight:700,letterSpacing:"-0.03em",lineHeight:1,fontVariantNumeric:"tabular-nums",marginBottom:_.s5,color:_.ink}}>{fmt(T.curr)}</div>
+            <div style={{fontSize:mobile?28:40,fontWeight:700,letterSpacing:"-0.03em",lineHeight:1,fontVariantNumeric:"tabular-nums",marginBottom:_.s5,color:_.ink}}>{fmt(T.curr)}</div>
             {/* Stage dots */}
             <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:_.s2}}>
               {STAGES.map((s,i)=>(<div key={s} style={{display:"flex",alignItems:"center",gap:4}}>
@@ -415,7 +439,7 @@ export default function IBuild(){
           </div>
 
           {/* Attention + Activity */}
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:_.s5,marginBottom:_.s7}}>
+          <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"1fr 1fr",gap:_.s5,marginBottom:_.s7}}>
             <div style={card}>
               <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:_.s3}}>Needs attention</div>
               {alerts.length===0&&<div style={{fontSize:13,color:_.faint,padding:`${_.s3}px 0`}}>All clear</div>}
@@ -442,7 +466,7 @@ export default function IBuild(){
           </div>
 
           {/* Quick actions */}
-          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:_.s3}}>
+          <div style={{display:"grid",gridTemplateColumns:mobile?"repeat(2,1fr)":"repeat(4,1fr)",gap:_.s3}}>
             {[[PenLine,"New quote","quote"],[Upload,"Upload plans","plans"],[Receipt,"Invoice","invoices"],[BookOpen,"Site diary","diary"]].map(([Ic,l2,t2])=>(
               <div key={l2} onClick={()=>go(t2)} style={{...card,padding:16,cursor:"pointer",textAlign:"center",transition:"all 0.15s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=_.ac}} onMouseLeave={e=>{e.currentTarget.style.borderColor=_.line}}>
                 <div style={{marginBottom:6,display:"flex",justifyContent:"center"}}><Ic size={20} strokeWidth={1.5} color={_.muted} /></div>
@@ -472,7 +496,7 @@ export default function IBuild(){
           {/* Client details */}
           <div style={{marginBottom:_.s8}}>
             <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:_.s4}}>Client & Project</div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:`${_.s3}px ${_.s4}px`}}>
+            <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"1fr 1fr",gap:`${_.s3}px ${_.s4}px`}}>
               {[["Client name","client","Johnson Residence"],["Email","email","client@email.com"],["Phone","phone","0412 345 678"],["Site address","address","42 Smith St"],["Suburb","suburb","Richmond"],["Assigned to","assignedTo","Site manager name"],["Build type","type",""],["Storeys","stories",""],["Floor area (m\xB2)","area","280"]].map(([l2,k,ph])=>(
                 <div key={k}>
                   <label style={label}>{l2}</label>
@@ -483,7 +507,7 @@ export default function IBuild(){
               ))}
             </div>
             <div style={{marginTop:_.s3}}><label style={label}>Notes</label><textarea style={{...input,minHeight:56,resize:"vertical"}} value={p.notes} onChange={e=>up(pr=>{pr.notes=e.target.value;return pr})} placeholder="Scope notes, special requirements..." /></div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:_.s4,marginTop:_.s4}}>
+            <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"1fr 1fr 1fr",gap:_.s4,marginTop:_.s4}}>
               <div><label style={label}>Margin %</label><input type="number" style={{...input,textAlign:"center",fontWeight:600,fontSize:18}} value={p.margin} onChange={e=>up(pr=>{pr.margin=parseFloat(e.target.value)||0;return pr})} /></div>
               <div><label style={label}>Contingency %</label><input type="number" style={{...input,textAlign:"center",fontWeight:600,fontSize:18}} value={p.contingency} onChange={e=>up(pr=>{pr.contingency=parseFloat(e.target.value)||0;return pr})} /></div>
               <div><label style={label}>Status</label><select style={{...input,cursor:"pointer"}} value={p.status} onChange={e=>{const nv=e.target.value;up(pr=>{pr.status=nv;return pr});log("Status → "+nv)}}>{STAGES.map(s=><option key={s}>{s}</option>)}</select></div>
@@ -529,7 +553,7 @@ export default function IBuild(){
           {/* Summary */}
           {T.curr>0&&<div style={{...card,borderLeft:`4px solid ${_.ac}`,marginBottom:_.s6}}>
             <div style={{fontSize:12,color:_.muted,fontWeight:600,letterSpacing:"0.04em",textTransform:"uppercase",marginBottom:_.s3}}>Contract Total</div>
-            <div style={{fontSize:40,fontWeight:600,letterSpacing:"-0.04em",lineHeight:1,fontVariantNumeric:"tabular-nums",color:_.ink}}>{fmt(T.curr)}</div>
+            <div style={{fontSize:mobile?28:40,fontWeight:600,letterSpacing:"-0.04em",lineHeight:1,fontVariantNumeric:"tabular-nums",color:_.ink}}>{fmt(T.curr)}</div>
             <div style={{fontSize:13,color:_.muted,marginTop:_.s3,lineHeight:1.5}}>
               Sub {fmt(T.sub)} + {p.margin}% margin + {p.contingency}% contingency + GST
             </div>
@@ -597,7 +621,7 @@ export default function IBuild(){
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:16}}>
               <div>
                 <div style={{fontSize:11,color:_.ac,letterSpacing:"0.06em",fontWeight:600,textTransform:"uppercase",marginBottom:4}}>Build Progress</div>
-                <div style={{fontSize:48,fontWeight:600,letterSpacing:"-0.04em",lineHeight:1,fontVariantNumeric:"tabular-nums",color:_.ink}}>{p.milestones.length>0?Math.round((p.milestones.filter(m=>m.done).length/p.milestones.length)*100):0}<span style={{fontSize:20,color:_.muted}}>%</span></div>
+                <div style={{fontSize:mobile?36:48,fontWeight:600,letterSpacing:"-0.04em",lineHeight:1,fontVariantNumeric:"tabular-nums",color:_.ink}}>{p.milestones.length>0?Math.round((p.milestones.filter(m=>m.done).length/p.milestones.length)*100):0}<span style={{fontSize:mobile?16:20,color:_.muted}}>%</span></div>
               </div>
               <div style={{textAlign:"right"}}>
                 <div style={{fontSize:13,color:_.body}}>{p.milestones.findIndex(m=>!m.done)>=0?p.milestones[p.milestones.findIndex(m=>!m.done)].name:"All complete"}</div>
@@ -688,7 +712,7 @@ export default function IBuild(){
           <div style={{fontSize:14,color:_.muted,marginBottom:_.s7}}>Changes to original contract scope</div>
 
           {/* VO equation strip */}
-          <div style={{display:"flex",gap:_.s7,marginBottom:_.s7,paddingBottom:_.s6,borderBottom:`1px solid ${_.line}`,alignItems:"baseline"}}>
+          <div style={{display:"flex",gap:mobile?_.s4:_.s7,marginBottom:_.s7,paddingBottom:_.s6,borderBottom:`1px solid ${_.line}`,alignItems:"baseline",flexWrap:mobile?"wrap":"nowrap"}}>
             <div><div style={label}>Original</div><div style={{fontSize:22,fontWeight:700}}>{fmt(T.orig)}</div></div>
             <span style={{color:_.faint,fontSize:18}}>+</span>
             <div><div style={{...label,color:_.ac}}>Approved</div><div style={{fontSize:22,fontWeight:700,color:_.ac}}>{fmt(T.aV)}</div></div>
@@ -699,7 +723,7 @@ export default function IBuild(){
           {/* New VO form */}
           <div style={{marginBottom:_.s7,paddingBottom:_.s7,borderBottom:`1px solid ${_.line}`}}>
             <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:_.s4}}>New Variation</div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:`${_.s3}px ${_.s4}px`,marginBottom:_.s3}}>
+            <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"1fr 1fr",gap:`${_.s3}px ${_.s4}px`,marginBottom:_.s3}}>
               <div><label style={label}>Description *</label><input style={{...input,borderColor:voForm._err&&!voForm.desc?_.red:_.line}} value={voForm.desc} onChange={e=>setVoForm({...voForm,desc:e.target.value,_err:false})} placeholder="Upgraded stone benchtop" /></div>
               <div><label style={label}>Category</label><input style={input} value={voForm.cat} onChange={e=>setVoForm({...voForm,cat:e.target.value})} placeholder="Kitchen" /></div>
               <div><label style={label}>Amount (inc GST) *</label><input type="number" style={{...input,borderColor:voForm._err&&!voForm.amount?_.red:_.line}} value={voForm.amount} onChange={e=>setVoForm({...voForm,amount:e.target.value,_err:false})} placeholder="3500" /></div>
@@ -759,7 +783,7 @@ export default function IBuild(){
         {/* ════ INVOICES ════ */}
         {tab==="invoices"&&invView===null&&<Section key={anim}>
           <h1 style={{fontSize:28,fontWeight:600,letterSpacing:"-0.02em",marginBottom:_.s7}}>Invoices</h1>
-          <div style={{display:"flex",gap:_.s9,marginBottom:_.s5,alignItems:"baseline"}}>
+          <div style={{display:"flex",gap:mobile?_.s4:_.s9,marginBottom:_.s5,alignItems:"baseline",flexWrap:mobile?"wrap":"nowrap"}}>
             <div><div style={label}>Contract</div><div style={{fontSize:24,fontWeight:700}}>{fmt(T.curr)}</div></div>
             <div><div style={{...label,color:_.ac}}>Claimed</div><div style={{fontSize:24,fontWeight:700,color:_.ac}}>{fmt(T.inv)}</div></div>
             <div><div style={{...label,color:_.green}}>Paid</div><div style={{fontSize:24,fontWeight:700,color:_.green}}>{fmt(T.paid)}</div></div>
@@ -769,7 +793,7 @@ export default function IBuild(){
 
           <div style={{marginBottom:_.s7,paddingBottom:_.s6,borderBottom:`1px solid ${_.line}`}}>
             <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:_.s4}}>New Progress Claim</div>
-            <div style={{display:"grid",gridTemplateColumns:"80px 1fr auto",gap:_.s2,alignItems:"end"}}>
+            <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"80px 1fr auto",gap:_.s2,alignItems:mobile?"stretch":"end"}}>
               <div><label style={label}>%</label><input type="text" inputMode="decimal" style={{...input,fontSize:20,fontWeight:700,textAlign:"center"}} value={invPct} onChange={e=>{const v=e.target.value;if(v===""||/^\d*\.?\d*$/.test(v))setInvPct(v)}} placeholder="25" /></div>
               <div><label style={label}>Description</label><input style={input} value={invDesc} onChange={e=>setInvDesc(e.target.value)} placeholder="Frame stage" /></div>
               <button onClick={()=>{const pc=parseFloat(invPct);if(!pc){notify("Enter %","error");return}const amt=T.curr*(pc/100);up(pr=>{pr.invoices.push({id:`INV-${uid()}`,date:ds(),pct:pc,amount:amt,desc:invDesc||`Claim ${pr.invoices.length+1}`,status:"pending"});return pr});log(`Invoice: ${invDesc||"Claim"} (${fmt(amt)})`);notify(`Invoice — ${fmt(amt)}`);setInvPct("");setInvDesc("")}} style={btnPrimary}>Generate</button>
@@ -808,7 +832,7 @@ export default function IBuild(){
         {tab==="diary"&&<Section key={anim}>
           <h1 style={{fontSize:28,fontWeight:600,letterSpacing:"-0.02em",marginBottom:_.s7}}>Site Diary</h1>
           <div style={{marginBottom:_.s7,paddingBottom:_.s6,borderBottom:`1px solid ${_.line}`}}>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:`${_.s3}px ${_.s4}px`,marginBottom:_.s3}}>
+            <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"1fr 1fr 1fr",gap:`${_.s3}px ${_.s4}px`,marginBottom:_.s3}}>
               <div><label style={label}>Date</label><input type="date" style={{...input,cursor:"pointer"}} value={diaryForm.date} onChange={e=>setDiaryForm({...diaryForm,date:e.target.value})} /></div>
               <div><label style={label}>Weather</label><select style={{...input,cursor:"pointer"}} value={diaryForm.weather} onChange={e=>setDiaryForm({...diaryForm,weather:e.target.value})}>{WEATHER.map(w=><option key={w}>{w}</option>)}</select></div>
               <div><label style={label}>Trades on site</label><input style={input} value={diaryForm.trades} onChange={e=>setDiaryForm({...diaryForm,trades:e.target.value})} placeholder="Plumber, Sparky" /></div>
@@ -834,7 +858,7 @@ export default function IBuild(){
           <h1 style={{fontSize:28,fontWeight:600,letterSpacing:"-0.02em",marginBottom:4}}>Defects</h1>
           <div style={{fontSize:14,color:_.muted,marginBottom:_.s7}}>{p.defects.filter(d=>d.done).length} of {p.defects.length} resolved</div>
           <div style={{marginBottom:_.s7,paddingBottom:_.s6,borderBottom:`1px solid ${_.line}`}}>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:_.s4,marginBottom:_.s3}}>
+            <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"1fr 1fr 1fr",gap:_.s4,marginBottom:_.s3}}>
               <div><label style={label}>Location</label><input style={input} value={defectForm.location} onChange={e=>setDefectForm({...defectForm,location:e.target.value})} placeholder="Master ensuite" /></div>
               <div><label style={label}>Description *</label><input style={input} value={defectForm.desc} onChange={e=>setDefectForm({...defectForm,desc:e.target.value})} placeholder="Cracked tile" /></div>
               <div><label style={label}>Assigned to</label><input style={input} value={defectForm.assignee} onChange={e=>setDefectForm({...defectForm,assignee:e.target.value})} placeholder="Tiler" /></div>
@@ -854,7 +878,7 @@ export default function IBuild(){
         {tab==="trades"&&<Section key={anim}>
           <h1 style={{fontSize:28,fontWeight:600,letterSpacing:"-0.02em",marginBottom:_.s7}}>Trades</h1>
           <div style={{marginBottom:_.s7,paddingBottom:_.s6,borderBottom:`1px solid ${_.line}`}}>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:_.s4}}>
+            <div style={{display:"grid",gridTemplateColumns:mobile?"1fr 1fr":"1fr 1fr 1fr 1fr",gap:_.s4}}>
               {[["Trade","trade","Electrician"],["Company","company","Spark Bros"],["Contact","contact","Dave"],["Phone","phone","0412..."]].map(([l2,k,ph])=>(<div key={k}><label style={label}>{l2}</label><input style={input} value={trForm[k]} onChange={e=>setTrForm({...trForm,[k]:e.target.value})} placeholder={ph} /></div>))}
             </div>
             <button onClick={()=>{if(!trForm.trade){notify("Enter trade","error");return}up(pr=>{pr.trades.push({...trForm});return pr});log("Trade added: "+trForm.trade);setTrForm({trade:"",company:"",contact:"",phone:""});notify("Added")}} style={{...btnPrimary,marginTop:_.s3}}>Add trade</button>
@@ -938,6 +962,31 @@ export default function IBuild(){
         </Section>}
 
       </main>
+
+      {/* ═══ MOBILE BOTTOM TAB BAR ═══ */}
+      {mobile&&<nav style={{position:"fixed",bottom:0,left:0,right:0,zIndex:50,background:_.surface,borderTop:`1px solid ${_.line}`,display:"flex",justifyContent:"space-around",padding:"6px 0 env(safe-area-inset-bottom,6px)"}}>
+        {[{id:"dash",l:"Overview",Ic:BarChart3},{id:"quote",l:"Quote",Ic:PenLine},{id:"proposal",l:"Proposals",Ic:FileText},{id:"invoices",l:"Invoices",Ic:Receipt},{id:"diary",l:"Diary",Ic:BookOpen}].map(item=>(
+          <div key={item.id} onClick={()=>{go(item.id);setMoreMenu(false)}} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2,padding:"4px 0",minWidth:56,minHeight:44,justifyContent:"center",cursor:"pointer",color:tab===item.id&&!moreMenu?_.ac:_.muted,transition:"color 0.15s"}}>
+            <item.Ic size={20} strokeWidth={tab===item.id&&!moreMenu?2:1.5} />
+            <span style={{fontSize:10,fontWeight:tab===item.id&&!moreMenu?600:400}}>{item.l}</span>
+          </div>
+        ))}
+        <div onClick={()=>setMoreMenu(!moreMenu)} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2,padding:"4px 0",minWidth:56,minHeight:44,justifyContent:"center",cursor:"pointer",color:moreMenu?_.ac:_.muted,transition:"color 0.15s"}}>
+          <Menu size={20} strokeWidth={moreMenu?2:1.5} />
+          <span style={{fontSize:10,fontWeight:moreMenu?600:400}}>More</span>
+        </div>
+      </nav>}
+
+      {/* ═══ MOBILE MORE MENU ═══ */}
+      {mobile&&moreMenu&&<div onClick={()=>setMoreMenu(false)} style={{position:"fixed",inset:0,zIndex:48,background:"rgba(0,0,0,0.2)"}} />}
+      {mobile&&moreMenu&&<div style={{position:"fixed",bottom:64,left:0,right:0,zIndex:49,background:_.surface,borderTop:`1px solid ${_.line}`,borderRadius:"16px 16px 0 0",boxShadow:"0 -4px 24px rgba(0,0,0,0.08)",padding:"12px 0",animation:"fadeUp 0.2s ease"}}>
+        {[{id:"plans",l:"Plans AI",Ic:Ruler},{id:"costs",l:"Costs",Ic:DollarSign},{id:"schedule",l:"Schedule",Ic:ClipboardList},{id:"variations",l:"Variations",Ic:ArrowUpRight},{id:"defects",l:"Defects",Ic:AlertTriangle},{id:"trades",l:"Trades",Ic:Wrench},{id:"templates",l:"Templates",Ic:FolderOpen}].map(item=>(
+          <div key={item.id} onClick={()=>{go(item.id);setMoreMenu(false)}} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 20px",fontSize:14,cursor:"pointer",color:tab===item.id?_.ac:_.body,fontWeight:tab===item.id?600:400,minHeight:44,transition:"background 0.1s"}} onMouseEnter={e=>e.currentTarget.style.background=_.well} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+            <item.Ic size={18} strokeWidth={tab===item.id?2:1.5} />
+            {item.l}
+          </div>
+        ))}
+      </div>}
 
       <style>{`
         *{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;box-sizing:border-box}
