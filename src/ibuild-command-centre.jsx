@@ -259,7 +259,7 @@ export default function IBuild(){
   const quoteReady=p.client&&T.items>0;
   const quoteSent=["Approved","Active","Invoiced","Complete"].includes(p.status);
   const recentActivity=projects.flatMap((pr,idx)=>(pr.activity||[]).slice(0,4).map(a=>({...a,project:pName(pr),idx}))).slice(0,8);
-  const tabs=[{id:"dash",l:"Overview"},{id:"pipeline",l:"Pipeline"},{id:"quote",l:"Quote"},{id:"plans",l:"Plans AI"},{id:"costs",l:"Costs"},{id:"schedule",l:"Schedule"},{id:"variations",l:"VOs"},{id:"invoices",l:"Invoices"},{id:"diary",l:"Diary"},{id:"defects",l:"Defects"},{id:"trades",l:"Trades"},{id:"proposal",l:"Proposal"},{id:"templates",l:"Templates"}];
+  const tabs=[{id:"dash",l:"Overview"},{id:"pipeline",l:"Pipeline"},{id:"client",l:"Client"},{id:"quote",l:"Quote"},{id:"plans",l:"Plans AI"},{id:"costs",l:"Costs"},{id:"schedule",l:"Schedule"},{id:"variations",l:"VOs"},{id:"invoices",l:"Invoices"},{id:"diary",l:"Diary"},{id:"defects",l:"Defects"},{id:"trades",l:"Trades"},{id:"proposal",l:"Proposal"},{id:"templates",l:"Templates"}];
 
   // (Empty and Section moved to module level to prevent remount-on-keystroke bug)
 
@@ -449,6 +449,22 @@ export default function IBuild(){
                   </div>
                 </div>)})}
             </div>)})}
+        </Section>}
+
+        {/* ════ CLIENT — Contact info ════ */}
+        {tab==="client"&&<Section key={anim}>
+          <h1 style={{fontSize:36,fontWeight:300,letterSpacing:"-0.04em",marginBottom:_.s6}}>Client</h1>
+          <div style={{marginBottom:_.s8}}>
+            <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:_.s4}}>Contact Information</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr",gap:_.s3}}>
+              {[["Client name","client","Johnson Residence"],["Email","email","client@email.com"],["Phone","phone","0412 345 678"],["Site address","address","42 Smith St"],["Suburb","suburb","Richmond"]].map(([l2,k,ph])=>(
+                <div key={k}>
+                  <label style={label}>{l2}</label>
+                  <input style={input} value={p[k]} onChange={e=>up(pr=>{pr[k]=e.target.value;return pr})} placeholder={ph} />
+                </div>
+              ))}
+            </div>
+          </div>
         </Section>}
 
         {/* ════ QUOTE — Clean guided flow ════ */}
@@ -783,7 +799,7 @@ export default function IBuild(){
           <div style={{marginBottom:_.s7,paddingBottom:_.s6,borderBottom:`1px solid ${_.line}`}}>
             <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:_.s4}}>New Progress Claim</div>
             <div style={{display:"grid",gridTemplateColumns:"80px 1fr auto",gap:_.s2,alignItems:"end"}}>
-              <div><label style={label}>%</label><input type="number" style={{...input,fontSize:20,fontWeight:700,textAlign:"center"}} value={invPct} onChange={e=>setInvPct(e.target.value)} placeholder="25" /></div>
+              <div><label style={label}>%</label><input type="text" inputMode="decimal" style={{...input,fontSize:20,fontWeight:700,textAlign:"center"}} value={invPct} onChange={e=>{const v=e.target.value;if(v===""||/^\d*\.?\d*$/.test(v))setInvPct(v)}} placeholder="25" /></div>
               <div><label style={label}>Description</label><input style={input} value={invDesc} onChange={e=>setInvDesc(e.target.value)} placeholder="Frame stage" /></div>
               <button onClick={()=>{const pc=parseFloat(invPct);if(!pc){notify("Enter %","error");return}const amt=T.curr*(pc/100);up(pr=>{pr.invoices.push({id:`INV-${uid()}`,date:ds(),pct:pc,amount:amt,desc:invDesc||`Claim ${pr.invoices.length+1}`,status:"pending"});return pr});log(`Invoice: ${invDesc||"Claim"} (${fmt(amt)})`);notify(`Invoice — ${fmt(amt)}`);setInvPct("");setInvDesc("")}} style={btnPrimary}>Generate</button>
             </div>
