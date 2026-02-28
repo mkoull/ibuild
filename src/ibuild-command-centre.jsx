@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { FileText, Ruler, Receipt, BookOpen, BarChart3, ClipboardList, Search, Wrench, FolderOpen, PenLine, Upload, Plus, ChevronRight, ChevronDown, X, Check, AlertTriangle, ArrowRight, Printer, ArrowUpRight } from "lucide-react";
+import { FileText, Ruler, Receipt, BookOpen, BarChart3, ClipboardList, Search, Wrench, FolderOpen, PenLine, Upload, Plus, ChevronRight, ChevronDown, X, Check, AlertTriangle, ArrowRight, Printer, ArrowUpRight, DollarSign } from "lucide-react";
 
 // ═══ RATE DATA ═══
 const RATES = {
@@ -106,56 +106,75 @@ const sIdx=s=>STAGES.indexOf(s);
 const mkProject=()=>({id:uid(),status:"Lead",created:ds(),client:"",email:"",phone:"",address:"",suburb:"",assignedTo:"",type:"New Build",stories:"Single Storey",area:"",validDays:30,scope:mkScope(),margin:18,contingency:5,notes:"",variations:[],invoices:[],proposals:[],milestones:MILESTONES.map(m=>({name:m.name,wk:m.wk,done:false,date:"",planned:""})),trades:[],diary:[],defects:[],sigData:null,activity:[{action:"Project created",time:ts(),date:ds()}]});
 
 // ═══════════════════════════════════════════════
-// DESIGN SYSTEM — Apple / Xero clean minimal
-// Maximum whitespace, minimal borders, nothing heavy.
+// DESIGN SYSTEM — Buildxact-inspired clean professional
 // ═══════════════════════════════════════════════
 const _ = {
-  bg:"#f5f5f7",
+  bg:"#f0f2f5",
   surface:"#ffffff",
   raised:"#ffffff",
-  well:"#f9f9fb",
-  line:"#e5e5e7",
-  line2:"#d1d1d6",
-  ink:"#1d1d1f",
-  body:"#6e6e73",
-  muted:"#aeaeb2",
-  faint:"#d1d1d6",
-  ac:"#1a73e8",
-  acDark:"#1557b0",
-  acLight:"#e8f0fe",
-  acBorder:"#c5d9f5",
-  green:"#34c759",greenBg:"#eafbef",
-  red:"#ff3b30",redBg:"#fff5f5",
-  amber:"#ff9f0a",amberBg:"#fff8eb",
-  blue:"#1a73e8",blueBg:"#e8f0fe",
-  violet:"#6d28d9",
+  well:"#f4f5f7",
+  line:"#DFE1E6",
+  line2:"#C1C7D0",
+  ink:"#172B4D",
+  body:"#5E6C84",
+  muted:"#97A0AF",
+  faint:"#C1C7D0",
+  ac:"#0066FF",
+  acDark:"#0052CC",
+  acLight:"#DEEBFF",
+  acBorder:"#B3D4FF",
+  green:"#36B37E",greenBg:"#E3FCEF",
+  red:"#FF5630",redBg:"#FFEBE6",
+  amber:"#FFAB00",amberBg:"#FFFAE6",
+  blue:"#0066FF",blueBg:"#DEEBFF",
+  violet:"#6554C0",
   s1:4,s2:8,s3:12,s4:16,s5:20,s6:24,s7:32,s8:40,s9:48,s10:64,
-  r:"12px",rSm:"10px",rXs:"8px",rFull:"999px",
+  r:"8px",rSm:"6px",rXs:"4px",rFull:"999px",
 };
 
 const input = {
-  width:"100%",padding:"10px 14px",background:"#fff",border:"1px solid #e5e5e7",
+  width:"100%",padding:"8px 12px",background:"#fff",border:`1px solid ${_.line}`,
   borderRadius:_.rXs,color:_.ink,fontSize:14,fontFamily:"inherit",outline:"none",
-  transition:"all 0.2s ease",letterSpacing:"-0.005em",
+  transition:"all 0.15s",
 };
 const label = {
   fontSize:11,color:_.muted,marginBottom:4,display:"block",fontWeight:600,
   letterSpacing:"0.04em",textTransform:"uppercase",
 };
 const btnPrimary = {
-  padding:"10px 22px",background:_.ac,color:"#fff",border:"none",borderRadius:_.rFull,
-  fontSize:14,fontWeight:600,cursor:"pointer",transition:"all 0.2s ease",
-  display:"inline-flex",alignItems:"center",gap:6,letterSpacing:"-0.01em",
+  padding:"8px 16px",background:_.ac,color:"#fff",border:"none",borderRadius:_.rSm,
+  fontSize:13,fontWeight:600,cursor:"pointer",transition:"all 0.15s",
+  display:"inline-flex",alignItems:"center",gap:6,
 };
 const btnSecondary = {
   ...btnPrimary,background:_.well,color:_.body,border:`1px solid ${_.line}`,
 };
 const btnGhost = {
-  ...btnPrimary,background:"transparent",color:_.body,padding:"10px 16px",
+  ...btnPrimary,background:"transparent",color:_.body,padding:"8px 12px",
 };
+const card = {background:_.surface,borderRadius:_.r,border:`1px solid ${_.line}`,padding:24};
 const stCol=s=>s==="Active"||s==="Invoiced"?_.green:s==="Approved"?_.blue:s==="Complete"?_.ac:s==="Quote"?_.violet:_.amber;
-const stBg=s=>s==="Active"||s==="Invoiced"?_.greenBg:s==="Approved"?_.blueBg:s==="Complete"?_.acLight:s==="Quote"?"#f3f0ff":_.amberBg;
-const badge=(c,bg)=>({fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:_.rFull,background:bg||`${c}10`,color:c,letterSpacing:"0.01em"});
+const stBg=s=>s==="Active"||s==="Invoiced"?_.greenBg:s==="Approved"?_.blueBg:s==="Complete"?_.acLight:s==="Quote"?"#EAE6FF":_.amberBg;
+const badge=(c,bg)=>({fontSize:11,fontWeight:600,padding:"2px 8px",borderRadius:_.rFull,background:bg||`${c}15`,color:c});
+
+const NAV_ITEMS=[
+  {group:"PROJECT",items:[
+    {id:"dash",l:"Overview",Ic:BarChart3},{id:"quote",l:"Quote",Ic:PenLine},
+    {id:"plans",l:"Plans AI",Ic:Ruler},{id:"costs",l:"Costs",Ic:DollarSign},
+    {id:"schedule",l:"Schedule",Ic:ClipboardList},
+  ]},
+  {group:"DOCUMENTS",items:[
+    {id:"proposal",l:"Proposals",Ic:FileText},{id:"variations",l:"Variations",Ic:ArrowUpRight},
+    {id:"invoices",l:"Invoices",Ic:Receipt},
+  ]},
+  {group:"SITE",items:[
+    {id:"diary",l:"Diary",Ic:BookOpen},{id:"defects",l:"Defects",Ic:AlertTriangle},
+    {id:"trades",l:"Trades",Ic:Wrench},
+  ]},
+  {group:"TOOLS",items:[
+    {id:"templates",l:"Templates",Ic:FolderOpen},
+  ]},
+];
 
 // ═══ Stable components — MUST live outside IBuild to avoid remount on every keystroke ═══
 const Empty=({icon:Ic,text,action,actionText})=>(
@@ -165,7 +184,7 @@ const Empty=({icon:Ic,text,action,actionText})=>(
     {action&&<button onClick={action} style={{...btnPrimary,marginTop:_.s5}}>{actionText} <ArrowRight size={14} /></button>}
   </div>
 );
-const Section=({children})=>(<div style={{animation:"fadeUp 0.3s ease",maxWidth:800}}>{children}</div>);
+const Section=({children})=>(<div style={{animation:"fadeUp 0.3s ease",maxWidth:960}}>{children}</div>);
 
 function calc(p){
   const sub=Object.values(p.scope).flat().filter(i=>i.on).reduce((t,i)=>t+i.rate*i.qty,0);
@@ -251,93 +270,133 @@ export default function IBuild(){
   const quoteReady=p.client&&T.items>0;
   const quoteSent=["Approved","Active","Invoiced","Complete"].includes(p.status);
   const recentActivity=projects.flatMap((pr,idx)=>(pr.activity||[]).slice(0,4).map(a=>({...a,project:pName(pr),idx}))).slice(0,8);
-  const tabs=[{id:"dash",l:"Overview"},{id:"pipeline",l:"Pipeline"},{id:"client",l:"Client"},{id:"quote",l:"Quote"},{id:"plans",l:"Plans AI"},{id:"costs",l:"Costs"},{id:"schedule",l:"Schedule"},{id:"variations",l:"VOs"},{id:"invoices",l:"Invoices"},{id:"diary",l:"Diary"},{id:"defects",l:"Defects"},{id:"trades",l:"Trades"},{id:"proposal",l:"Proposal"},{id:"templates",l:"Templates"}];
+  // Pre-compute detail views (eliminates IIFEs that caused focus bugs)
+  const ganttMaxWk=Math.max(...p.milestones.map(m=>m.wk||0),36);
+  const ganttLastDoneIdx=[...p.milestones].reverse().findIndex(m=>m.done);
+  const ganttLastDone=ganttLastDoneIdx>=0?p.milestones[p.milestones.length-1-ganttLastDoneIdx]:null;
+  const ganttPct=ganttLastDone?((ganttLastDone.wk||0)/ganttMaxWk)*100:0;
 
-  // (Empty and Section moved to module level to prevent remount-on-keystroke bug)
+  const voD=voView!==null&&p.variations[voView]?p.variations[voView]:null;
+  const voCB=voView!==null?T.orig+p.variations.slice(0,voView).filter(x=>x.status==="approved").reduce((s,x)=>s+x.amount,0):0;
+
+  const invD=invView!==null&&p.invoices[invView]?p.invoices[invView]:null;
+  const invGst=invD?invD.amount/11:0;
+
+  const propD=propView!==null&&p.proposals[propView]?p.proposals[propView]:null;
+  const propDCats=propD?Object.entries(propD.scope).filter(([,items])=>items.some(x=>x.on)):[];
+  const propCT=(sc,c2)=>sc[c2].filter(i=>i.on).reduce((t,i)=>t+i.rate*i.qty,0);
 
   // ═══════════════════════════════════════════════
   // RENDER
   // ═══════════════════════════════════════════════
   return(
-    <div style={{minHeight:"100vh",background:_.bg,color:_.ink,fontFamily:"'Inter',-apple-system,BlinkMacSystemFont,sans-serif",letterSpacing:"-0.011em"}}>
+    <div style={{display:"flex",height:"100vh",background:_.bg,color:_.ink,fontFamily:"'Inter',-apple-system,BlinkMacSystemFont,sans-serif"}}>
 
       {/* Toast */}
-      {toast&&<div style={{position:"fixed",top:16,left:"50%",transform:"translateX(-50%)",zIndex:999,padding:"10px 22px",borderRadius:_.rFull,fontSize:13,fontWeight:600,color:"#fff",background:toast.type==="error"?_.red:_.ink,boxShadow:"0 8px 30px rgba(0,0,0,0.12)",animation:"fadeUp 0.2s ease"}}>{toast.msg}</div>}
+      {toast&&<div style={{position:"fixed",top:16,left:"50%",transform:"translateX(-50%)",zIndex:999,padding:"10px 22px",borderRadius:_.rSm,fontSize:13,fontWeight:600,color:"#fff",background:toast.type==="error"?_.red:_.ac,boxShadow:"0 4px 12px rgba(0,0,0,0.15)",animation:"fadeUp 0.2s ease"}}>{toast.msg}</div>}
 
-      {/* ═══ HEADER — minimal, sticky ═══ */}
-      <header style={{padding:`${_.s3}px ${_.s5}px`,background:"rgba(245,245,247,0.85)",backdropFilter:"blur(16px)",WebkitBackdropFilter:"blur(16px)",borderBottom:`1px solid ${_.line}`,display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,zIndex:50}}>
-        <div style={{display:"flex",alignItems:"center",gap:_.s3}}>
-          <div style={{width:28,height:28,background:_.ink,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:_.bg}}>i</div>
-          <span style={{fontSize:15,fontWeight:700,letterSpacing:"-0.02em"}}>iBuild</span>
-
+      {/* ═══ SIDEBAR ═══ */}
+      <aside style={{width:240,flexShrink:0,background:_.surface,borderRight:`1px solid ${_.line}`,display:"flex",flexDirection:"column"}}>
+        {/* Logo */}
+        <div style={{padding:"16px 20px",display:"flex",alignItems:"center",gap:10,borderBottom:`1px solid ${_.line}`}}>
+          <div style={{width:28,height:28,background:_.ac,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:"#fff"}}>i</div>
+          <span style={{fontSize:15,fontWeight:700,color:_.ink}}>iBuild</span>
         </div>
-        <div style={{position:"relative"}}>
-          <div onClick={()=>setSw(!sw)} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 14px",background:_.surface,borderRadius:_.rFull,cursor:"pointer",fontSize:13,fontWeight:600,boxShadow:"0 1px 3px rgba(0,0,0,0.04)",border:`1px solid ${_.line}`}}>
-            <span style={{maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{pName(p)}</span>
-            <ChevronDown size={13} strokeWidth={2.5} color={_.muted} />
+
+        {/* Project switcher */}
+        <div style={{padding:"12px 16px",borderBottom:`1px solid ${_.line}`,position:"relative",zIndex:30}}>
+          <div onClick={()=>setSw(!sw)} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 12px",background:_.well,borderRadius:_.rSm,cursor:"pointer",transition:"all 0.15s"}} onMouseEnter={e=>e.currentTarget.style.background=_.line} onMouseLeave={e=>e.currentTarget.style.background=_.well}>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:13,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{pName(p)}</div>
+              <div style={{fontSize:11,color:_.muted,marginTop:1}}>{p.status} · {p.type}</div>
+            </div>
+            <ChevronDown size={14} color={_.muted} style={{flexShrink:0,transform:sw?"rotate(180deg)":"none",transition:"transform 0.15s"}} />
           </div>
-          {sw&&<div style={{position:"absolute",top:"calc(100% + 6px)",right:0,background:_.surface,borderRadius:_.r,width:300,zIndex:100,boxShadow:"0 16px 48px rgba(0,0,0,0.10),0 0 0 1px rgba(0,0,0,0.04)",overflow:"hidden",maxHeight:400,overflowY:"auto"}}>
+          {sw&&<div style={{position:"absolute",top:"100%",left:8,right:8,background:_.surface,borderRadius:_.r,zIndex:100,boxShadow:"0 12px 36px rgba(0,0,0,0.12),0 0 0 1px rgba(0,0,0,0.04)",maxHeight:360,overflowY:"auto",marginTop:4}}>
             {projects.map((pr,i)=>(
-              <div key={pr.id} style={{padding:"12px 16px",cursor:"pointer",background:i===ai?_.well:_.surface,display:"flex",justifyContent:"space-between",alignItems:"center",transition:"background 0.1s"}} onClick={()=>{setAi(i);setSw(false)}}>
-                <div><div style={{fontSize:13,fontWeight:600}}>{pName(pr)}</div><div style={{fontSize:11,color:_.muted,marginTop:2}}>{pr.type}{pr.assignedTo?` · ${pr.assignedTo}`:""}{calc(pr).curr>0?` · ${fmt(calc(pr).curr)}`:""}</div></div>
-                <div style={{display:"flex",gap:4,alignItems:"center"}}>
+              <div key={pr.id} style={{padding:"10px 14px",cursor:"pointer",background:i===ai?_.acLight:_.surface,display:"flex",justifyContent:"space-between",alignItems:"center",transition:"background 0.1s"}} onClick={()=>{setAi(i);setSw(false)}} onMouseEnter={e=>{if(i!==ai)e.currentTarget.style.background=_.well}} onMouseLeave={e=>{e.currentTarget.style.background=i===ai?_.acLight:_.surface}}>
+                <div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{pName(pr)}</div><div style={{fontSize:11,color:_.muted,marginTop:1}}>{pr.type}{calc(pr).curr>0?` · ${fmt(calc(pr).curr)}`:""}</div></div>
+                <div style={{display:"flex",gap:4,alignItems:"center",flexShrink:0}}>
                   <span style={badge(stCol(pr.status),stBg(pr.status))}>{pr.status}</span>
-                  <div onClick={e=>{e.stopPropagation();dupeProject(i)}} style={{cursor:"pointer",color:_.faint,display:"flex",padding:2,transition:"color 0.15s"}} onMouseEnter={e=>e.currentTarget.style.color=_.body} onMouseLeave={e=>e.currentTarget.style.color=_.faint}><Plus size={14} /></div>
+                  <div onClick={e=>{e.stopPropagation();dupeProject(i)}} style={{cursor:"pointer",color:_.faint,display:"flex",padding:2}} onMouseEnter={e=>e.currentTarget.style.color=_.body} onMouseLeave={e=>e.currentTarget.style.color=_.faint}><Plus size={14} /></div>
                 </div>
               </div>
             ))}
-            <div onClick={()=>{setProjects(pv=>[...pv,mkProject()]);setAi(projects.length);setSw(false);go("quote")}} style={{padding:"12px 16px",cursor:"pointer",color:_.ac,fontSize:13,fontWeight:600,textAlign:"center",borderTop:`1px solid ${_.line}`}}>+ New Project</div>
+            <div onClick={()=>{setProjects(pv=>[...pv,mkProject()]);setAi(projects.length);setSw(false);go("quote")}} style={{padding:"10px 14px",cursor:"pointer",color:_.ac,fontSize:13,fontWeight:600,textAlign:"center",borderTop:`1px solid ${_.line}`}}>+ New Project</div>
           </div>}
         </div>
-      </header>
 
-      {/* ═══ NAV — underline tabs, not pills ═══ */}
-      <nav style={{display:"flex",overflowX:"auto",padding:`0 ${_.s5}px`,gap:0,background:_.surface,borderBottom:`1px solid ${_.line}`}}>
-        {tabs.map(t2=>(
-          <div key={t2.id} onClick={()=>go(t2.id)} style={{
-            padding:`${_.s3}px ${_.s4}px`,cursor:"pointer",fontSize:13,fontWeight:tab===t2.id?600:400,
-            color:tab===t2.id?_.ink:_.muted,
-            borderBottom:tab===t2.id?`2px solid ${_.ac}`:"2px solid transparent",
-            whiteSpace:"nowrap",flexShrink:0,transition:"all 0.15s ease",marginBottom:-1,
-          }}>{t2.l}</div>
-        ))}
-      </nav>
+        {/* Nav groups */}
+        <div style={{flex:1,overflowY:"auto",padding:"8px 0"}}>
+          {NAV_ITEMS.map(g=>(
+            <div key={g.group} style={{marginBottom:12}}>
+              <div style={{padding:"8px 20px",fontSize:10,fontWeight:700,color:_.muted,letterSpacing:"0.08em",textTransform:"uppercase"}}>{g.group}</div>
+              {g.items.map(item=>(
+                <div key={item.id} onClick={()=>go(item.id)} style={{
+                  display:"flex",alignItems:"center",gap:10,padding:"7px 20px",fontSize:13,cursor:"pointer",
+                  background:tab===item.id?_.acLight:"transparent",color:tab===item.id?_.ac:_.body,
+                  fontWeight:tab===item.id?600:400,borderLeft:tab===item.id?`3px solid ${_.ac}`:"3px solid transparent",
+                  transition:"all 0.12s",
+                }} onMouseEnter={e=>{if(tab!==item.id)e.currentTarget.style.background=_.well}} onMouseLeave={e=>{if(tab!==item.id)e.currentTarget.style.background="transparent"}}>
+                  <item.Ic size={16} strokeWidth={tab===item.id?2:1.5} />
+                  {item.l}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </aside>
 
-      {/* ═══ CONTENT ═══ */}
-      <main style={{padding:`${_.s7}px ${_.s5}px ${_.s10}px`,maxWidth:900,margin:"0 auto",width:"100%"}}>
+      {/* ═══ MAIN CONTENT ═══ */}
+      <main style={{flex:1,overflowY:"auto",padding:"32px 40px 64px"}}>
 
         {/* ════════════════════════════════════
-            DASHBOARD — Hero section
+            DASHBOARD
         ════════════════════════════════════ */}
         {tab==="dash"&&<Section key={anim}>
-          {/* Hero */}
-          <div style={{marginBottom:_.s9}}>
-            <div style={{fontSize:14,color:_.muted,fontWeight:500,marginBottom:_.s2}}>
-              {ds()} · {projects.length} project{projects.length!==1?"s":""}
-            </div>
-            <h1 style={{fontSize:38,fontWeight:600,letterSpacing:"-0.03em",lineHeight:1,marginBottom:_.s2}}>
+          {/* Header */}
+          <div style={{marginBottom:_.s7}}>
+            <div style={{fontSize:13,color:_.muted,marginBottom:_.s1}}>{ds()} · {projects.length} project{projects.length!==1?"s":""}</div>
+            <h1 style={{fontSize:28,fontWeight:700,letterSpacing:"-0.02em",margin:0}}>
               Good {new Date().getHours()<12?"morning":new Date().getHours()<17?"afternoon":"evening"}.
             </h1>
-            {p.client&&<div style={{fontSize:18,color:_.body,fontWeight:400,letterSpacing:"-0.01em"}}>{pName(p)}</div>}
           </div>
 
-          {/* Hero project card — white with blue left accent */}
-          <div style={{background:_.surface,borderRadius:_.r,padding:`${_.s7}px`,border:`1px solid ${_.line}`,borderLeft:`4px solid ${_.ac}`,boxShadow:"0 1px 3px rgba(0,0,0,0.04)",marginBottom:_.s7}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:_.s5}}>
+          {/* Stat cards row */}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:_.s4,marginBottom:_.s7}}>
+            {[["Pipeline",fmt(pipeV),`${allT.filter(x=>["Quote","Approved"].includes(x.status)).length} quotes`,_.amber],
+              ["Active",fmt(actV),`${allT.filter(x=>x.status==="Active").length} jobs`,_.green],
+              ["Outstanding",fmt(allT.reduce((s,x)=>s+x.inv-x.paid,0)),`${allT.reduce((s,x)=>s+x.invoices.filter(i2=>i2.status==="pending").length,0)} unpaid`,_.red],
+              ["Contract",fmt(T.curr),`${T.items} items`,_.ac],
+            ].map(([lb,val,sub,c])=>(
+              <div key={lb} style={{...card,padding:20}}>
+                <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:_.s2}}>{lb}</div>
+                <div style={{fontSize:24,fontWeight:700,letterSpacing:"-0.02em",color:_.ink,lineHeight:1,fontVariantNumeric:"tabular-nums"}}>{val}</div>
+                <div style={{fontSize:12,color:c,fontWeight:500,marginTop:_.s1}}>{sub}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Current project card */}
+          <div style={{...card,borderLeft:`4px solid ${_.ac}`,marginBottom:_.s7}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:_.s4}}>
               <div>
                 <div style={{fontSize:11,color:_.ac,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:_.s1}}>Current project</div>
-                <div style={{fontSize:20,fontWeight:600,letterSpacing:"-0.02em",color:_.ink}}>{pName(p)}</div>
+                <div style={{fontSize:20,fontWeight:600,color:_.ink}}>{pName(p)}</div>
                 {(p.address||p.assignedTo)&&<div style={{fontSize:13,color:_.muted,marginTop:2}}>{p.type}{p.area?` · ${p.area}m²`:""}{p.assignedTo?` · ${p.assignedTo}`:""}</div>}
               </div>
               <span style={badge(stCol(p.status),stBg(p.status))}>{p.status}</span>
             </div>
-            <div style={{fontSize:48,fontWeight:600,letterSpacing:"-0.04em",lineHeight:1,fontVariantNumeric:"tabular-nums",marginBottom:_.s5,color:_.ink}}>{fmt(T.curr)}</div>
-            {/* Stage progress bar */}
-            <div style={{display:"flex",gap:2,marginBottom:_.s2}}>
-              {STAGES.map((s,i)=>(<div key={s} style={{flex:1,height:4,borderRadius:2,background:i<=sIdx(p.status)?_.ac:_.line,transition:"background 0.3s"}} />))}
+            <div style={{fontSize:40,fontWeight:700,letterSpacing:"-0.03em",lineHeight:1,fontVariantNumeric:"tabular-nums",marginBottom:_.s5,color:_.ink}}>{fmt(T.curr)}</div>
+            {/* Stage dots */}
+            <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:_.s2}}>
+              {STAGES.map((s,i)=>(<div key={s} style={{display:"flex",alignItems:"center",gap:4}}>
+                <div style={{width:10,height:10,borderRadius:"50%",background:i<=sIdx(p.status)?_.ac:_.line,transition:"background 0.3s"}} title={s} />
+                {i<STAGES.length-1&&<div style={{width:20,height:2,background:i<sIdx(p.status)?_.ac:_.line,transition:"background 0.3s"}} />}
+              </div>))}
             </div>
-            <div style={{display:"flex",justifyContent:"space-between",fontSize:10,marginBottom:_.s5}}>
-              {STAGES.map((s,i)=>(<span key={s} style={{color:i<=sIdx(p.status)?_.ac:_.faint,fontWeight:i===sIdx(p.status)?700:500}}>{s}</span>))}
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:_.muted,marginBottom:_.s5}}>
+              {STAGES.map((s,i)=>(<span key={s} style={{color:i<=sIdx(p.status)?_.ac:_.faint,fontWeight:i===sIdx(p.status)?700:400}}>{s}</span>))}
             </div>
             <div style={{display:"flex",gap:_.s2}}>
               {!quoteReady&&<button onClick={()=>go("quote")} style={btnPrimary}>Build quote <ArrowRight size={14} /></button>}
@@ -347,39 +406,24 @@ export default function IBuild(){
             </div>
           </div>
 
-          {/* Horizontal stat strip — NOT boxed cards */}
-          <div style={{display:"flex",gap:_.s9,marginBottom:_.s8,paddingBottom:_.s7,borderBottom:`1px solid ${_.line}`}}>
-            {[["Pipeline",fmt(pipeV),`${allT.filter(x=>["Quote","Approved"].includes(x.status)).length} quotes`,_.amber],
-              ["Active",fmt(actV),`${allT.filter(x=>x.status==="Active").length} jobs`,_.green],
-              ["Outstanding",fmt(allT.reduce((s,x)=>s+x.inv-x.paid,0)),`${allT.reduce((s,x)=>s+x.invoices.filter(i2=>i2.status==="pending").length,0)} unpaid`,_.red],
-              ["Contract",fmt(T.curr),`${T.items} items`,_.ac],
-            ].map(([lb,val,sub,c])=>(
-              <div key={lb}>
-                <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:_.s2}}>{lb}</div>
-                <div style={{fontSize:28,fontWeight:700,letterSpacing:"-0.03em",color:_.ink,lineHeight:1,fontVariantNumeric:"tabular-nums"}}>{val}</div>
-                <div style={{fontSize:12,color:c,fontWeight:500,marginTop:_.s1}}>{sub}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* Two-column: Alerts + Activity */}
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:_.s6,marginBottom:_.s7}}>
-            <div>
+          {/* Attention + Activity */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:_.s5,marginBottom:_.s7}}>
+            <div style={card}>
               <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:_.s3}}>Needs attention</div>
-              {alerts.length===0&&<div style={{fontSize:13,color:_.faint,padding:`${_.s4}px 0`}}>All clear</div>}
+              {alerts.length===0&&<div style={{fontSize:13,color:_.faint,padding:`${_.s3}px 0`}}>All clear</div>}
               {alerts.slice(0,4).map((a,i)=>(
-                <div key={i} onClick={()=>{setAi(a.idx);go(a.tab)}} style={{padding:`${_.s2}px 0`,display:"flex",alignItems:"flex-start",gap:_.s2,cursor:"pointer",borderBottom:i<Math.min(alerts.length,4)-1?`1px solid ${_.line}`:"none"}} onMouseEnter={e=>e.currentTarget.style.opacity="0.7"} onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
-                  <div style={{width:5,height:5,borderRadius:3,background:a.c,flexShrink:0,marginTop:6}} />
+                <div key={i} onClick={()=>{setAi(a.idx);go(a.tab)}} style={{padding:`${_.s2}px 0`,display:"flex",alignItems:"center",gap:_.s2,cursor:"pointer",borderBottom:i<Math.min(alerts.length,4)-1?`1px solid ${_.line}`:"none"}} onMouseEnter={e=>e.currentTarget.style.opacity="0.7"} onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
+                  <AlertTriangle size={14} color={a.c} />
                   <span style={{fontSize:13,color:_.body,lineHeight:1.4}}>{a.text}</span>
                 </div>
               ))}
             </div>
-            <div>
+            <div style={card}>
               <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:_.s3}}>Recent activity</div>
-              {recentActivity.length===0&&<div style={{fontSize:13,color:_.faint,padding:`${_.s4}px 0`}}>No activity yet</div>}
+              {recentActivity.length===0&&<div style={{fontSize:13,color:_.faint,padding:`${_.s3}px 0`}}>No activity yet</div>}
               {recentActivity.slice(0,5).map((a,i)=>(
-                <div key={i} style={{padding:`${_.s2}px 0`,display:"flex",alignItems:"flex-start",gap:_.s2,borderBottom:i<4?`1px solid ${_.line}`:"none"}}>
-                  <div style={{width:5,height:5,borderRadius:3,background:_.ac,flexShrink:0,marginTop:6}} />
+                <div key={i} style={{padding:`${_.s2}px 0`,display:"flex",alignItems:"center",gap:_.s2,borderBottom:i<4?`1px solid ${_.line}`:"none"}}>
+                  <div style={{width:6,height:6,borderRadius:3,background:_.ac,flexShrink:0}} />
                   <div style={{flex:1}}>
                     <span style={{fontSize:13,color:_.body,lineHeight:1.4}}>{a.action}</span>
                     <div style={{fontSize:11,color:_.faint,marginTop:1}}>{a.project} · {a.time}</div>
@@ -390,72 +434,13 @@ export default function IBuild(){
           </div>
 
           {/* Quick actions */}
-          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:_.s2}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:_.s3}}>
             {[[PenLine,"New quote","quote"],[Upload,"Upload plans","plans"],[Receipt,"Invoice","invoices"],[BookOpen,"Site diary","diary"]].map(([Ic,l2,t2])=>(
-              <div key={l2} onClick={()=>go(t2)} style={{padding:`${_.s5}px ${_.s3}px`,cursor:"pointer",textAlign:"center",borderRadius:_.rSm,transition:"all 0.2s ease",background:"transparent"}} onMouseEnter={e=>{e.currentTarget.style.background=_.well}} onMouseLeave={e=>{e.currentTarget.style.background="transparent"}}>
+              <div key={l2} onClick={()=>go(t2)} style={{...card,padding:16,cursor:"pointer",textAlign:"center",transition:"all 0.15s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=_.ac}} onMouseLeave={e=>{e.currentTarget.style.borderColor=_.line}}>
                 <div style={{marginBottom:6,display:"flex",justifyContent:"center"}}><Ic size={20} strokeWidth={1.5} color={_.muted} /></div>
                 <div style={{fontSize:12,fontWeight:500,color:_.body}}>{l2}</div>
               </div>
             ))}
-          </div>
-        </Section>}
-
-        {/* ════ PIPELINE ════ */}
-        {tab==="pipeline"&&<Section key={anim}>
-          <h1 style={{fontSize:28,fontWeight:600,letterSpacing:"-0.02em",marginBottom:_.s3}}>Pipeline</h1>
-          <div style={{fontSize:14,color:_.muted,marginBottom:_.s7}}>{projects.length} project{projects.length!==1?"s":""} · {fmt(allT.reduce((s,x)=>s+x.curr,0))} total value</div>
-
-          {/* Stage flow header */}
-          <div style={{display:"flex",gap:0,marginBottom:_.s7,background:_.well,borderRadius:_.rSm,overflow:"hidden"}}>
-            {STAGES.map((s,i)=>{
-              const count=allT.filter(x=>x.status===s).length;const val=allT.filter(x=>x.status===s).reduce((t,x)=>t+x.curr,0);
-              return(<div key={s} style={{flex:1,padding:`${_.s3}px ${_.s3}px`,textAlign:"center",borderRight:i<STAGES.length-1?`1px solid ${_.line}`:"none",transition:"background 0.15s"}} onMouseEnter={e=>e.currentTarget.style.background=_.surface} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                <div style={{fontSize:10,fontWeight:600,color:count>0?stCol(s):_.faint,letterSpacing:"0.04em",textTransform:"uppercase",marginBottom:2}}>{s}</div>
-                <div style={{fontSize:18,fontWeight:700,color:count>0?_.ink:_.faint,fontVariantNumeric:"tabular-nums"}}>{count}</div>
-                {val>0&&<div style={{fontSize:10,color:_.muted,marginTop:1}}>{fmt(val)}</div>}
-              </div>)})}
-          </div>
-
-          {/* Project cards by stage */}
-          {STAGES.map(s=>{const inS=allT.filter(x=>x.status===s);if(!inS.length)return null;
-            return(<div key={s} style={{marginBottom:_.s7}}>
-              <div style={{display:"flex",alignItems:"center",gap:_.s2,marginBottom:_.s3}}>
-                <div style={{width:8,height:8,borderRadius:4,background:stCol(s)}} />
-                <span style={{fontSize:13,fontWeight:600}}>{s}</span>
-                <span style={{fontSize:12,color:_.muted}}>{inS.length} · {fmt(inS.reduce((t,x)=>t+x.curr,0))}</span>
-              </div>
-              {inS.map(pr=>{const si=sIdx(pr.status);const lastAct=pr.activity&&pr.activity[0];const updatedTxt=lastAct?`${lastAct.action} · ${lastAct.date}`:`Created ${pr.created}`;return(
-                <div key={pr.id} onClick={()=>{setAi(projects.findIndex(x=>x.id===pr.id));go("quote")}} style={{padding:`${_.s4}px ${_.s5}px`,cursor:"pointer",background:_.surface,borderRadius:_.rSm,marginBottom:_.s2,display:"flex",justifyContent:"space-between",alignItems:"center",transition:"all 0.15s ease",boxShadow:"0 1px 3px rgba(0,0,0,0.03)"}} onMouseEnter={e=>{e.currentTarget.style.background=_.well}} onMouseLeave={e=>{e.currentTarget.style.background=_.surface}}>
-                  <div style={{flex:1}}>
-                    <div style={{fontSize:15,fontWeight:600,marginBottom:2}}>{pName(pr)}</div>
-                    <div style={{fontSize:12,color:_.muted}}>{pr.type}{pr.area?` · ${pr.area}m²`:""}{pr.assignedTo?` · ${pr.assignedTo}`:""}</div>
-                    {/* Mini stage dots */}
-                    <div style={{display:"flex",gap:3,marginTop:6}}>
-                      {STAGES.map((st,j)=>(<div key={st} style={{width:j<=si?16:8,height:4,borderRadius:2,background:j<=si?stCol(pr.status):_.line,transition:"all 0.2s"}} />))}
-                    </div>
-                  </div>
-                  <div style={{textAlign:"right",marginLeft:_.s4}}>
-                    <div style={{fontSize:20,fontWeight:700,letterSpacing:"-0.02em",fontVariantNumeric:"tabular-nums"}}>{fmt(pr.curr)}</div>
-                    {pr.paid>0&&<div style={{fontSize:11,color:_.green,marginTop:2}}>{fmt(pr.paid)} paid</div>}
-                    <div style={{fontSize:11,color:_.faint,marginTop:2,maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{updatedTxt}</div>
-                  </div>
-                </div>)})}
-            </div>)})}
-        </Section>}
-
-        {/* ════ CLIENT — Contact info ════ */}
-        {tab==="client"&&<Section key={anim}>
-          <h1 style={{fontSize:28,fontWeight:600,letterSpacing:"-0.02em",marginBottom:_.s6}}>Client</h1>
-          <div style={{marginBottom:_.s8}}>
-            <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:_.s4}}>Contact Information</div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr",gap:_.s3}}>
-              {[["Client name","client","Johnson Residence"],["Email","email","client@email.com"],["Phone","phone","0412 345 678"],["Site address","address","42 Smith St"],["Suburb","suburb","Richmond"]].map(([l2,k,ph])=>(
-                <div key={k}>
-                  <label style={label}>{l2}</label>
-                  <input style={input} value={p[k]} onChange={e=>up(pr=>{pr[k]=e.target.value;return pr})} placeholder={ph} />
-                </div>
-              ))}
-            </div>
           </div>
         </Section>}
 
@@ -534,7 +519,7 @@ export default function IBuild(){
           </div>
 
           {/* Summary */}
-          {T.curr>0&&<div style={{background:_.surface,borderRadius:_.r,padding:`${_.s7}px`,border:`1px solid ${_.line}`,borderLeft:`4px solid ${_.ac}`,boxShadow:"0 1px 3px rgba(0,0,0,0.04)",marginBottom:_.s6}}>
+          {T.curr>0&&<div style={{...card,borderLeft:`4px solid ${_.ac}`,marginBottom:_.s6}}>
             <div style={{fontSize:12,color:_.muted,fontWeight:600,letterSpacing:"0.04em",textTransform:"uppercase",marginBottom:_.s3}}>Contract Total</div>
             <div style={{fontSize:40,fontWeight:600,letterSpacing:"-0.04em",lineHeight:1,fontVariantNumeric:"tabular-nums",color:_.ink}}>{fmt(T.curr)}</div>
             <div style={{fontSize:13,color:_.muted,marginTop:_.s3,lineHeight:1.5}}>
@@ -600,7 +585,7 @@ export default function IBuild(){
           <div style={{fontSize:14,color:_.muted,marginBottom:_.s7}}>{p.milestones.filter(m=>m.done).length} of {p.milestones.length} milestones · {p.milestones.length>0?Math.round((p.milestones.filter(m=>m.done).length/p.milestones.length)*100):0}% complete</div>
 
           {/* Progress hero */}
-          <div style={{background:_.surface,borderRadius:_.r,padding:"24px 28px",marginBottom:_.s7,border:`1px solid ${_.line}`,borderLeft:`4px solid ${_.ac}`,boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
+          <div style={{...card,borderLeft:`4px solid ${_.ac}`,marginBottom:_.s7}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:16}}>
               <div>
                 <div style={{fontSize:11,color:_.ac,letterSpacing:"0.06em",fontWeight:600,textTransform:"uppercase",marginBottom:4}}>Build Progress</div>
@@ -626,27 +611,15 @@ export default function IBuild(){
               <div style={{fontSize:12,color:_.muted}}>Week {Math.max(...p.milestones.filter(m=>m.wk!==undefined).map(m=>m.wk),0)}</div>
             </div>
             {/* Gantt-style bar */}
-            {(()=>{
-              const maxWk=Math.max(...p.milestones.map(m=>m.wk||0),36);
-              return(
-                <div style={{position:"relative",height:28,background:_.well,borderRadius:8,marginBottom:_.s5,overflow:"hidden"}}>
-                  {/* Filled progress */}
-                  {(()=>{
-                    const lastDoneIdx=[...p.milestones].reverse().findIndex(m=>m.done);
-                    const lastDone=lastDoneIdx>=0?p.milestones[p.milestones.length-1-lastDoneIdx]:null;
-                    const pctDone=lastDone?((lastDone.wk||0)/maxWk)*100:0;
-                    return <div style={{position:"absolute",left:0,top:0,bottom:0,width:`${pctDone}%`,background:_.ac,borderRadius:8,transition:"width 0.6s ease"}} />;
-                  })()}
-                  {/* Milestone markers */}
-                  {p.milestones.map((ms,i)=>{
-                    const left=maxWk?((ms.wk||0)/maxWk)*100:0;
-                    return(
-                      <div key={i} style={{position:"absolute",left:`${left}%`,top:"50%",transform:"translate(-50%,-50%)",width:ms.done?10:8,height:ms.done?10:8,borderRadius:"50%",background:ms.done?"#fff":_.line2,border:ms.done?"none":`2px solid ${_.muted}`,zIndex:1,cursor:"pointer",transition:"all 0.2s"}} title={`${ms.name} — Wk ${ms.wk||0}`} />
-                    );
-                  })}
-                </div>
-              );
-            })()}
+            <div style={{position:"relative",height:28,background:_.well,borderRadius:_.r,marginBottom:_.s5,overflow:"hidden"}}>
+              <div style={{position:"absolute",left:0,top:0,bottom:0,width:`${ganttPct}%`,background:_.ac,borderRadius:_.r,transition:"width 0.6s ease"}} />
+              {p.milestones.map((ms,i)=>{
+                const left=ganttMaxWk?((ms.wk||0)/ganttMaxWk)*100:0;
+                return(
+                  <div key={i} style={{position:"absolute",left:`${left}%`,top:"50%",transform:"translate(-50%,-50%)",width:ms.done?10:8,height:ms.done?10:8,borderRadius:"50%",background:ms.done?"#fff":_.line2,border:ms.done?"none":`2px solid ${_.muted}`,zIndex:1,cursor:"pointer",transition:"all 0.2s"}} title={`${ms.name} — Wk ${ms.wk||0}`} />
+                );
+              })}
+            </div>
             {/* Week labels */}
             <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:_.faint,marginBottom:_.s5}}>
               <span>Wk 0</span>
@@ -746,36 +719,34 @@ export default function IBuild(){
         </Section>}
 
         {/* ════ VO DETAIL ════ */}
-        {tab==="variations"&&voView!==null&&p.variations[voView]&&(()=>{
-          const v=p.variations[voView];const cB=T.orig+p.variations.slice(0,voView).filter(x=>x.status==="approved").reduce((s,x)=>s+x.amount,0);
-          return(<Section key={anim}>
+        {tab==="variations"&&voD&&<Section key={anim}>
             <div style={{display:"flex",alignItems:"center",gap:_.s2,marginBottom:_.s7}}>
               <button onClick={()=>setVoView(null)} style={btnGhost}><ArrowRight size={14} style={{transform:"rotate(180deg)"}} /> Back</button>
-              <span style={{fontSize:22,fontWeight:600}}>{v.id}</span>
-              <span style={badge(v.status==="approved"?_.green:v.status==="pending"?_.amber:_.muted,v.status==="approved"?_.greenBg:v.status==="pending"?_.amberBg:_.well)}>{v.status}</span>
+              <span style={{fontSize:22,fontWeight:600}}>{voD.id}</span>
+              <span style={badge(voD.status==="approved"?_.green:voD.status==="pending"?_.amber:_.muted,voD.status==="approved"?_.greenBg:voD.status==="pending"?_.amberBg:_.well)}>{voD.status}</span>
               <div style={{flex:1}} /><button onClick={()=>printEl(voDocRef)} style={btnGhost}><Printer size={14} /> Print</button>
             </div>
             <div ref={voDocRef} style={{background:"#fff",fontFamily:"'Inter',sans-serif",borderRadius:_.r,overflow:"hidden",boxShadow:"0 4px 24px rgba(0,0,0,0.06)",border:`1px solid ${_.line}`}}>
-              <div style={{background:_.ink,color:"#fff",padding:"18px 28px",display:"flex",justifyContent:"space-between",alignItems:"center"}}><div style={{display:"flex",alignItems:"center",gap:8}}><div style={{width:22,height:22,background:"#fff",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:_.ink}}>i</div><span style={{fontSize:13,fontWeight:700}}>iBuild National</span></div><div style={{textAlign:"right"}}><div style={{fontSize:9,color:_.ac,letterSpacing:"0.1em",fontWeight:600}}>VARIATION ORDER</div><div style={{fontSize:16,fontWeight:700,color:_.ac}}>{v.id}</div></div></div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",borderBottom:`1px solid ${_.line}`}}>{[["Project",pName(p)],["Client",p.client],["Date",v.date]].map(([l2,v2])=>(<div key={l2} style={{padding:"10px 16px",borderRight:`1px solid ${_.line}`}}><div style={{fontSize:9,color:_.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.06em"}}>{l2}</div><div style={{fontSize:12,fontWeight:500,marginTop:1}}>{v2||"—"}</div></div>))}</div>
-              <div style={{padding:"18px 28px",borderBottom:`1px solid ${_.line}`}}><div style={{fontSize:9,color:_.ac,letterSpacing:"0.06em",fontWeight:600,marginBottom:4}}>DESCRIPTION</div><div style={{fontSize:13,lineHeight:1.7}}>{v.description}</div>{v.reason&&<div style={{fontSize:11,color:_.muted,marginTop:3}}>Reason: {v.reason}</div>}</div>
+              <div style={{background:_.ink,color:"#fff",padding:"18px 28px",display:"flex",justifyContent:"space-between",alignItems:"center"}}><div style={{display:"flex",alignItems:"center",gap:8}}><div style={{width:22,height:22,background:"#fff",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:_.ink}}>i</div><span style={{fontSize:13,fontWeight:700}}>iBuild National</span></div><div style={{textAlign:"right"}}><div style={{fontSize:9,color:_.ac,letterSpacing:"0.1em",fontWeight:600}}>VARIATION ORDER</div><div style={{fontSize:16,fontWeight:700,color:_.ac}}>{voD.id}</div></div></div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",borderBottom:`1px solid ${_.line}`}}>{[["Project",pName(p)],["Client",p.client],["Date",voD.date]].map(([l2,v2])=>(<div key={l2} style={{padding:"10px 16px",borderRight:`1px solid ${_.line}`}}><div style={{fontSize:9,color:_.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.06em"}}>{l2}</div><div style={{fontSize:12,fontWeight:500,marginTop:1}}>{v2||"—"}</div></div>))}</div>
+              <div style={{padding:"18px 28px",borderBottom:`1px solid ${_.line}`}}><div style={{fontSize:9,color:_.ac,letterSpacing:"0.06em",fontWeight:600,marginBottom:4}}>DESCRIPTION</div><div style={{fontSize:13,lineHeight:1.7}}>{voD.description}</div>{voD.reason&&<div style={{fontSize:11,color:_.muted,marginTop:3}}>Reason: {voD.reason}</div>}</div>
               <div style={{padding:"18px 28px",borderBottom:`1px solid ${_.line}`}}><div style={{fontSize:9,color:_.ac,letterSpacing:"0.06em",fontWeight:600,marginBottom:10}}>CONTRACT IMPACT</div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}><div style={{background:_.well,padding:12,borderRadius:8}}><div style={{fontSize:9,color:_.muted,fontWeight:600}}>BEFORE</div><div style={{fontSize:17,fontWeight:600,marginTop:2}}>{fmt(cB)}</div></div><div style={{background:_.ink,padding:12,borderRadius:8,color:"#f8f8f6"}}><div style={{fontSize:9,color:_.ac,fontWeight:600}}>THIS VO</div><div style={{fontSize:17,fontWeight:600,color:_.ac,marginTop:2}}>{v.amount>=0?"+":""}{fmt(v.amount)}</div></div><div style={{background:_.well,padding:12,borderRadius:8}}><div style={{fontSize:9,color:_.muted,fontWeight:600}}>REVISED</div><div style={{fontSize:17,fontWeight:600,color:_.ac,marginTop:2}}>{fmt(cB+v.amount)}</div></div></div></div>
-              <div style={{padding:"18px 28px"}}><div style={{fontSize:9,color:_.ac,letterSpacing:"0.06em",fontWeight:600,marginBottom:10}}>AUTHORISATION</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>{[["Builder — iBuild National",v.builderSig],[`Client — ${p.client||"Owner"}`,v.clientSig]].map(([l2,sig])=>(<div key={l2}><div style={{fontSize:11,fontWeight:600,marginBottom:3}}>{l2}</div>{sig?<div><img src={sig} alt="" style={{maxHeight:34}} /><div style={{fontSize:9,color:_.muted,marginTop:2}}>Signed {v.approvedDate||v.date}</div></div>:<div style={{borderBottom:`1px solid ${_.line2}`,height:34}} />}</div>))}</div>
-                {v.status==="approved"&&<div style={{marginTop:10,padding:"8px 12px",background:_.greenBg,borderRadius:6,fontSize:12,color:_.green,fontWeight:600}}>Approved {v.approvedDate}</div>}</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}><div style={{background:_.well,padding:12,borderRadius:_.r}}><div style={{fontSize:9,color:_.muted,fontWeight:600}}>BEFORE</div><div style={{fontSize:17,fontWeight:600,marginTop:2}}>{fmt(voCB)}</div></div><div style={{background:_.ink,padding:12,borderRadius:_.r,color:"#f8f8f6"}}><div style={{fontSize:9,color:_.ac,fontWeight:600}}>THIS VO</div><div style={{fontSize:17,fontWeight:600,color:_.ac,marginTop:2}}>{voD.amount>=0?"+":""}{fmt(voD.amount)}</div></div><div style={{background:_.well,padding:12,borderRadius:_.r}}><div style={{fontSize:9,color:_.muted,fontWeight:600}}>REVISED</div><div style={{fontSize:17,fontWeight:600,color:_.ac,marginTop:2}}>{fmt(voCB+voD.amount)}</div></div></div></div>
+              <div style={{padding:"18px 28px"}}><div style={{fontSize:9,color:_.ac,letterSpacing:"0.06em",fontWeight:600,marginBottom:10}}>AUTHORISATION</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>{[["Builder — iBuild National",voD.builderSig],[`Client — ${p.client||"Owner"}`,voD.clientSig]].map(([l2,sig])=>(<div key={l2}><div style={{fontSize:11,fontWeight:600,marginBottom:3}}>{l2}</div>{sig?<div><img src={sig} alt="" style={{maxHeight:34}} /><div style={{fontSize:9,color:_.muted,marginTop:2}}>Signed {voD.approvedDate||voD.date}</div></div>:<div style={{borderBottom:`1px solid ${_.line2}`,height:34}} />}</div>))}</div>
+                {voD.status==="approved"&&<div style={{marginTop:10,padding:"8px 12px",background:_.greenBg,borderRadius:_.rSm,fontSize:12,color:_.green,fontWeight:600}}>Approved {voD.approvedDate}</div>}</div>
               <div style={{padding:"10px 28px",background:_.ink,fontSize:9,color:_.muted}}>iBuild National · ABN 12 345 678 901 · (03) 8510 5472</div>
             </div>
-            {v.status!=="approved"&&v.status!=="rejected"&&<div style={{marginTop:_.s5}}>
+            {voD.status!=="approved"&&voD.status!=="rejected"&&<div style={{marginTop:_.s5}}>
               <div style={{fontSize:14,fontWeight:600,marginBottom:_.s3}}>Sign variation</div>
               <div style={{display:"inline-flex",background:_.well,borderRadius:_.rFull,padding:2,marginBottom:_.s3}}>
-                {["builder","client"].map(role=>(<div key={role} onClick={()=>{setVoSignAs(role);clr(voSigRef,voSigCtx)}} style={{padding:"6px 16px",borderRadius:_.rFull,fontSize:12,fontWeight:600,cursor:"pointer",background:voSignAs===role?_.surface:"transparent",color:voSignAs===role?_.ink:_.muted,boxShadow:voSignAs===role?"0 1px 3px rgba(0,0,0,0.06)":"none",transition:"all 0.15s"}}>{role==="builder"?"Builder":"Client"}{((role==="builder"&&v.builderSig)||(role==="client"&&v.clientSig))?" ✓":""}</div>))}
+                {["builder","client"].map(role=>(<div key={role} onClick={()=>{setVoSignAs(role);clr(voSigRef,voSigCtx)}} style={{padding:"6px 16px",borderRadius:_.rFull,fontSize:12,fontWeight:600,cursor:"pointer",background:voSignAs===role?_.surface:"transparent",color:voSignAs===role?_.ink:_.muted,boxShadow:voSignAs===role?"0 1px 3px rgba(0,0,0,0.06)":"none",transition:"all 0.15s"}}>{role==="builder"?"Builder":"Client"}{((role==="builder"&&voD.builderSig)||(role==="client"&&voD.clientSig))?" ✓":""}</div>))}
               </div>
-              {((voSignAs==="builder"&&!v.builderSig)||(voSignAs==="client"&&!v.clientSig))?<div>
+              {((voSignAs==="builder"&&!voD.builderSig)||(voSignAs==="client"&&!voD.clientSig))?<div>
                 <div style={{background:"#fff",borderRadius:_.rXs,touchAction:"none",overflow:"hidden",border:`1.5px solid ${_.line2}`}}><canvas ref={mkCv(voSigRef,voSigCtx)} width={500} height={100} style={{width:"100%",height:100,cursor:"crosshair"}} {...cvH(voSigRef,voSigCtx,voSigDr)} /></div>
-                <div style={{display:"flex",gap:_.s2,marginTop:_.s2}}><button onClick={()=>{if(!voSigRef.current)return;const data=voSigRef.current.toDataURL();up(pr=>{if(voSignAs==="builder")pr.variations[voView].builderSig=data;else pr.variations[voView].clientSig=data;if(pr.variations[voView].builderSig&&pr.variations[voView].clientSig){pr.variations[voView].status="approved";pr.variations[voView].approvedDate=ds();notify("VO approved")}else{pr.variations[voView].status="pending";notify((voSignAs==="builder"?"Builder":"Client")+" signed")}return pr});log(v.id+" signed by "+voSignAs);clr(voSigRef,voSigCtx)}} style={btnPrimary}>Confirm</button><button onClick={()=>clr(voSigRef,voSigCtx)} style={btnSecondary}>Clear</button></div>
+                <div style={{display:"flex",gap:_.s2,marginTop:_.s2}}><button onClick={()=>{if(!voSigRef.current)return;const data=voSigRef.current.toDataURL();up(pr=>{if(voSignAs==="builder")pr.variations[voView].builderSig=data;else pr.variations[voView].clientSig=data;if(pr.variations[voView].builderSig&&pr.variations[voView].clientSig){pr.variations[voView].status="approved";pr.variations[voView].approvedDate=ds();notify("VO approved")}else{pr.variations[voView].status="pending";notify((voSignAs==="builder"?"Builder":"Client")+" signed")}return pr});log(voD.id+" signed by "+voSignAs);clr(voSigRef,voSigCtx)}} style={btnPrimary}>Confirm</button><button onClick={()=>clr(voSigRef,voSigCtx)} style={btnSecondary}>Clear</button></div>
               </div>:<div style={{padding:_.s3,background:_.greenBg,borderRadius:_.rXs,fontSize:13,color:_.green,fontWeight:500}}>{voSignAs==="builder"?"Builder":"Client"} signed</div>}
             </div>}
-          </Section>)})()}
+        </Section>}
 
         {/* ════ INVOICES ════ */}
         {tab==="invoices"&&invView===null&&<Section key={anim}>
@@ -812,19 +783,18 @@ export default function IBuild(){
         </Section>}
 
         {/* ════ INVOICE DOC ════ */}
-        {tab==="invoices"&&invView!==null&&p.invoices[invView]&&(()=>{const inv=p.invoices[invView],gA=inv.amount/11;
-          return(<Section key={anim}>
-            <div style={{display:"flex",alignItems:"center",gap:_.s2,marginBottom:_.s7}}><button onClick={()=>setInvView(null)} style={btnGhost}><ArrowRight size={14} style={{transform:"rotate(180deg)"}} /> Back</button><span style={{fontSize:22,fontWeight:600}}>{inv.id}</span><div style={{flex:1}} /><button onClick={()=>printEl(invDocRef)} style={btnGhost}><Printer size={14} /> Print</button></div>
+        {tab==="invoices"&&invD&&<Section key={anim}>
+            <div style={{display:"flex",alignItems:"center",gap:_.s2,marginBottom:_.s7}}><button onClick={()=>setInvView(null)} style={btnGhost}><ArrowRight size={14} style={{transform:"rotate(180deg)"}} /> Back</button><span style={{fontSize:22,fontWeight:600}}>{invD.id}</span><div style={{flex:1}} /><button onClick={()=>printEl(invDocRef)} style={btnGhost}><Printer size={14} /> Print</button></div>
             <div ref={invDocRef} style={{background:"#fff",fontFamily:"'Inter',sans-serif",borderRadius:_.r,overflow:"hidden",boxShadow:"0 4px 24px rgba(0,0,0,0.06)",border:`1px solid ${_.line}`}}>
-              <div style={{background:_.ink,color:"#fff",padding:"18px 28px",display:"flex",justifyContent:"space-between",alignItems:"center"}}><div style={{display:"flex",alignItems:"center",gap:8}}><div style={{width:22,height:22,background:"#fff",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:_.ink}}>i</div><span style={{fontSize:13,fontWeight:700}}>iBuild National</span></div><div style={{textAlign:"right"}}><div style={{fontSize:9,color:_.ac,letterSpacing:"0.1em",fontWeight:600}}>TAX INVOICE</div><div style={{fontSize:16,fontWeight:700,color:_.ac}}>{inv.id}</div></div></div>
+              <div style={{background:_.ink,color:"#fff",padding:"18px 28px",display:"flex",justifyContent:"space-between",alignItems:"center"}}><div style={{display:"flex",alignItems:"center",gap:8}}><div style={{width:22,height:22,background:"#fff",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:_.ink}}>i</div><span style={{fontSize:13,fontWeight:700}}>iBuild National</span></div><div style={{textAlign:"right"}}><div style={{fontSize:9,color:_.ac,letterSpacing:"0.1em",fontWeight:600}}>TAX INVOICE</div><div style={{fontSize:16,fontWeight:700,color:_.ac}}>{invD.id}</div></div></div>
               <div style={{padding:"16px 28px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,borderBottom:`1px solid ${_.line}`}}><div><div style={{fontSize:9,color:_.muted,fontWeight:600,textTransform:"uppercase"}}>From</div><div style={{fontSize:12,fontWeight:600,marginTop:1}}>iBuild National Pty Ltd</div><div style={{fontSize:11,color:_.muted}}>ABN 12 345 678 901</div></div><div><div style={{fontSize:9,color:_.muted,fontWeight:600,textTransform:"uppercase"}}>To</div><div style={{fontSize:12,fontWeight:600,marginTop:1}}>{p.client||"Client"}</div><div style={{fontSize:11,color:_.muted}}>{p.address}{p.suburb?`, ${p.suburb}`:""}</div></div></div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",borderBottom:`1px solid ${_.line}`}}>{[["Date",inv.date],["Project",pName(p)],["Due","14 days"]].map(([l2,v2])=>(<div key={l2} style={{padding:"10px 16px",borderRight:`1px solid ${_.line}`}}><div style={{fontSize:9,color:_.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.06em"}}>{l2}</div><div style={{fontSize:12,fontWeight:500,marginTop:1}}>{v2}</div></div>))}</div>
-              <div style={{padding:"18px 28px"}}><div style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:`2px solid ${_.ink}`,fontSize:10,color:_.muted,fontWeight:600,textTransform:"uppercase"}}><span>Description</span><span>Amount</span></div><div style={{display:"flex",justifyContent:"space-between",padding:"12px 0",borderBottom:`1px solid ${_.line}`}}><div><div style={{fontSize:13,fontWeight:500}}>{inv.desc}</div><div style={{fontSize:11,color:_.muted,marginTop:2}}>{inv.pct}% of {fmt(T.curr)}</div></div><span style={{fontSize:13,fontWeight:600}}>{fmt(inv.amount)}</span></div>
-                <div style={{display:"flex",justifyContent:"flex-end",marginTop:12}}><div style={{width:200}}><div style={{display:"flex",justifyContent:"space-between",padding:"3px 0",fontSize:11,color:_.muted}}><span>Subtotal</span><span>{fmt(inv.amount-gA)}</span></div><div style={{display:"flex",justifyContent:"space-between",padding:"3px 0",fontSize:11,color:_.muted,borderBottom:`1px solid ${_.line}`}}><span>GST</span><span>{fmt(gA)}</span></div><div style={{display:"flex",justifyContent:"space-between",padding:"6px 0",fontSize:16,fontWeight:700,borderTop:`2px solid ${_.ink}`,marginTop:2}}><span>Total</span><span>{fmt(inv.amount)}</span></div></div></div>
-                <div style={{marginTop:14,padding:10,background:_.well,borderRadius:8,fontSize:11,color:_.muted}}><strong>Payment</strong> BSB: 063-000 · Acct: 1234 5678 · Ref: {inv.id}</div></div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",borderBottom:`1px solid ${_.line}`}}>{[["Date",invD.date],["Project",pName(p)],["Due","14 days"]].map(([l2,v2])=>(<div key={l2} style={{padding:"10px 16px",borderRight:`1px solid ${_.line}`}}><div style={{fontSize:9,color:_.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.06em"}}>{l2}</div><div style={{fontSize:12,fontWeight:500,marginTop:1}}>{v2}</div></div>))}</div>
+              <div style={{padding:"18px 28px"}}><div style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:`2px solid ${_.ink}`,fontSize:10,color:_.muted,fontWeight:600,textTransform:"uppercase"}}><span>Description</span><span>Amount</span></div><div style={{display:"flex",justifyContent:"space-between",padding:"12px 0",borderBottom:`1px solid ${_.line}`}}><div><div style={{fontSize:13,fontWeight:500}}>{invD.desc}</div><div style={{fontSize:11,color:_.muted,marginTop:2}}>{invD.pct}% of {fmt(T.curr)}</div></div><span style={{fontSize:13,fontWeight:600}}>{fmt(invD.amount)}</span></div>
+                <div style={{display:"flex",justifyContent:"flex-end",marginTop:12}}><div style={{width:200}}><div style={{display:"flex",justifyContent:"space-between",padding:"3px 0",fontSize:11,color:_.muted}}><span>Subtotal</span><span>{fmt(invD.amount-invGst)}</span></div><div style={{display:"flex",justifyContent:"space-between",padding:"3px 0",fontSize:11,color:_.muted,borderBottom:`1px solid ${_.line}`}}><span>GST</span><span>{fmt(invGst)}</span></div><div style={{display:"flex",justifyContent:"space-between",padding:"6px 0",fontSize:16,fontWeight:700,borderTop:`2px solid ${_.ink}`,marginTop:2}}><span>Total</span><span>{fmt(invD.amount)}</span></div></div></div>
+                <div style={{marginTop:14,padding:10,background:_.well,borderRadius:_.r,fontSize:11,color:_.muted}}><strong>Payment</strong> BSB: 063-000 · Acct: 1234 5678 · Ref: {invD.id}</div></div>
               <div style={{padding:"10px 28px",background:_.ink,fontSize:9,color:_.muted}}>iBuild National · ABN 12 345 678 901</div>
             </div>
-          </Section>)})()}
+        </Section>}
 
         {/* ════ DIARY ════ */}
         {tab==="diary"&&<Section key={anim}>
@@ -910,42 +880,38 @@ export default function IBuild(){
         </Section>}
 
         {/* ════ PROPOSAL DETAIL ════ */}
-        {tab==="proposal"&&propView!==null&&p.proposals[propView]&&(()=>{
-          const prop=p.proposals[propView];
-          const propCats=Object.entries(prop.scope).filter(([,items])=>items.some(x=>x.on));
-          const propCT=(sc,cat)=>sc[cat].filter(i=>i.on).reduce((t,i)=>t+i.rate*i.qty,0);
-          return(<Section key={anim}>
+        {tab==="proposal"&&propD&&<Section key={anim}>
             <div style={{display:"flex",alignItems:"center",gap:_.s2,marginBottom:_.s5}}>
               <button onClick={()=>setPropView(null)} style={btnGhost}><ArrowRight size={14} style={{transform:"rotate(180deg)"}} /> Back</button>
-              <span style={{fontSize:22,fontWeight:600}}>{prop.name}</span>
-              <span style={badge(prop.status==="signed"?_.green:prop.status==="declined"?_.red:prop.status==="sent"?_.blue:_.amber,prop.status==="signed"?_.greenBg:prop.status==="declined"?_.redBg:prop.status==="sent"?_.blueBg:_.amberBg)}>{prop.status}</span>
+              <span style={{fontSize:22,fontWeight:600}}>{propD.name}</span>
+              <span style={badge(propD.status==="signed"?_.green:propD.status==="declined"?_.red:propD.status==="sent"?_.blue:_.amber,propD.status==="signed"?_.greenBg:propD.status==="declined"?_.redBg:propD.status==="sent"?_.blueBg:_.amberBg)}>{propD.status}</span>
               <div style={{flex:1}} />
               <button onClick={()=>printEl(propRef)} style={btnGhost}><Printer size={14} /> Print</button>
             </div>
             <div style={{display:"flex",gap:_.s2,marginBottom:_.s5}}>
               {["draft","sent","signed","declined"].map(s=>(
-                <div key={s} onClick={()=>{up(pr=>{pr.proposals[propView].status=s;return pr});log(`Proposal → ${s}`);notify(`Marked ${s}`)}} style={{padding:"6px 14px",borderRadius:_.rFull,fontSize:12,fontWeight:600,cursor:"pointer",background:prop.status===s?(s==="signed"?_.greenBg:s==="declined"?_.redBg:s==="sent"?_.blueBg:_.amberBg):_.well,color:prop.status===s?(s==="signed"?_.green:s==="declined"?_.red:s==="sent"?_.blue:_.amber):_.muted,transition:"all 0.15s"}}>{s}</div>
+                <div key={s} onClick={()=>{up(pr=>{pr.proposals[propView].status=s;return pr});log(`Proposal → ${s}`);notify(`Marked ${s}`)}} style={{padding:"6px 14px",borderRadius:_.rFull,fontSize:12,fontWeight:600,cursor:"pointer",background:propD.status===s?(s==="signed"?_.greenBg:s==="declined"?_.redBg:s==="sent"?_.blueBg:_.amberBg):_.well,color:propD.status===s?(s==="signed"?_.green:s==="declined"?_.red:s==="sent"?_.blue:_.amber):_.muted,transition:"all 0.15s"}}>{s}</div>
               ))}
             </div>
             <div ref={propRef} style={{background:"#fff",fontFamily:"'Inter',sans-serif",borderRadius:_.r,overflow:"hidden",boxShadow:"0 1px 3px rgba(0,0,0,0.04)",border:`1px solid ${_.line}`}}>
-              <div style={{padding:"24px 32px",borderBottom:`1px solid ${_.line}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}><div style={{display:"flex",alignItems:"center",gap:8}}><div style={{width:28,height:28,background:_.ac,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:"#fff"}}>i</div><span style={{fontSize:15,fontWeight:700,color:_.ink}}>iBuild National</span></div><div style={{textAlign:"right"}}><div style={{fontSize:9,color:_.ac,letterSpacing:"0.1em",fontWeight:600}}>PROPOSAL</div><div style={{fontSize:14,fontWeight:600,color:_.ink}}>{prop.name}</div></div></div>
-              <div style={{padding:"32px",borderBottom:`1px solid ${_.line}`,borderLeft:`4px solid ${_.ac}`}}><div style={{fontSize:10,color:_.ac,marginBottom:8,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase"}}>Prepared for</div><div style={{fontSize:28,fontWeight:600,letterSpacing:"-0.02em",color:_.ink,lineHeight:1.15}}>{prop.client}</div><div style={{fontSize:14,color:_.body,marginTop:4}}>{prop.address}{prop.suburb?`, ${prop.suburb}`:""}</div></div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",borderBottom:`1px solid ${_.line}`}}>{[["Date",prop.date],["Project",prop.client+(prop.suburb?` — ${prop.suburb}`:"")],["Valid",`${prop.validDays||30}d`],["Value",fmt(prop.pricing.total)]].map(([l2,v2],i)=>(<div key={l2} style={{padding:"12px 16px",borderRight:i<3?`1px solid ${_.line}`:"none"}}><div style={{fontSize:9,color:_.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.06em"}}>{l2}</div><div style={{fontSize:12,fontWeight:500,color:i===3?_.ac:_.ink,marginTop:2}}>{v2}</div></div>))}</div>
-              {prop.notes&&<div style={{padding:"16px 32px",borderBottom:`1px solid ${_.line}`}}><div style={{fontSize:9,color:_.ac,letterSpacing:"0.06em",fontWeight:600,marginBottom:3}}>BRIEF</div><div style={{fontSize:12,lineHeight:1.7,color:_.body}}>{prop.type} · {prop.stories}{prop.area?` · ${prop.area}m²`:""}. {prop.notes}</div></div>}
+              <div style={{padding:"24px 32px",borderBottom:`1px solid ${_.line}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}><div style={{display:"flex",alignItems:"center",gap:8}}><div style={{width:28,height:28,background:_.ac,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:"#fff"}}>i</div><span style={{fontSize:15,fontWeight:700,color:_.ink}}>iBuild National</span></div><div style={{textAlign:"right"}}><div style={{fontSize:9,color:_.ac,letterSpacing:"0.1em",fontWeight:600}}>PROPOSAL</div><div style={{fontSize:14,fontWeight:600,color:_.ink}}>{propD.name}</div></div></div>
+              <div style={{padding:"32px",borderBottom:`1px solid ${_.line}`,borderLeft:`4px solid ${_.ac}`}}><div style={{fontSize:10,color:_.ac,marginBottom:8,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase"}}>Prepared for</div><div style={{fontSize:28,fontWeight:600,letterSpacing:"-0.02em",color:_.ink,lineHeight:1.15}}>{propD.client}</div><div style={{fontSize:14,color:_.body,marginTop:4}}>{propD.address}{propD.suburb?`, ${propD.suburb}`:""}</div></div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",borderBottom:`1px solid ${_.line}`}}>{[["Date",propD.date],["Project",propD.client+(propD.suburb?` — ${propD.suburb}`:"")],["Valid",`${propD.validDays||30}d`],["Value",fmt(propD.pricing.total)]].map(([l2,v2],i)=>(<div key={l2} style={{padding:"12px 16px",borderRight:i<3?`1px solid ${_.line}`:"none"}}><div style={{fontSize:9,color:_.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.06em"}}>{l2}</div><div style={{fontSize:12,fontWeight:500,color:i===3?_.ac:_.ink,marginTop:2}}>{v2}</div></div>))}</div>
+              {propD.notes&&<div style={{padding:"16px 32px",borderBottom:`1px solid ${_.line}`}}><div style={{fontSize:9,color:_.ac,letterSpacing:"0.06em",fontWeight:600,marginBottom:3}}>BRIEF</div><div style={{fontSize:12,lineHeight:1.7,color:_.body}}>{propD.type} · {propD.stories}{propD.area?` · ${propD.area}m²`:""}. {propD.notes}</div></div>}
               <div style={{padding:"20px 32px"}}><div style={{fontSize:9,color:_.ac,letterSpacing:"0.06em",fontWeight:600,marginBottom:10,paddingBottom:4,borderBottom:`2px solid ${_.ink}`}}>SCOPE</div>
-                {propCats.map(([cat,items],ci)=>(<div key={cat} style={{marginBottom:10}}><div style={{display:"flex",justifyContent:"space-between",padding:"5px 8px",background:_.ac,color:"#fff",fontSize:10,borderRadius:4,fontWeight:600}}><span>{String(ci+1).padStart(2,"0")}. {cat}</span><span>{fmt(propCT(prop.scope,cat))}</span></div>{items.filter(i2=>i2.on).map((item,idx)=>(<div key={idx} style={{display:"grid",gridTemplateColumns:"1fr 36px 48px 24px 48px",gap:2,padding:"3px 8px",fontSize:9,borderBottom:`1px solid ${_.line}`,color:_.body}}><span style={{color:_.ink}}>{item.item}</span><span>{item.unit}</span><span style={{textAlign:"right"}}>{fmt(item.rate)}</span><span style={{textAlign:"center"}}>x{item.qty}</span><span style={{textAlign:"right",fontWeight:600,color:_.ink}}>{fmt(item.rate*item.qty)}</span></div>))}</div>))}</div>
-              <div style={{padding:"0 32px 20px",display:"flex",justifyContent:"flex-end"}}><div style={{width:220}}>{[["Subtotal",prop.pricing.sub],[`Margin ${prop.pricing.margin}%`,prop.pricing.mar],[`Contingency ${prop.pricing.contingency}%`,prop.pricing.con],["GST",prop.pricing.gst]].map(([l2,v2])=>(<div key={l2} style={{display:"flex",justifyContent:"space-between",padding:"2px 0",fontSize:10,color:_.muted,borderBottom:`1px solid ${_.line}`}}><span>{l2}</span><span>{fmt(v2)}</span></div>))}<div style={{display:"flex",justifyContent:"space-between",padding:"6px 0",fontSize:15,fontWeight:700,borderTop:`2px solid ${_.ink}`,marginTop:2}}><span>Total</span><span>{fmt(prop.pricing.total)}</span></div></div></div>
-              <div style={{padding:"14px 32px",borderTop:`1px solid ${_.line}`,fontSize:9,color:_.muted,lineHeight:1.7}}><div style={{fontSize:9,color:_.ac,letterSpacing:"0.06em",fontWeight:600,marginBottom:3}}>TERMS</div>{`Valid ${prop.validDays||30} days · 5% deposit · Progress claims 7 days · Variations via VO · Full insurance · 13-week defects`}</div>
-              <div style={{padding:"14px 32px",borderTop:`1px solid ${_.line}`}}><div style={{fontSize:9,color:_.ac,letterSpacing:"0.06em",fontWeight:600,marginBottom:6}}>ACCEPTANCE</div><div style={{fontSize:10,color:_.muted,marginBottom:8}}>I/We accept and authorise iBuild National to proceed.</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>{["Client","Builder"].map(r=>(<div key={r}><div style={{fontSize:10,fontWeight:600,marginBottom:3}}>{r}</div>{prop.sigData&&r==="Client"?<div><img src={prop.sigData} alt="" style={{maxHeight:28}} /><div style={{fontSize:8,color:_.muted,marginTop:1}}>Signed</div></div>:<div style={{borderBottom:`1px solid ${_.line2}`,height:28}} />}</div>))}</div></div>
+                {propDCats.map(([cat,items],ci)=>(<div key={cat} style={{marginBottom:10}}><div style={{display:"flex",justifyContent:"space-between",padding:"5px 8px",background:_.ac,color:"#fff",fontSize:10,borderRadius:4,fontWeight:600}}><span>{String(ci+1).padStart(2,"0")}. {cat}</span><span>{fmt(propCT(propD.scope,cat))}</span></div>{items.filter(i2=>i2.on).map((item,idx)=>(<div key={idx} style={{display:"grid",gridTemplateColumns:"1fr 36px 48px 24px 48px",gap:2,padding:"3px 8px",fontSize:9,borderBottom:`1px solid ${_.line}`,color:_.body}}><span style={{color:_.ink}}>{item.item}</span><span>{item.unit}</span><span style={{textAlign:"right"}}>{fmt(item.rate)}</span><span style={{textAlign:"center"}}>x{item.qty}</span><span style={{textAlign:"right",fontWeight:600,color:_.ink}}>{fmt(item.rate*item.qty)}</span></div>))}</div>))}</div>
+              <div style={{padding:"0 32px 20px",display:"flex",justifyContent:"flex-end"}}><div style={{width:220}}>{[["Subtotal",propD.pricing.sub],[`Margin ${propD.pricing.margin}%`,propD.pricing.mar],[`Contingency ${propD.pricing.contingency}%`,propD.pricing.con],["GST",propD.pricing.gst]].map(([l2,v2])=>(<div key={l2} style={{display:"flex",justifyContent:"space-between",padding:"2px 0",fontSize:10,color:_.muted,borderBottom:`1px solid ${_.line}`}}><span>{l2}</span><span>{fmt(v2)}</span></div>))}<div style={{display:"flex",justifyContent:"space-between",padding:"6px 0",fontSize:15,fontWeight:700,borderTop:`2px solid ${_.ink}`,marginTop:2}}><span>Total</span><span>{fmt(propD.pricing.total)}</span></div></div></div>
+              <div style={{padding:"14px 32px",borderTop:`1px solid ${_.line}`,fontSize:9,color:_.muted,lineHeight:1.7}}><div style={{fontSize:9,color:_.ac,letterSpacing:"0.06em",fontWeight:600,marginBottom:3}}>TERMS</div>{`Valid ${propD.validDays||30} days · 5% deposit · Progress claims 7 days · Variations via VO · Full insurance · 13-week defects`}</div>
+              <div style={{padding:"14px 32px",borderTop:`1px solid ${_.line}`}}><div style={{fontSize:9,color:_.ac,letterSpacing:"0.06em",fontWeight:600,marginBottom:6}}>ACCEPTANCE</div><div style={{fontSize:10,color:_.muted,marginBottom:8}}>I/We accept and authorise iBuild National to proceed.</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>{["Client","Builder"].map(r=>(<div key={r}><div style={{fontSize:10,fontWeight:600,marginBottom:3}}>{r}</div>{propD.sigData&&r==="Client"?<div><img src={propD.sigData} alt="" style={{maxHeight:28}} /><div style={{fontSize:8,color:_.muted,marginTop:1}}>Signed</div></div>:<div style={{borderBottom:`1px solid ${_.line2}`,height:28}} />}</div>))}</div></div>
               <div style={{padding:"10px 32px",background:_.ink,fontSize:9,color:"#999",display:"flex",justifyContent:"space-between"}}><span>iBuild National Pty Ltd · ABN 12 345 678 901</span><span>(03) 8510 5472</span></div>
             </div>
-            {!prop.sigData&&<div style={{marginTop:_.s5}}>
+            {!propD.sigData&&<div style={{marginTop:_.s5}}>
               <div style={{fontSize:14,fontWeight:600,marginBottom:_.s2}}>Client signature</div>
               <div style={{background:"#fff",borderRadius:_.rXs,touchAction:"none",overflow:"hidden",border:`1.5px solid ${_.line2}`}}><canvas ref={mkCv(sigRef,sigCtx)} width={600} height={100} style={{width:"100%",height:100,cursor:"crosshair"}} {...cvH(sigRef,sigCtx,sigDr,()=>{up(pr=>{pr.proposals[propView].sigData=sigRef.current.toDataURL();pr.proposals[propView].status="signed";return pr});log("Proposal signed");notify("Signed")})} /></div>
               <div style={{display:"flex",gap:_.s2,marginTop:_.s2}}><button onClick={()=>{clr(sigRef,sigCtx)}} style={btnSecondary}>Clear</button></div>
             </div>}
-            {prop.sigData&&<div style={{marginTop:_.s5,padding:`${_.s3}px`,background:_.greenBg,borderRadius:_.rXs,fontSize:13,color:_.green,fontWeight:500,display:"flex",alignItems:"center",gap:4}}><Check size={13} /> Client signed</div>}
-          </Section>)})()}
+            {propD.sigData&&<div style={{marginTop:_.s5,padding:`${_.s3}px`,background:_.greenBg,borderRadius:_.rXs,fontSize:13,color:_.green,fontWeight:500,display:"flex",alignItems:"center",gap:4}}><Check size={13} /> Client signed</div>}
+        </Section>}
 
         {/* ════ TEMPLATES ════ */}
         {tab==="templates"&&<Section key={anim}>
@@ -971,7 +937,10 @@ export default function IBuild(){
         input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none}
         input[type=number]{-moz-appearance:textfield}
         textarea{font-family:inherit}
-        ::-webkit-scrollbar{width:0;height:0}
+        ::-webkit-scrollbar{width:6px;height:6px}
+        ::-webkit-scrollbar-track{background:transparent}
+        ::-webkit-scrollbar-thumb{background:${_.line};border-radius:3px}
+        ::-webkit-scrollbar-thumb:hover{background:${_.line2}}
         input:focus,textarea:focus,select:focus{border-color:${_.ac}!important;background:#fff!important;box-shadow:0 0 0 3px ${_.acLight}!important}
         @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
       `}</style>
