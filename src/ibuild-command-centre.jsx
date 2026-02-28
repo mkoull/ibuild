@@ -100,7 +100,7 @@ const fmt=n=>new Intl.NumberFormat("en-AU",{style:"currency",currency:"AUD",mini
 const uid=()=>Math.random().toString(36).slice(2,8).toUpperCase();
 const ds=()=>new Date().toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric"});
 const ts=()=>new Date().toLocaleTimeString("en-AU",{hour:"numeric",minute:"2-digit"});
-const mkScope=()=>{const s={};Object.entries(RATES).forEach(([c,i])=>{s[c]=i.map(x=>({...x,on:false,actual:0}))});return s};
+const mkScope=()=>{const s={};Object.entries(RATES).forEach(([c,i])=>{s[c]=i.map(x=>({...x,on:false,actual:0,_id:uid()}))});return s};
 const pName=(pr)=>pr.client?(pr.suburb?`${pr.client} \u2014 ${pr.suburb}`:pr.client):"New Project";
 const sIdx=s=>STAGES.indexOf(s);
 const mkProject=()=>({id:uid(),status:"Lead",created:ds(),client:"",email:"",phone:"",address:"",suburb:"",assignedTo:"",type:"New Build",stories:"Single Storey",area:"",validDays:30,scope:mkScope(),margin:18,contingency:5,notes:"",variations:[],invoices:[],proposals:[],milestones:MILESTONES.map(m=>({name:m.name,wk:m.wk,done:false,date:"",planned:""})),trades:[],diary:[],defects:[],sigData:null,activity:[{action:"Project created",time:ts(),date:ds()}]});
@@ -157,6 +157,15 @@ const stCol=s=>s==="Active"||s==="Invoiced"?_.green:s==="Approved"?_.blue:s==="C
 const stBg=s=>s==="Active"||s==="Invoiced"?_.greenBg:s==="Approved"?_.blueBg:s==="Complete"?_.acLight:s==="Quote"?"#EAE6FF":_.amberBg;
 const badge=(c,bg)=>({fontSize:11,fontWeight:600,padding:"2px 8px",borderRadius:_.rFull,background:bg||`${c}15`,color:c});
 
+// ═══ STORAGE WRAPPER ═══
+const STORAGE_VERSION=1;
+const store={
+  get(key){try{const v=localStorage.getItem(key);return v===null?null:JSON.parse(v)}catch{return null}},
+  set(key,value){try{localStorage.setItem(key,JSON.stringify(value));return true}catch{return false}},
+  remove(key){try{localStorage.removeItem(key)}catch{}},
+};
+const hydrateScope=projects=>projects.map(pr=>{if(pr.scope)Object.values(pr.scope).forEach(items=>items.forEach(item=>{if(!item._id)item._id=uid()}));return pr});
+
 const NAV_ITEMS=[
   {group:"PROJECT",items:[
     {id:"dash",l:"Overview",Ic:BarChart3},{id:"quote",l:"Quote",Ic:PenLine},
@@ -206,8 +215,16 @@ function calc(p){
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════
 export default function IBuild(){
-  const [projects,setProjects]=useState([mkProject()]);
-  const [ai,setAi]=useState(0);
+  const [projects,setProjects]=useState(()=>{
+    const d=store.get("ib_projects");
+    if(d&&d.v===STORAGE_VERSION&&Array.isArray(d.projects)&&d.projects.length>0)return hydrateScope(d.projects);
+    return [mkProject()];
+  });
+  const [ai,setAi]=useState(()=>{
+    const d=store.get("ib_projects");
+    if(d&&d.v===STORAGE_VERSION&&Array.isArray(d.projects)&&typeof d.ai==="number")return Math.max(0,Math.min(d.ai,(d.projects.length||1)-1));
+    return 0;
+  });
   const [tab,setTab]=useState("dash");
   const [exp,setExp]=useState({});
   const [planLoad,setPlanLoad]=useState(false);
@@ -231,6 +248,8 @@ export default function IBuild(){
   const [newMs,setNewMs]=useState("");
   const [mobile,setMobile]=useState(window.innerWidth<768);
   const [moreMenu,setMoreMenu]=useState(false);
+  const [saveStatus,setSaveStatus]=useState(null);
+  const saveTimer=useRef(null);
 
   const sigRef=useRef(null),sigCtx=useRef(null),sigDr=useRef(false);
   const voSigRef=useRef(null),voSigCtx=useRef(null),voSigDr=useRef(false);
@@ -244,10 +263,26 @@ export default function IBuild(){
   const log=action=>up(pr=>{pr.activity.unshift({action,time:ts(),date:ds()});if(pr.activity.length>30)pr.activity=pr.activity.slice(0,30);return pr});
 
   useEffect(()=>{const h=()=>setMobile(window.innerWidth<768);window.addEventListener("resize",h);return()=>window.removeEventListener("resize",h)},[]);
-  useEffect(()=>{(async()=>{try{const r=await window.storage.get("ibt8");if(r?.value)setTpl(JSON.parse(r.value))}catch{}})()},[]);
-  const saveTpl=async t2=>{setTpl(t2);try{await window.storage.set("ibt8",JSON.stringify(t2))}catch{}};
+
+  // Autosave projects (debounced 400ms)
+  useEffect(()=>{
+    if(saveTimer.current)clearTimeout(saveTimer.current);
+    setSaveStatus("saving");
+    saveTimer.current=setTimeout(()=>{
+      store.set("ib_projects",{v:STORAGE_VERSION,projects,ai});
+      setSaveStatus(new Date().toLocaleTimeString("en-AU",{hour:"numeric",minute:"2-digit"}));
+    },400);
+    return()=>{if(saveTimer.current)clearTimeout(saveTimer.current)};
+  },[projects,ai]);
+
+  // Clamp ai when projects length changes
+  useEffect(()=>{if(ai>=projects.length)setAi(Math.max(0,projects.length-1))},[projects.length]);
+
+  // Templates persistence (localStorage)
+  useEffect(()=>{const d=store.get("ib_templates");if(Array.isArray(d))setTpl(d)},[]);
+  const saveTpl=t2=>{setTpl(t2);store.set("ib_templates",t2)};
   const uI=(cat,idx,k,v)=>up(pr=>{pr.scope[cat][idx][k]=v;if(k==="on"&&v&&!pr.scope[cat][idx].qty)pr.scope[cat][idx].qty=1;return pr});
-  const addC=cat=>up(pr=>{pr.scope[cat].push({item:"Custom Item",unit:"fixed",rate:0,qty:1,on:true,actual:0,custom:true});return pr});
+  const addC=cat=>up(pr=>{pr.scope[cat].push({item:"Custom Item",unit:"fixed",rate:0,qty:1,on:true,actual:0,custom:true,_id:uid()});return pr});
 
   const mkCv=(ref,ctx)=>el=>{if(!el)return;ref.current=el;const c2=el.getContext("2d");c2.strokeStyle=_.ink;c2.lineWidth=2;c2.lineCap="round";c2.lineJoin="round";ctx.current=c2};
   const cvH=(ref,ctx,dr,done)=>{
@@ -256,9 +291,11 @@ export default function IBuild(){
   };
   const clr=(ref,ctx)=>{if(ctx.current&&ref.current)ctx.current.clearRect(0,0,ref.current.width,ref.current.height)};
   const analysePlan=async file=>{
+    const endpoint=import.meta.env.VITE_FLOORPLAN_ANALYSE_ENDPOINT;
+    if(!endpoint){notify("Set VITE_FLOORPLAN_ANALYSE_ENDPOINT to enable AI analysis","error");return}
     setPlanLoad(true);setPlanData(null);
     try{const b64=await new Promise((r,j)=>{const fr=new FileReader();fr.onload=()=>r(fr.result.split(",")[1]);fr.onerror=j;fr.readAsDataURL(file)});const mt=file.type||"image/png";setPlanImg(`data:${mt};base64,${b64}`);
-      const resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:mt,data:b64}},{type:"text",text:'Analyse this floor plan. Return ONLY JSON: {"total_m2":number,"rooms":[{"name":"string","m2":number}],"notes":"string"}.'}]}]})});
+      const resp=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({image:b64,media_type:mt})});
       const d=await resp.json();setPlanData(JSON.parse((d.content?.map(b=>b.text||"").join("")||"").replace(/```json|```/g,"").trim()));
     }catch(e){setPlanData({error:"Analysis failed — try a clearer image."})}setPlanLoad(false);
   };
@@ -312,6 +349,8 @@ export default function IBuild(){
         <div style={{padding:"16px 20px",display:"flex",alignItems:"center",gap:10,borderBottom:`1px solid ${_.line}`}}>
           <div style={{width:28,height:28,background:_.ac,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:"#fff"}}>i</div>
           <span style={{fontSize:15,fontWeight:700,color:_.ink}}>iBuild</span>
+          <div style={{flex:1}} />
+          {saveStatus&&<span style={{fontSize:10,color:_.faint,fontWeight:500}}>{saveStatus==="saving"?"Saving\u2026":`Saved ${saveStatus}`}</span>}
         </div>
 
         {/* Project switcher */}
@@ -362,7 +401,7 @@ export default function IBuild(){
       {mobile&&<div style={{position:"fixed",top:0,left:0,right:0,zIndex:50,background:_.surface,borderBottom:`1px solid ${_.line}`,padding:"10px 16px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
           <div style={{width:28,height:28,background:_.ac,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:"#fff"}}>i</div>
-          <span style={{fontSize:15,fontWeight:700,color:_.ink}}>iBuild</span>
+          <div><span style={{fontSize:15,fontWeight:700,color:_.ink}}>iBuild</span>{saveStatus&&<div style={{fontSize:9,color:_.faint,fontWeight:500}}>{saveStatus==="saving"?"Saving\u2026":`Saved ${saveStatus}`}</div>}</div>
         </div>
         <div onClick={()=>setSw(!sw)} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",background:_.well,borderRadius:_.rSm,cursor:"pointer",maxWidth:"55%"}}>
           <div style={{fontSize:13,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{pName(p)}</div>
@@ -533,7 +572,7 @@ export default function IBuild(){
                 </div>
                 {open&&<div style={{paddingBottom:_.s4,paddingLeft:_.s6}}>
                   {items.map((item,idx)=>(
-                    <div key={idx} style={{display:"flex",gap:_.s2,alignItems:"center",padding:`5px 0`}}>
+                    <div key={item._id||idx} style={{display:"flex",gap:_.s2,alignItems:"center",padding:`5px 0`}}>
                       <div onClick={()=>uI(cat,idx,"on",!item.on)} style={{width:18,height:18,borderRadius:5,border:`1.5px solid ${item.on?_.ac:_.line2}`,background:item.on?_.ac:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all 0.15s"}}>{item.on&&<Check size={11} strokeWidth={3} color="#fff" />}</div>
                       <span style={{flex:1,fontSize:13,color:item.on?_.ink:_.muted}}>{item.item}</span>
                       {item.on&&<>
@@ -599,7 +638,7 @@ export default function IBuild(){
               </div>
               {act>0&&<div style={{height:3,background:_.line,borderRadius:2,marginBottom:_.s3}}><div style={{height:"100%",width:`${Math.min((act/est)*100,100)}%`,background:act>est?_.red:_.green,borderRadius:2,transition:"width 0.4s"}} /></div>}
               {items.filter(i=>i.on).map((item,idx)=>(
-                <div key={idx} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0",fontSize:13}}>
+                <div key={item._id||idx} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0",fontSize:13}}>
                   <span style={{color:_.body}}>{item.item}</span>
                   <div style={{display:"flex",alignItems:"center",gap:_.s2}}>
                     <span style={{color:_.muted,fontVariantNumeric:"tabular-nums"}}>{fmt(item.rate*item.qty)}</span>

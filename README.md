@@ -1,16 +1,35 @@
-# React + Vite
+# iBuild — Builder Command Centre
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Construction project management SaaS. Vite + React single-page app.
 
-Currently, two official plugins are available:
+## Quick Start
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+```bash
+npm install
+npm run dev
+```
 
-## React Compiler
+## Environment Variables
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+| Variable | Required | Description |
+|---|---|---|
+| `VITE_FLOORPLAN_ANALYSE_ENDPOINT` | No | URL of a backend proxy that forwards floorplan images to an AI model for analysis. If not set, the "Plans AI" upload will show a toast prompting you to configure it. The client sends `POST { image: "<base64>", media_type: "image/png" }` and expects back the same response shape as the Anthropic Messages API. |
 
-## Expanding the ESLint configuration
+Example `.env`:
+```
+VITE_FLOORPLAN_ANALYSE_ENDPOINT=http://localhost:3001/api/analyse-plan
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Local Storage Keys
+
+| Key | Shape | Description |
+|---|---|---|
+| `ib_projects` | `{ v: 1, projects: [...], ai: number }` | All projects + active index. Autosaved with 400ms debounce. |
+| `ib_templates` | `[{ name, scope, margin, contingency }]` | Saved scope templates. |
+
+## Architecture
+
+- **Primary file:** `src/ibuild-command-centre.jsx` — entire app in one component
+- **Entry:** `src/main.jsx` → `src/App.jsx` → `IBuild`
+- **Storage:** `localStorage` via `store` wrapper (get/set/remove with JSON + try/catch)
+- **No backend required** — fully local-first, all data in browser storage
