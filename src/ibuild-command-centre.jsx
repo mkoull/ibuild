@@ -106,56 +106,67 @@ const sIdx=s=>STAGES.indexOf(s);
 const mkProject=()=>({id:uid(),status:"Lead",created:ds(),client:"",email:"",phone:"",address:"",suburb:"",assignedTo:"",type:"New Build",stories:"Single Storey",area:"",validDays:30,scope:mkScope(),margin:18,contingency:5,notes:"",variations:[],invoices:[],proposals:[],milestones:MILESTONES.map(m=>({name:m.name,wk:m.wk,done:false,date:"",planned:""})),trades:[],diary:[],defects:[],sigData:null,activity:[{action:"Project created",time:ts(),date:ds()}]});
 
 // ═══════════════════════════════════════════════
-// DESIGN SYSTEM — Buildxact-inspired clean professional
+// DESIGN SYSTEM — Premium Builder OS
 // ═══════════════════════════════════════════════
 const _ = {
-  bg:"#f0f2f5",
+  // Surfaces
+  bg:"#f6f7f9",
   surface:"#ffffff",
   raised:"#ffffff",
-  well:"#f4f5f7",
-  line:"#DFE1E6",
-  line2:"#C1C7D0",
-  ink:"#172B4D",
-  body:"#5E6C84",
-  muted:"#97A0AF",
-  faint:"#C1C7D0",
-  ac:"#0066FF",
-  acDark:"#0052CC",
-  acLight:"#DEEBFF",
-  acBorder:"#B3D4FF",
-  green:"#36B37E",greenBg:"#E3FCEF",
-  red:"#FF5630",redBg:"#FFEBE6",
-  amber:"#FFAB00",amberBg:"#FFFAE6",
-  blue:"#0066FF",blueBg:"#DEEBFF",
-  violet:"#6554C0",
+  well:"#f1f3f5",
+  // Borders
+  line:"#e8eaed",
+  line2:"#d0d4da",
+  // Text hierarchy
+  ink:"#111827",
+  body:"#4b5563",
+  muted:"#9ca3af",
+  faint:"#d1d5db",
+  // Accent
+  ac:"#2563eb",
+  acDark:"#1d4ed8",
+  acLight:"#eff6ff",
+  acBorder:"#bfdbfe",
+  // Semantic
+  green:"#059669",greenBg:"#ecfdf5",
+  red:"#dc2626",redBg:"#fef2f2",
+  amber:"#d97706",amberBg:"#fffbeb",
+  blue:"#2563eb",blueBg:"#eff6ff",
+  violet:"#7c3aed",
+  // Spacing (8px base grid)
   s1:4,s2:8,s3:12,s4:16,s5:20,s6:24,s7:32,s8:40,s9:48,s10:64,
-  r:"8px",rSm:"6px",rXs:"4px",rFull:"999px",
+  // Radius
+  r:"10px",rSm:"8px",rXs:"6px",rFull:"999px",
+  // Shadows
+  sh1:"0 1px 2px rgba(0,0,0,0.04),0 1px 3px rgba(0,0,0,0.06)",
+  sh2:"0 2px 8px rgba(0,0,0,0.06),0 1px 2px rgba(0,0,0,0.04)",
+  sh3:"0 8px 24px rgba(0,0,0,0.08),0 2px 6px rgba(0,0,0,0.04)",
 };
 
 const input = {
-  width:"100%",padding:"8px 12px",background:"#fff",border:`1px solid ${_.line}`,
+  width:"100%",padding:"9px 12px",background:_.well,border:"1.5px solid transparent",
   borderRadius:_.rXs,color:_.ink,fontSize:14,fontFamily:"inherit",outline:"none",
-  transition:"all 0.15s",
+  transition:"all 0.15s ease",
 };
 const label = {
-  fontSize:11,color:_.muted,marginBottom:4,display:"block",fontWeight:600,
-  letterSpacing:"0.04em",textTransform:"uppercase",
+  fontSize:11,color:_.muted,marginBottom:5,display:"block",fontWeight:600,
+  letterSpacing:"0.05em",textTransform:"uppercase",
 };
 const btnPrimary = {
-  padding:"8px 16px",background:_.ac,color:"#fff",border:"none",borderRadius:_.rSm,
-  fontSize:13,fontWeight:600,cursor:"pointer",transition:"all 0.15s",
+  padding:"9px 18px",background:_.ac,color:"#fff",border:"none",borderRadius:_.rSm,
+  fontSize:13,fontWeight:600,cursor:"pointer",transition:"all 0.12s ease",
   display:"inline-flex",alignItems:"center",gap:6,
 };
 const btnSecondary = {
-  ...btnPrimary,background:_.well,color:_.body,border:`1px solid ${_.line}`,
+  ...btnPrimary,background:_.well,color:_.body,border:`1.5px solid ${_.line}`,
 };
 const btnGhost = {
-  ...btnPrimary,background:"transparent",color:_.body,padding:"8px 12px",
+  ...btnPrimary,background:"transparent",color:_.body,padding:"9px 12px",
 };
-const card = {background:_.surface,borderRadius:_.r,border:`1px solid ${_.line}`,padding:24};
+const card = {background:_.surface,borderRadius:_.r,border:`1px solid ${_.line}`,padding:24,boxShadow:_.sh1,transition:"box-shadow 0.18s ease, transform 0.18s ease"};
 const stCol=s=>s==="Active"||s==="Invoiced"?_.green:s==="Approved"?_.blue:s==="Complete"?_.ac:s==="Quote"?_.violet:_.amber;
-const stBg=s=>s==="Active"||s==="Invoiced"?_.greenBg:s==="Approved"?_.blueBg:s==="Complete"?_.acLight:s==="Quote"?"#EAE6FF":_.amberBg;
-const badge=(c,bg)=>({fontSize:11,fontWeight:600,padding:"2px 8px",borderRadius:_.rFull,background:bg||`${c}15`,color:c});
+const stBg=s=>s==="Active"||s==="Invoiced"?_.greenBg:s==="Approved"?_.blueBg:s==="Complete"?_.acLight:s==="Quote"?"#f5f3ff":_.amberBg;
+const badge=(c,bg)=>({fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:_.rFull,background:bg||`${c}12`,color:c,letterSpacing:"0.01em"});
 
 // ═══ STORAGE WRAPPER ═══
 const STORAGE_VERSION=1;
@@ -164,7 +175,7 @@ const store={
   set(key,value){try{localStorage.setItem(key,JSON.stringify(value));return true}catch{return false}},
   remove(key){try{localStorage.removeItem(key)}catch{}},
 };
-const hydrateScope=projects=>projects.map(pr=>{if(pr.scope)Object.values(pr.scope).forEach(items=>items.forEach(item=>{if(!item._id)item._id=uid()}));return pr});
+const hydrateScope=projects=>projects.map(pr=>{if(!pr.scope)pr.scope=mkScope();Object.values(pr.scope).forEach(items=>items.forEach(item=>{if(!item._id)item._id=uid()}));return pr});
 
 const NAV_ITEMS=[
   {group:"PROJECT",items:[
@@ -187,13 +198,13 @@ const NAV_ITEMS=[
 
 // ═══ Stable components — MUST live outside IBuild to avoid remount on every keystroke ═══
 const Empty=({icon:Ic,text,action,actionText})=>(
-  <div style={{textAlign:"center",padding:`${_.s10}px ${_.s6}px`}}>
-    {Ic&&<div style={{marginBottom:_.s4,display:"flex",justifyContent:"center"}}><Ic size={36} strokeWidth={1} color={_.faint} /></div>}
-    <div style={{fontSize:15,color:_.muted,lineHeight:1.5}}>{text}</div>
+  <div style={{textAlign:"center",padding:`${_.s10}px ${_.s7}px`,background:_.well,borderRadius:_.r,border:`1.5px dashed ${_.line2}`}}>
+    {Ic&&<div style={{marginBottom:_.s4,display:"flex",justifyContent:"center"}}><div style={{width:56,height:56,borderRadius:"50%",background:_.surface,boxShadow:_.sh1,display:"flex",alignItems:"center",justifyContent:"center"}}><Ic size={24} strokeWidth={1.5} color={_.muted} /></div></div>}
+    <div style={{fontSize:15,color:_.body,lineHeight:1.5,fontWeight:500}}>{text}</div>
     {action&&<button onClick={action} style={{...btnPrimary,marginTop:_.s5}}>{actionText} <ArrowRight size={14} /></button>}
   </div>
 );
-const Section=({children})=>(<div style={{animation:"fadeUp 0.3s ease",maxWidth:960}}>{children}</div>);
+const Section=({children})=>(<div style={{animation:"fadeUp 0.25s ease",maxWidth:960}}>{children}</div>);
 
 function calc(p){
   const sub=Object.values(p.scope).flat().filter(i=>i.on).reduce((t,i)=>t+i.rate*i.qty,0);
@@ -255,7 +266,7 @@ export default function IBuild(){
   const voSigRef=useRef(null),voSigCtx=useRef(null),voSigDr=useRef(false);
   const propRef=useRef(null),voDocRef=useRef(null),invDocRef=useRef(null);
 
-  const p=projects[ai];
+  const p=projects[ai]||projects[0];
   const up=fn=>setProjects(pv=>pv.map((x,i)=>i===ai?fn(JSON.parse(JSON.stringify(x))):x));
   const T=calc(p);
   const notify=(msg,type="ok")=>{setToast({msg,type});setTimeout(()=>setToast(null),2200)};
@@ -305,7 +316,7 @@ export default function IBuild(){
   const createProp=(name)=>{
     if(!name)name=`Proposal v${p.proposals.length+1}`;
     const newIdx=p.proposals.length;
-    up(pr=>{pr.proposals.push({id:`PROP-${uid()}`,name,date:ds(),scope:JSON.parse(JSON.stringify(pr.scope)),client:pr.client,address:pr.address,suburb:pr.suburb,type:pr.type,stories:pr.stories,area:pr.area,notes:pr.notes,validDays:pr.validDays,pricing:{sub:T.sub,mar:T.mar,con:T.con,gst:T.gst,total:T.curr,margin:pr.margin,contingency:pr.contingency},sigData:null,status:"draft"});return pr});
+    up(pr=>{const t=calc(pr);pr.proposals.push({id:`PROP-${uid()}`,name,date:ds(),scope:JSON.parse(JSON.stringify(pr.scope)),client:pr.client,address:pr.address,suburb:pr.suburb,type:pr.type,stories:pr.stories,area:pr.area,notes:pr.notes,validDays:pr.validDays,pricing:{sub:t.sub,mar:t.mar,con:t.con,gst:t.gst,total:t.curr,margin:pr.margin,contingency:pr.contingency},sigData:null,status:"draft"});return pr});
     log("Proposal saved: "+name);notify("Proposal saved");
     setTab("proposal");setVoView(null);setInvView(null);setPropView(newIdx);setAnim(a=>a+1);
   };
@@ -341,16 +352,16 @@ export default function IBuild(){
     <div style={{display:"flex",height:"100vh",background:_.bg,color:_.ink,fontFamily:"'Inter',-apple-system,BlinkMacSystemFont,sans-serif"}}>
 
       {/* Toast */}
-      {toast&&<div style={{position:"fixed",top:16,left:"50%",transform:"translateX(-50%)",zIndex:999,padding:"10px 22px",borderRadius:_.rSm,fontSize:13,fontWeight:600,color:"#fff",background:toast.type==="error"?_.red:_.ac,boxShadow:"0 4px 12px rgba(0,0,0,0.15)",animation:"fadeUp 0.2s ease"}}>{toast.msg}</div>}
+      {toast&&<div style={{position:"fixed",top:20,left:"50%",transform:"translateX(-50%)",zIndex:999,padding:"10px 24px",borderRadius:_.rFull,fontSize:13,fontWeight:600,color:"#fff",background:toast.type==="error"?_.red:_.ink,boxShadow:_.sh3,animation:"fadeUp 0.2s ease"}}>{toast.msg}</div>}
 
       {/* ═══ SIDEBAR ═══ */}
-      <aside style={{width:240,flexShrink:0,background:_.surface,borderRight:`1px solid ${_.line}`,display:mobile?"none":"flex",flexDirection:"column"}}>
+      <aside style={{width:248,flexShrink:0,background:_.surface,borderRight:`1px solid ${_.line}`,display:mobile?"none":"flex",flexDirection:"column"}}>
         {/* Logo */}
-        <div style={{padding:"16px 20px",display:"flex",alignItems:"center",gap:10,borderBottom:`1px solid ${_.line}`}}>
-          <div style={{width:28,height:28,background:_.ac,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:"#fff"}}>i</div>
-          <span style={{fontSize:15,fontWeight:700,color:_.ink}}>iBuild</span>
+        <div style={{padding:"18px 20px",display:"flex",alignItems:"center",gap:10,borderBottom:`1px solid ${_.line}`}}>
+          <div style={{width:30,height:30,background:`linear-gradient(135deg,${_.ac},${_.acDark})`,borderRadius:9,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:"#fff",boxShadow:`0 2px 8px ${_.ac}30`}}>i</div>
+          <span style={{fontSize:16,fontWeight:700,color:_.ink,letterSpacing:"-0.02em"}}>iBuild</span>
           <div style={{flex:1}} />
-          {saveStatus&&<span style={{fontSize:10,color:_.faint,fontWeight:500}}>{saveStatus==="saving"?"Saving\u2026":`Saved ${saveStatus}`}</span>}
+          {saveStatus&&<span style={{fontSize:10,color:_.faint,fontWeight:500,whiteSpace:"nowrap"}}>{saveStatus==="saving"?"Saving\u2026":`Saved ${saveStatus}`}</span>}
         </div>
 
         {/* Project switcher */}
@@ -362,7 +373,7 @@ export default function IBuild(){
             </div>
             <ChevronDown size={14} color={_.muted} style={{flexShrink:0,transform:sw?"rotate(180deg)":"none",transition:"transform 0.15s"}} />
           </div>
-          {sw&&<div style={{position:"absolute",top:"100%",left:8,right:8,background:_.surface,borderRadius:_.r,zIndex:100,boxShadow:"0 12px 36px rgba(0,0,0,0.12),0 0 0 1px rgba(0,0,0,0.04)",maxHeight:360,overflowY:"auto",marginTop:4}}>
+          {sw&&<div style={{position:"absolute",top:"100%",left:8,right:8,background:_.surface,borderRadius:_.r,zIndex:100,boxShadow:"0 12px 36px rgba(0,0,0,0.12),0 0 0 1px rgba(0,0,0,0.04)",maxHeight:360,overflowY:"auto",marginTop:4,animation:"slideDown 0.15s ease"}}>
             {projects.map((pr,i)=>(
               <div key={pr.id} style={{padding:"10px 14px",cursor:"pointer",background:i===ai?_.acLight:_.surface,display:"flex",justifyContent:"space-between",alignItems:"center",transition:"background 0.1s"}} onClick={()=>{setAi(i);setSw(false)}} onMouseEnter={e=>{if(i!==ai)e.currentTarget.style.background=_.well}} onMouseLeave={e=>{e.currentTarget.style.background=i===ai?_.acLight:_.surface}}>
                 <div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{pName(pr)}</div><div style={{fontSize:11,color:_.muted,marginTop:1}}>{pr.type}{calc(pr).curr>0?` · ${fmt(calc(pr).curr)}`:""}</div></div>
@@ -377,17 +388,18 @@ export default function IBuild(){
         </div>
 
         {/* Nav groups */}
-        <div style={{flex:1,overflowY:"auto",padding:"8px 0"}}>
+        <div style={{flex:1,overflowY:"auto",padding:"8px 10px"}}>
           {NAV_ITEMS.map(g=>(
-            <div key={g.group} style={{marginBottom:12}}>
-              <div style={{padding:"8px 20px",fontSize:10,fontWeight:700,color:_.muted,letterSpacing:"0.08em",textTransform:"uppercase"}}>{g.group}</div>
+            <div key={g.group} style={{marginBottom:8}}>
+              <div style={{padding:"10px 12px 4px",fontSize:10,fontWeight:700,color:_.muted,letterSpacing:"0.1em",textTransform:"uppercase"}}>{g.group}</div>
               {g.items.map(item=>(
                 <div key={item.id} onClick={()=>go(item.id)} style={{
-                  display:"flex",alignItems:"center",gap:10,padding:"7px 20px",fontSize:13,cursor:"pointer",
+                  display:"flex",alignItems:"center",gap:10,padding:"8px 12px",fontSize:13,cursor:"pointer",
+                  borderRadius:_.rSm,margin:"1px 0",
                   background:tab===item.id?_.acLight:"transparent",color:tab===item.id?_.ac:_.body,
-                  fontWeight:tab===item.id?600:400,borderLeft:tab===item.id?`3px solid ${_.ac}`:"3px solid transparent",
-                  transition:"all 0.12s",
-                }} onMouseEnter={e=>{if(tab!==item.id)e.currentTarget.style.background=_.well}} onMouseLeave={e=>{if(tab!==item.id)e.currentTarget.style.background="transparent"}}>
+                  fontWeight:tab===item.id?600:400,
+                  transition:"all 0.12s ease",
+                }} onMouseEnter={e=>{if(tab!==item.id)e.currentTarget.style.background=_.well}} onMouseLeave={e=>{if(tab!==item.id)e.currentTarget.style.background=tab===item.id?_.acLight:"transparent"}}>
                   <item.Ic size={16} strokeWidth={tab===item.id?2:1.5} />
                   {item.l}
                 </div>
@@ -400,7 +412,7 @@ export default function IBuild(){
       {/* ═══ MOBILE HEADER ═══ */}
       {mobile&&<div style={{position:"fixed",top:0,left:0,right:0,zIndex:50,background:_.surface,borderBottom:`1px solid ${_.line}`,padding:"10px 16px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <div style={{width:28,height:28,background:_.ac,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:"#fff"}}>i</div>
+          <div style={{width:28,height:28,background:`linear-gradient(135deg,${_.ac},${_.acDark})`,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:"#fff",boxShadow:`0 2px 8px ${_.ac}30`}}>i</div>
           <div><span style={{fontSize:15,fontWeight:700,color:_.ink}}>iBuild</span>{saveStatus&&<div style={{fontSize:9,color:_.faint,fontWeight:500}}>{saveStatus==="saving"?"Saving\u2026":`Saved ${saveStatus}`}</div>}</div>
         </div>
         <div onClick={()=>setSw(!sw)} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",background:_.well,borderRadius:_.rSm,cursor:"pointer",maxWidth:"55%"}}>
@@ -408,7 +420,7 @@ export default function IBuild(){
           <ChevronDown size={14} color={_.muted} style={{flexShrink:0,transform:sw?"rotate(180deg)":"none",transition:"transform 0.15s"}} />
         </div>
       </div>}
-      {mobile&&sw&&<div style={{position:"fixed",top:52,left:8,right:8,zIndex:100,background:_.surface,borderRadius:_.r,boxShadow:"0 12px 36px rgba(0,0,0,0.12),0 0 0 1px rgba(0,0,0,0.04)",maxHeight:360,overflowY:"auto"}}>
+      {mobile&&sw&&<div style={{position:"fixed",top:52,left:8,right:8,zIndex:100,background:_.surface,borderRadius:_.r,boxShadow:"0 12px 36px rgba(0,0,0,0.12),0 0 0 1px rgba(0,0,0,0.04)",maxHeight:360,overflowY:"auto",animation:"slideDown 0.15s ease"}}>
         {projects.map((pr,i)=>(
           <div key={pr.id} style={{padding:"12px 14px",cursor:"pointer",background:i===ai?_.acLight:_.surface,display:"flex",justifyContent:"space-between",alignItems:"center",minHeight:44}} onClick={()=>{setAi(i);setSw(false)}}>
             <div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{pName(pr)}</div><div style={{fontSize:11,color:_.muted,marginTop:1}}>{pr.type}</div></div>
@@ -440,7 +452,8 @@ export default function IBuild(){
               ["Outstanding",fmt(allT.reduce((s,x)=>s+x.inv-x.paid,0)),`${allT.reduce((s,x)=>s+x.invoices.filter(i2=>i2.status==="pending").length,0)} unpaid`,_.red],
               ["Contract",fmt(T.curr),`${T.items} items`,_.ac],
             ].map(([lb,val,sub,c])=>(
-              <div key={lb} style={{...card,padding:20}}>
+              <div key={lb} style={{...card,padding:20,position:"relative",overflow:"hidden",transition:"box-shadow 0.18s ease, transform 0.18s ease"}} onMouseEnter={e=>{e.currentTarget.style.boxShadow=_.sh2;e.currentTarget.style.transform="translateY(-2px)"}} onMouseLeave={e=>{e.currentTarget.style.boxShadow=_.sh1;e.currentTarget.style.transform="translateY(0)"}}>
+                <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:c,opacity:0.7}} />
                 <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:_.s2}}>{lb}</div>
                 <div style={{fontSize:24,fontWeight:700,letterSpacing:"-0.02em",color:_.ink,lineHeight:1,fontVariantNumeric:"tabular-nums"}}>{val}</div>
                 <div style={{fontSize:12,color:c,fontWeight:500,marginTop:_.s1}}>{sub}</div>
@@ -449,7 +462,7 @@ export default function IBuild(){
           </div>
 
           {/* Current project card */}
-          <div style={{...card,borderLeft:`4px solid ${_.ac}`,marginBottom:_.s7}}>
+          <div style={{...card,borderLeft:`4px solid ${_.ac}`,marginBottom:_.s7,transition:"box-shadow 0.18s ease"}} onMouseEnter={e=>{e.currentTarget.style.boxShadow=_.sh2}} onMouseLeave={e=>{e.currentTarget.style.boxShadow=_.sh1}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:_.s4}}>
               <div>
                 <div style={{fontSize:11,color:_.ac,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:_.s1}}>Current project</div>
@@ -479,7 +492,7 @@ export default function IBuild(){
 
           {/* Attention + Activity */}
           <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"1fr 1fr",gap:_.s5,marginBottom:_.s7}}>
-            <div style={card}>
+            <div style={{...card,transition:"box-shadow 0.18s ease"}} onMouseEnter={e=>{e.currentTarget.style.boxShadow=_.sh2}} onMouseLeave={e=>{e.currentTarget.style.boxShadow=_.sh1}}>
               <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:_.s3}}>Needs attention</div>
               {alerts.length===0&&<div style={{fontSize:13,color:_.faint,padding:`${_.s3}px 0`}}>All clear</div>}
               {alerts.slice(0,4).map((a,i)=>(
@@ -489,7 +502,7 @@ export default function IBuild(){
                 </div>
               ))}
             </div>
-            <div style={card}>
+            <div style={{...card,transition:"box-shadow 0.18s ease"}} onMouseEnter={e=>{e.currentTarget.style.boxShadow=_.sh2}} onMouseLeave={e=>{e.currentTarget.style.boxShadow=_.sh1}}>
               <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:_.s3}}>Recent activity</div>
               {recentActivity.length===0&&<div style={{fontSize:13,color:_.faint,padding:`${_.s3}px 0`}}>No activity yet</div>}
               {recentActivity.slice(0,5).map((a,i)=>(
@@ -507,9 +520,9 @@ export default function IBuild(){
           {/* Quick actions */}
           <div style={{display:"grid",gridTemplateColumns:mobile?"repeat(2,1fr)":"repeat(4,1fr)",gap:_.s3}}>
             {[[PenLine,"New quote","quote"],[Upload,"Upload plans","plans"],[Receipt,"Invoice","invoices"],[BookOpen,"Site diary","diary"]].map(([Ic,l2,t2])=>(
-              <div key={l2} onClick={()=>go(t2)} style={{...card,padding:16,cursor:"pointer",textAlign:"center",transition:"all 0.15s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=_.ac}} onMouseLeave={e=>{e.currentTarget.style.borderColor=_.line}}>
-                <div style={{marginBottom:6,display:"flex",justifyContent:"center"}}><Ic size={20} strokeWidth={1.5} color={_.muted} /></div>
-                <div style={{fontSize:12,fontWeight:500,color:_.body}}>{l2}</div>
+              <div key={l2} onClick={()=>go(t2)} style={{...card,padding:18,cursor:"pointer",textAlign:"center",transition:"all 0.18s ease"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=_.ac;e.currentTarget.style.boxShadow=_.sh2;e.currentTarget.style.transform="translateY(-2px)"}} onMouseLeave={e=>{e.currentTarget.style.borderColor=_.line;e.currentTarget.style.boxShadow=_.sh1;e.currentTarget.style.transform="translateY(0)"}}>
+                <div style={{marginBottom:8,display:"flex",justifyContent:"center"}}><div style={{width:40,height:40,borderRadius:"50%",background:_.well,display:"flex",alignItems:"center",justifyContent:"center",transition:"background 0.15s"}}><Ic size={18} strokeWidth={1.5} color={_.muted} /></div></div>
+                <div style={{fontSize:12,fontWeight:600,color:_.body}}>{l2}</div>
               </div>
             ))}
           </div>
@@ -590,7 +603,7 @@ export default function IBuild(){
           </div>
 
           {/* Summary */}
-          {T.curr>0&&<div style={{...card,borderLeft:`4px solid ${_.ac}`,marginBottom:_.s6}}>
+          {T.curr>0&&<div style={{...card,borderLeft:`4px solid ${_.ac}`,marginBottom:_.s6,transition:"box-shadow 0.18s ease"}} onMouseEnter={e=>{e.currentTarget.style.boxShadow=_.sh2}} onMouseLeave={e=>{e.currentTarget.style.boxShadow=_.sh1}}>
             <div style={{fontSize:12,color:_.muted,fontWeight:600,letterSpacing:"0.04em",textTransform:"uppercase",marginBottom:_.s3}}>Contract Total</div>
             <div style={{fontSize:mobile?28:40,fontWeight:600,letterSpacing:"-0.04em",lineHeight:1,fontVariantNumeric:"tabular-nums",color:_.ink}}>{fmt(T.curr)}</div>
             <div style={{fontSize:13,color:_.muted,marginTop:_.s3,lineHeight:1.5}}>
@@ -656,7 +669,7 @@ export default function IBuild(){
           <div style={{fontSize:14,color:_.muted,marginBottom:_.s7}}>{p.milestones.filter(m=>m.done).length} of {p.milestones.length} milestones · {p.milestones.length>0?Math.round((p.milestones.filter(m=>m.done).length/p.milestones.length)*100):0}% complete</div>
 
           {/* Progress hero */}
-          <div style={{...card,borderLeft:`4px solid ${_.ac}`,marginBottom:_.s7}}>
+          <div style={{...card,borderLeft:`4px solid ${_.ac}`,marginBottom:_.s7,transition:"box-shadow 0.18s ease"}} onMouseEnter={e=>{e.currentTarget.style.boxShadow=_.sh2}} onMouseLeave={e=>{e.currentTarget.style.boxShadow=_.sh1}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:16}}>
               <div>
                 <div style={{fontSize:11,color:_.ac,letterSpacing:"0.06em",fontWeight:600,textTransform:"uppercase",marginBottom:4}}>Build Progress</div>
@@ -1029,17 +1042,21 @@ export default function IBuild(){
 
       <style>{`
         *{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;box-sizing:border-box}
-        ::selection{background:${_.acLight};color:${_.ink}}
+        ::selection{background:${_.acLight};color:${_.ac}}
         select option{background:#fff;color:${_.ink}}
         input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none}
         input[type=number]{-moz-appearance:textfield}
         textarea{font-family:inherit}
-        ::-webkit-scrollbar{width:6px;height:6px}
+        ::-webkit-scrollbar{width:5px;height:5px}
         ::-webkit-scrollbar-track{background:transparent}
-        ::-webkit-scrollbar-thumb{background:${_.line};border-radius:3px}
+        ::-webkit-scrollbar-thumb{background:${_.line};border-radius:99px}
         ::-webkit-scrollbar-thumb:hover{background:${_.line2}}
-        input:focus,textarea:focus,select:focus{border-color:${_.ac}!important;background:#fff!important;box-shadow:0 0 0 3px ${_.acLight}!important}
-        @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+        input:focus,textarea:focus,select:focus{border-color:${_.ac}!important;background:#fff!important;box-shadow:0 0 0 3px ${_.ac}18!important;outline:none!important}
+        button:active{transform:scale(0.97)!important}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes slideDown{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+        @media print{aside,nav{display:none!important}main{padding:0!important}}
       `}</style>
     </div>
   );
