@@ -90,6 +90,10 @@ export default function ScopePage() {
             <button onClick={() => navigate(`/clients/${p.clientId}`)} style={btnGhost}>Edit client</button>
           )}
         </div>
+        <div style={{ marginBottom: _.s4 }}>
+          <label style={label}>Project name</label>
+          <input style={input} value={p.name || ""} onChange={e => up(pr => { pr.name = e.target.value; return pr; })} placeholder="e.g. Johnson Residence Extension" />
+        </div>
         <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "1fr 1fr", gap: `${_.s3}px ${_.s4}px` }}>
           {[
             ["Client name", "client", "Johnson Residence"],

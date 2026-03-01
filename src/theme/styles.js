@@ -12,7 +12,8 @@ export const ts = () =>
   new Date().toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit" });
 
 export const pName = (pr, clients) => {
-  // Support both old shape (pr.client string) and new shape (pr.clientId + lookup)
+  if (pr.name) return pr.name;
+  // Fallback: derive from client + suburb
   let clientName = pr.client;
   if (!clientName && pr.clientId && clients) {
     const c = clients.find(cl => cl.id === pr.clientId);
