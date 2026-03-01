@@ -6,7 +6,7 @@ import { fmt, pName, ds, btnPrimary } from "../../theme/styles.js";
 import { STAGES } from "../../data/defaults.js";
 import { getNextStep } from "../../lib/nextStep.js";
 import StagePipeline from "../../components/ui/StagePipeline.jsx";
-import { ArrowRight, Check } from "lucide-react";
+import { ArrowRight, Check, Pencil } from "lucide-react";
 
 export default function OverviewPage() {
   const { project: p, T, client, log, transitionStage } = useProject();
@@ -74,8 +74,15 @@ export default function OverviewPage() {
           <h1 style={{ fontSize: mobile ? 28 : 40, fontWeight: 700, letterSpacing: "-0.03em", margin: 0, lineHeight: 1.1, color: _.ink }}>
             {pName(p, clients) === "New Project" ? "Overview" : pName(p, clients)}
           </h1>
-          <div style={{ fontSize: 13, color: _.muted, marginTop: 8, letterSpacing: "-0.01em" }}>
-            {stage} · {p.buildType || p.type}{p.floorArea || p.area ? ` · ${p.floorArea || p.area}m²` : ""} · {ds()}
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 8 }}>
+            <div style={{ fontSize: 13, color: _.muted, letterSpacing: "-0.01em" }}>
+              {stage} · {p.buildType || p.type}{p.floorArea || p.area ? ` · ${p.floorArea || p.area}m²` : ""} · {ds()}
+            </div>
+            <div onClick={() => navigate("../scope")}
+              style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: _.ac, cursor: "pointer", fontWeight: 500 }}
+              onMouseEnter={e => e.currentTarget.style.opacity = "0.7"}
+              onMouseLeave={e => e.currentTarget.style.opacity = "1"}
+            ><Pencil size={11} /> Edit</div>
           </div>
         </div>
 

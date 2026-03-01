@@ -7,7 +7,7 @@ import { fmt, input, label, btnPrimary, btnGhost, uid, ds, ts } from "../../them
 import { STAGES } from "../../data/defaults.js";
 import { calc } from "../../lib/calc.js";
 import Section from "../../components/ui/Section.jsx";
-import { Check, ChevronRight, Plus, ArrowRight } from "lucide-react";
+import { Check, ChevronRight, Plus, ArrowRight, X } from "lucide-react";
 
 export default function ScopePage() {
   const { project: p, update: up, T, client, log } = useProject();
@@ -28,6 +28,11 @@ export default function ScopePage() {
 
   const addC = cat => up(pr => {
     pr.scope[cat].push({ item: "Custom Item", unit: "fixed", rate: 0, qty: 1, on: true, actual: 0, custom: true, _id: uid() });
+    return pr;
+  });
+
+  const delI = (cat, idx) => up(pr => {
+    pr.scope[cat].splice(idx, 1);
     return pr;
   });
 
@@ -185,11 +190,17 @@ export default function ScopePage() {
                       {item.on && <>
                         <input type="number" style={{ width: 48, padding: "3px 5px", background: _.well, border: `1px solid ${_.line}`, borderRadius: _.rXs, color: _.ink, fontSize: 12, textAlign: "center", outline: "none", fontWeight: 600 }}
                           value={item.qty} onChange={e => uI(cat, idx, "qty", parseFloat(e.target.value) || 0)} />
-                        <span style={{ fontSize: 11, color: _.muted, minWidth: 22 }}>{item.unit}</span>
+                        <input style={{ width: 40, padding: "3px 4px", background: "transparent", border: "none", outline: "none", fontSize: 11, color: _.muted, fontFamily: "inherit", textAlign: "center" }}
+                          value={item.unit} onChange={e => uI(cat, idx, "unit", e.target.value)} />
                         <input type="number" style={{ width: 60, padding: "3px 5px", background: _.well, border: `1px solid ${_.line}`, borderRadius: _.rXs, color: _.ink, fontSize: 12, textAlign: "right", outline: "none", fontWeight: 600 }}
                           value={item.rate} onChange={e => uI(cat, idx, "rate", parseFloat(e.target.value) || 0)} />
                         <span style={{ fontSize: 13, fontWeight: 600, minWidth: 56, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmt(item.rate * item.qty)}</span>
                       </>}
+                      <div onClick={() => delI(cat, idx)}
+                        style={{ cursor: "pointer", color: _.faint, transition: "color 0.15s", flexShrink: 0, padding: 2 }}
+                        onMouseEnter={e => e.currentTarget.style.color = _.red}
+                        onMouseLeave={e => e.currentTarget.style.color = _.faint}
+                      ><X size={12} /></div>
                     </div>
                   ))}
                   <div onClick={() => addC(cat)} style={{ padding: "6px 0", cursor: "pointer", color: _.ac, fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}
