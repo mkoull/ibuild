@@ -180,7 +180,8 @@ export default function ScopePage() {
                         background: item.on ? _.ac : "transparent", cursor: "pointer",
                         display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
                       }}>{item.on && <Check size={10} strokeWidth={3} color="#fff" />}</div>
-                      <span style={{ flex: 1, fontSize: 13, color: item.on ? _.ink : _.muted }}>{item.item}</span>
+                      <input style={{ flex: 1, fontSize: 13, color: item.on ? _.ink : _.muted, background: "transparent", border: "none", outline: "none", fontFamily: "inherit", padding: 0 }}
+                        value={item.item} onChange={e => uI(cat, idx, "item", e.target.value)} />
                       {item.on && <>
                         <input type="number" style={{ width: 48, padding: "3px 5px", background: _.well, border: `1px solid ${_.line}`, borderRadius: _.rXs, color: _.ink, fontSize: 12, textAlign: "center", outline: "none", fontWeight: 600 }}
                           value={item.qty} onChange={e => uI(cat, idx, "qty", parseFloat(e.target.value) || 0)} />
