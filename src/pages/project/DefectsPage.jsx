@@ -2,9 +2,11 @@ import { useState } from "react";
 import { useProject } from "../../context/ProjectContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
 import _ from "../../theme/tokens.js";
-import { input, label, btnPrimary, btnGhost, ds } from "../../theme/styles.js";
+import { input, label, ds } from "../../theme/styles.js";
 import Section from "../../components/ui/Section.jsx";
 import Empty from "../../components/ui/Empty.jsx";
+import Button from "../../components/ui/Button.jsx";
+import Modal from "../../components/ui/Modal.jsx";
 import { Search, Check, X, Pencil } from "lucide-react";
 
 export default function DefectsPage() {
@@ -13,10 +15,11 @@ export default function DefectsPage() {
   const [defectForm, setDefectForm] = useState({ location: "", desc: "", assignee: "" });
   const [editIdx, setEditIdx] = useState(null);
   const [editDefect, setEditDefect] = useState({});
+  const [deleteIdx, setDeleteIdx] = useState(null);
 
   return (
     <Section>
-      <h1 style={{ fontSize: 40, fontWeight: 700, letterSpacing: "-0.03em", marginBottom: 4 }}>Defects</h1>
+      <h1 style={{ fontSize: mobile ? 28 : 40, fontWeight: 700, letterSpacing: "-0.03em", marginBottom: 4 }}>Defects</h1>
       <div style={{ fontSize: 14, color: _.muted, marginBottom: _.s7 }}>{p.defects.filter(d => d.done).length} of {p.defects.length} resolved</div>
 
       <div style={{ marginBottom: _.s7, paddingBottom: _.s6, borderBottom: `1px solid ${_.line}` }}>
@@ -25,11 +28,11 @@ export default function DefectsPage() {
           <div><label style={label}>Description *</label><input style={input} value={defectForm.desc} onChange={e => setDefectForm({ ...defectForm, desc: e.target.value })} placeholder="Cracked tile" /></div>
           <div><label style={label}>Assigned to</label><input style={input} value={defectForm.assignee} onChange={e => setDefectForm({ ...defectForm, assignee: e.target.value })} placeholder="Tiler" /></div>
         </div>
-        <button onClick={() => {
+        <Button onClick={() => {
           if (!defectForm.desc) { notify("Add description", "error"); return; }
           up(pr => { pr.defects.push({ ...defectForm, date: ds(), done: false }); return pr; });
           log("Defect: " + defectForm.desc); setDefectForm({ location: "", desc: "", assignee: "" }); notify("Logged");
-        }} style={btnPrimary}>Add defect</button>
+        }}>Add defect</Button>
       </div>
 
       {p.defects.length === 0 && <Empty icon={Search} text="No defects" />}
@@ -37,7 +40,7 @@ export default function DefectsPage() {
         <div key={i} style={{
           display: "flex", alignItems: "center", gap: _.s4, padding: `${_.s3}px 0`,
           borderBottom: `1px solid ${_.line}`,
-          opacity: d.done ? 0.4 : 1, transition: "opacity 0.2s",
+          opacity: d.done ? 0.4 : 1, transition: `opacity ${_.tr}`,
         }}>
           <div onClick={() => {
             const wasDone = d.done;
@@ -58,8 +61,8 @@ export default function DefectsPage() {
                 <div><label style={label}>Assigned to</label><input style={input} value={editDefect.assignee} onChange={e => setEditDefect({ ...editDefect, assignee: e.target.value })} /></div>
               </div>
               <div style={{ display: "flex", gap: _.s2 }}>
-                <button onClick={() => { up(pr => { pr.defects[i] = { ...pr.defects[i], location: editDefect.location, desc: editDefect.desc, assignee: editDefect.assignee }; return pr; }); setEditIdx(null); notify("Updated"); }} style={btnPrimary}>Save</button>
-                <button onClick={() => setEditIdx(null)} style={btnGhost}>Cancel</button>
+                <Button size="sm" onClick={() => { up(pr => { pr.defects[i] = { ...pr.defects[i], location: editDefect.location, desc: editDefect.desc, assignee: editDefect.assignee }; return pr; }); setEditIdx(null); notify("Updated"); }}>Save</Button>
+                <Button variant="ghost" size="sm" onClick={() => setEditIdx(null)}>Cancel</Button>
               </div>
             </div>
           ) : (
@@ -69,12 +72,12 @@ export default function DefectsPage() {
                 <div style={{ fontSize: 12, color: _.muted, marginTop: 1 }}>{[d.location, d.assignee && `→ ${d.assignee}`, d.date].filter(Boolean).join(" · ")}</div>
               </div>
               <div onClick={() => { setEditIdx(i); setEditDefect({ location: d.location || "", desc: d.desc, assignee: d.assignee || "" }); }}
-                style={{ cursor: "pointer", color: _.faint, transition: "color 0.15s", flexShrink: 0 }}
+                style={{ cursor: "pointer", color: _.faint, transition: `color ${_.tr}`, flexShrink: 0 }}
                 onMouseEnter={e => e.currentTarget.style.color = _.ac}
                 onMouseLeave={e => e.currentTarget.style.color = _.faint}
               ><Pencil size={13} /></div>
-              <div onClick={() => { if (confirm(`Delete "${d.desc}"?`)) { up(pr => { pr.defects.splice(i, 1); return pr; }); notify("Deleted"); } }}
-                style={{ cursor: "pointer", color: _.faint, transition: "color 0.15s", flexShrink: 0 }}
+              <div onClick={() => setDeleteIdx(i)}
+                style={{ cursor: "pointer", color: _.faint, transition: `color ${_.tr}`, flexShrink: 0 }}
                 onMouseEnter={e => e.currentTarget.style.color = _.red}
                 onMouseLeave={e => e.currentTarget.style.color = _.faint}
               ><X size={14} /></div>
@@ -82,6 +85,16 @@ export default function DefectsPage() {
           )}
         </div>
       ))}
+
+      <Modal open={deleteIdx !== null} onClose={() => setDeleteIdx(null)} title="Delete Defect" width={400}>
+        <div style={{ fontSize: 14, color: _.body, marginBottom: 24 }}>
+          Delete <strong>{deleteIdx !== null && p.defects[deleteIdx] ? p.defects[deleteIdx].desc : ""}</strong>?
+        </div>
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+          <Button variant="ghost" onClick={() => setDeleteIdx(null)}>Cancel</Button>
+          <Button variant="danger" onClick={() => { up(pr => { pr.defects.splice(deleteIdx, 1); return pr; }); notify("Deleted"); setDeleteIdx(null); }}>Delete</Button>
+        </div>
+      </Modal>
     </Section>
   );
 }

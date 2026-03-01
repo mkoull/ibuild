@@ -2,10 +2,11 @@ import { useState } from "react";
 import { useProject } from "../../context/ProjectContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
 import _ from "../../theme/tokens.js";
-import { input, label, btnPrimary, btnGhost, badge, ds } from "../../theme/styles.js";
+import { input, label, badge, ds } from "../../theme/styles.js";
 import { WEATHER } from "../../data/defaults.js";
 import Section from "../../components/ui/Section.jsx";
 import Empty from "../../components/ui/Empty.jsx";
+import Button from "../../components/ui/Button.jsx";
 import { BookOpen, X } from "lucide-react";
 
 export default function SiteDiaryPage() {
@@ -25,13 +26,13 @@ export default function SiteDiaryPage() {
           <div><label style={label}>Trades on site</label><input style={input} value={diaryForm.trades} onChange={e => setDiaryForm({ ...diaryForm, trades: e.target.value })} placeholder="Plumber, Sparky" /></div>
         </div>
         <div><label style={label}>Notes</label><textarea style={{ ...input, minHeight: 64, resize: "vertical" }} value={diaryForm.notes} onChange={e => setDiaryForm({ ...diaryForm, notes: e.target.value })} placeholder="What happened on site today..." /></div>
-        <button onClick={() => {
+        <div style={{ marginTop: _.s3 }}><Button onClick={() => {
           if (!diaryForm.notes && !diaryForm.trades) { notify("Add notes", "error"); return; }
           const entryDate = diaryForm.date ? new Date(diaryForm.date + "T00:00:00").toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" }) : ds();
           up(pr => { pr.diary.unshift({ date: entryDate, weather: diaryForm.weather, trades: diaryForm.trades, notes: diaryForm.notes }); return pr; });
           log("Diary: " + diaryForm.weather + (diaryForm.trades ? ", " + diaryForm.trades : ""));
           setDiaryForm({ date: "", weather: "Clear", trades: "", notes: "" }); notify("Logged");
-        }} style={{ ...btnPrimary, marginTop: _.s3 }}>Log entry</button>
+        }}>Log entry</Button></div>
       </div>
 
       {p.diary.length === 0 && <Empty icon={BookOpen} text="No entries yet" />}
@@ -45,8 +46,8 @@ export default function SiteDiaryPage() {
               </div>
               <div><label style={label}>Notes</label><textarea style={{ ...input, minHeight: 64, resize: "vertical" }} value={editDiary.notes} onChange={e => setEditDiary({ ...editDiary, notes: e.target.value })} /></div>
               <div style={{ display: "flex", gap: _.s2, marginTop: _.s2 }}>
-                <button onClick={() => { up(pr => { pr.diary[i] = { ...pr.diary[i], weather: editDiary.weather, trades: editDiary.trades, notes: editDiary.notes }; return pr; }); setEditIdx(null); notify("Updated"); }} style={btnPrimary}>Save</button>
-                <button onClick={() => setEditIdx(null)} style={btnGhost}>Cancel</button>
+                <Button size="sm" onClick={() => { up(pr => { pr.diary[i] = { ...pr.diary[i], weather: editDiary.weather, trades: editDiary.trades, notes: editDiary.notes }; return pr; }); setEditIdx(null); notify("Updated"); }}>Save</Button>
+                <Button variant="ghost" size="sm" onClick={() => setEditIdx(null)}>Cancel</Button>
               </div>
             </div>
           ) : (

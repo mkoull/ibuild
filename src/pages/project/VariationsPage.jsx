@@ -3,9 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { useProject } from "../../context/ProjectContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
 import _ from "../../theme/tokens.js";
-import { fmt, input, label, btnPrimary, badge, uid, ds } from "../../theme/styles.js";
+import { fmt, input, label, badge, uid, ds } from "../../theme/styles.js";
 import Section from "../../components/ui/Section.jsx";
 import Empty from "../../components/ui/Empty.jsx";
+import Button from "../../components/ui/Button.jsx";
+import Modal from "../../components/ui/Modal.jsx";
 import { ClipboardList, ChevronRight, ArrowRight, X } from "lucide-react";
 
 export default function VariationsPage() {
@@ -13,10 +15,11 @@ export default function VariationsPage() {
   const { mobile, notify } = useApp();
   const navigate = useNavigate();
   const [voForm, setVoForm] = useState({ desc: "", cat: "", amount: "", reason: "" });
+  const [deleteIdx, setDeleteIdx] = useState(null);
 
   return (
     <Section>
-      <h1 style={{ fontSize: 40, fontWeight: 700, letterSpacing: "-0.03em", marginBottom: 4 }}>Variation Orders</h1>
+      <h1 style={{ fontSize: mobile ? 28 : 40, fontWeight: 700, letterSpacing: "-0.03em", marginBottom: 4 }}>Variation Orders</h1>
       <div style={{ fontSize: 14, color: _.muted, marginBottom: _.s7 }}>Changes to original contract scope</div>
 
       {/* VO equation */}
@@ -39,7 +42,7 @@ export default function VariationsPage() {
         </div>
         {voForm._err && <div style={{ fontSize: 13, color: _.red, marginBottom: _.s2 }}>Description and amount are required</div>}
         {voForm.amount && <div style={{ fontSize: 14, color: _.muted, marginBottom: _.s3 }}>Contract {parseFloat(voForm.amount) >= 0 ? "increases" : "decreases"} by <strong style={{ color: _.ac }}>{fmt(Math.abs(parseFloat(voForm.amount) || 0))}</strong></div>}
-        <button onClick={() => {
+        <Button icon={ArrowRight} onClick={() => {
           if (!voForm.desc || !voForm.amount) { setVoForm({ ...voForm, _err: true }); return; }
           up(pr => {
             pr.variations.push({ id: `VO-${String(pr.variations.length + 1).padStart(3, "0")}`, description: voForm.desc, category: voForm.cat, amount: parseFloat(voForm.amount), reason: voForm.reason, date: ds(), status: "draft", builderSig: null, clientSig: null, approvedDate: "" });
@@ -48,14 +51,14 @@ export default function VariationsPage() {
           log(`VO created: ${voForm.desc} (${fmt(parseFloat(voForm.amount))})`);
           notify(`VO created — ${fmt(parseFloat(voForm.amount))}`);
           setVoForm({ desc: "", cat: "", amount: "", reason: "" });
-        }} style={btnPrimary}>Create VO <ArrowRight size={14} /></button>
+        }}>Create VO</Button>
       </div>
 
       {p.variations.length === 0 && <Empty icon={ClipboardList} text="No variations yet" />}
       {p.variations.map((v, i) => (
         <div key={i} onClick={() => navigate(`${i}`)} style={{
           padding: `${_.s4}px 0`, cursor: "pointer", display: "flex", justifyContent: "space-between",
-          alignItems: "center", borderBottom: `1px solid ${_.line}`, transition: "all 0.15s",
+          alignItems: "center", borderBottom: `1px solid ${_.line}`, transition: `all ${_.tr}`,
         }}
         onMouseEnter={e => e.currentTarget.style.paddingLeft = "4px"}
         onMouseLeave={e => e.currentTarget.style.paddingLeft = "0"}
@@ -67,8 +70,8 @@ export default function VariationsPage() {
           <div style={{ display: "flex", alignItems: "center", gap: _.s3 }}>
             <span style={{ fontSize: 16, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{v.amount >= 0 ? "+" : ""}{fmt(v.amount)}</span>
             <span style={badge(v.status === "approved" ? _.green : v.status === "rejected" ? _.red : _.amber)}>{v.status}</span>
-            <div onClick={e => { e.stopPropagation(); if (confirm(`Delete "${v.id}"?`)) { up(pr => { pr.variations.splice(i, 1); return pr; }); notify("Deleted"); } }}
-              style={{ cursor: "pointer", color: _.faint, transition: "color 0.15s" }}
+            <div onClick={e => { e.stopPropagation(); setDeleteIdx(i); }}
+              style={{ cursor: "pointer", color: _.faint, transition: `color ${_.tr}` }}
               onMouseEnter={e => e.currentTarget.style.color = _.red}
               onMouseLeave={e => e.currentTarget.style.color = _.faint}
             ><X size={14} /></div>
@@ -76,6 +79,16 @@ export default function VariationsPage() {
           </div>
         </div>
       ))}
+
+      <Modal open={deleteIdx !== null} onClose={() => setDeleteIdx(null)} title="Delete Variation" width={400}>
+        <div style={{ fontSize: 14, color: _.body, marginBottom: 24 }}>
+          Delete <strong>{deleteIdx !== null && p.variations[deleteIdx] ? p.variations[deleteIdx].id : ""}</strong>?
+        </div>
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+          <Button variant="ghost" onClick={() => setDeleteIdx(null)}>Cancel</Button>
+          <Button variant="danger" onClick={() => { up(pr => { pr.variations.splice(deleteIdx, 1); return pr; }); notify("Deleted"); setDeleteIdx(null); }}>Delete</Button>
+        </div>
+      </Modal>
     </Section>
   );
 }

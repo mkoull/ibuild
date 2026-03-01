@@ -2,9 +2,10 @@ import { useState } from "react";
 import { useProject } from "../../context/ProjectContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
 import _ from "../../theme/tokens.js";
-import { input, label, btnPrimary, btnGhost, badge } from "../../theme/styles.js";
+import { input, label, badge } from "../../theme/styles.js";
 import Section from "../../components/ui/Section.jsx";
 import Empty from "../../components/ui/Empty.jsx";
+import Button from "../../components/ui/Button.jsx";
 import { Wrench, X, Plus, Check, Pencil } from "lucide-react";
 
 export default function ProjectTradesPage() {
@@ -79,11 +80,11 @@ export default function ProjectTradesPage() {
             <div key={k}><label style={label}>{l}</label><input style={input} value={trForm[k]} onChange={e => setTrForm({ ...trForm, [k]: e.target.value })} placeholder={ph} /></div>
           ))}
         </div>
-        <button onClick={() => {
+        <div style={{ marginTop: _.s3 }}><Button onClick={() => {
           if (!trForm.trade) { notify("Enter trade", "error"); return; }
           up(pr => { if (!pr.trades) pr.trades = []; pr.trades.push({ ...trForm }); return pr; });
           log("Trade added: " + trForm.trade); setTrForm({ trade: "", company: "", contact: "", phone: "" }); notify("Added");
-        }} style={{ ...btnPrimary, marginTop: _.s3 }}>Add trade</button>
+        }}>Add trade</Button></div>
       </div>
 
       {projectTrades.length === 0 && assignedTradeIds.length === 0 && <Empty icon={Wrench} text="No trades assigned" />}
@@ -97,8 +98,8 @@ export default function ProjectTradesPage() {
                 ))}
               </div>
               <div style={{ display: "flex", gap: _.s2 }}>
-                <button onClick={() => { up(pr => { pr.trades[i] = { ...editTrade }; return pr; }); setEditTradeIdx(null); notify("Updated"); }} style={btnPrimary}>Save</button>
-                <button onClick={() => setEditTradeIdx(null)} style={btnGhost}>Cancel</button>
+                <Button size="sm" onClick={() => { up(pr => { pr.trades[i] = { ...editTrade }; return pr; }); setEditTradeIdx(null); notify("Updated"); }}>Save</Button>
+                <Button variant="ghost" size="sm" onClick={() => setEditTradeIdx(null)}>Cancel</Button>
               </div>
             </div>
           ) : (
