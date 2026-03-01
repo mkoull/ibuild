@@ -258,6 +258,9 @@ export default function IBuild(){
   const [mobile,setMobile]=useState(window.innerWidth<768);
   const [moreMenu,setMoreMenu]=useState(false);
   const [saveStatus,setSaveStatus]=useState(null);
+  const [editMsIdx,setEditMsIdx]=useState(null);
+  const [editMsName,setEditMsName]=useState("");
+  const [shiftWeeks,setShiftWeeks]=useState("");
   const saveTimer=useRef(null);
 
   const sigRef=useRef(null),sigCtx=useRef(null),sigDr=useRef(false);
@@ -349,6 +352,17 @@ export default function IBuild(){
   const quoteReady=p.client&&T.items>0;
   const quoteSent=["Approved","Active","Invoiced","Complete"].includes(p.status);
   const recentActivity=projects.flatMap((pr,idx)=>(pr.activity||[]).slice(0,4).map(a=>({...a,project:pName(pr),idx}))).slice(0,8);
+
+  // ═══ Workflow stepper — "Next Best Action" engine ═══
+  const wfSteps=[
+    {key:"plans",label:"Upload plans",done:!!planData||T.items>0,detail:planData?`${planData.total_m2}m² analysed`:"Optional — AI scope extraction",action:()=>go("plans"),optional:true,Ic:Ruler},
+    {key:"scope",label:"Build scope",done:T.items>0,detail:T.items>0?`${T.items} items · ${fmt(T.sub)}`:"Select items from rate library",action:()=>go("quote"),Ic:PenLine},
+    {key:"client",label:"Add client details",done:!!p.client,detail:p.client?pName(p):"Name, address, contact",action:()=>go("quote"),Ic:FileText},
+    {key:"proposal",label:"Generate proposal",done:p.proposals.length>0,detail:p.proposals.length>0?`${p.proposals.length} saved`:"Requires scope + client",action:()=>{if(quoteReady)createProp();else go("quote")},Ic:FileText},
+    {key:"schedule",label:"Set schedule",done:p.milestones.some(m=>m.planned),detail:`${p.milestones.filter(m=>m.planned).length} of ${p.milestones.length} dates set`,action:()=>go("schedule"),Ic:ClipboardList},
+  ];
+  const wfNext=wfSteps.find(s=>!s.done&&!s.optional)||wfSteps.find(s=>!s.done);
+  const wfDone=wfSteps.filter(s=>s.done).length;
   // Pre-compute detail views (eliminates IIFEs that caused focus bugs)
   const ganttMaxWk=Math.max(...p.milestones.map(m=>m.wk||0),36);
   const ganttLastDoneIdx=[...p.milestones].reverse().findIndex(m=>m.done);
@@ -511,32 +525,29 @@ export default function IBuild(){
                 ))}
               </div>
 
-              {/* CONTENT — get started or actions */}
-              {T.items===0&&!p.client ? (
-                <div style={{marginBottom:48}}>
-                  <div style={{fontSize:18,fontWeight:600,color:_.ink,marginBottom:20}}>Get started</div>
-                  {[["Build your first quote","Add client details and scope items",()=>go("quote"),PenLine],
-                    ["Upload plans","Use AI to extract scope from floor plans",()=>{go("plans");setTimeout(()=>{if(planFileRef.current)planFileRef.current.click()},150)},Upload],
-                    ["Add scope items","Select items from the rate library",()=>{go("quote");setExp(e2=>{const first=Object.keys(p.scope)[0];return first?{...e2,[first]:true}:e2})},Plus]
-                  ].map(([title,desc,action,Ic],idx)=>(
-                    <div key={title} onClick={action} style={{display:"flex",alignItems:"center",gap:16,padding:"16px 0",cursor:"pointer",borderBottom:`1px solid ${_.line}`,transition:"padding-left 0.15s"}} onMouseEnter={e=>e.currentTarget.style.paddingLeft="4px"} onMouseLeave={e=>e.currentTarget.style.paddingLeft="0"}>
-                      <Ic size={18} color={_.muted} strokeWidth={1.5} />
-                      <div style={{flex:1}}>
-                        <div style={{fontSize:14,fontWeight:500,color:_.ink}}>{title}</div>
-                        <div style={{fontSize:13,color:_.muted,marginTop:2}}>{desc}</div>
-                      </div>
-                      <ArrowRight size={14} color={_.faint} />
+              {/* PROJECT SETUP — workflow stepper */}
+              <div style={{marginBottom:48}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:20}}>
+                  <div style={{fontSize:14,fontWeight:600,color:_.ink}}>Project setup</div>
+                  <div style={{fontSize:12,color:_.muted}}>{wfDone} of {wfSteps.length}</div>
+                </div>
+                {wfSteps.map((step,i)=>(
+                  <div key={step.key} onClick={step.action} style={{display:"flex",alignItems:"center",gap:14,padding:"12px 0",cursor:"pointer",borderBottom:`1px solid ${_.line}`,transition:"padding-left 0.12s"}} onMouseEnter={e=>e.currentTarget.style.paddingLeft="4px"} onMouseLeave={e=>e.currentTarget.style.paddingLeft="0"}>
+                    <div style={{width:20,height:20,borderRadius:10,background:step.done?_.ink:"transparent",border:step.done?"none":`1.5px solid ${_.line2}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{step.done&&<Check size={10} strokeWidth={3} color="#fff" />}</div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:13,fontWeight:step.done?500:500,color:step.done?_.muted:_.ink}}>{step.label}{step.optional?<span style={{fontSize:11,color:_.faint,marginLeft:6}}>Optional</span>:""}</div>
+                      <div style={{fontSize:12,color:step.done?_.faint:_.muted,marginTop:1}}>{step.detail}</div>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:48}}>
-                  {!quoteReady&&<button onClick={()=>go("quote")} style={btnPrimary}>Build quote <ArrowRight size={14} /></button>}
-                  {quoteReady&&!quoteSent&&<button onClick={()=>createProp()} style={btnPrimary}>Generate proposal <ArrowRight size={14} /></button>}
-                  {quoteSent&&<button onClick={()=>go("invoices")} style={btnPrimary}>Manage invoices <ArrowRight size={14} /></button>}
-                  <button onClick={()=>go("quote")} style={{...btnGhost,color:_.muted}} onMouseEnter={e=>e.currentTarget.style.color=_.ink} onMouseLeave={e=>e.currentTarget.style.color=_.muted}>View quote</button>
-                </div>
-              )}
+                    {!step.done&&<ArrowRight size={13} color={_.faint} />}
+                  </div>
+                ))}
+
+                {/* Single primary CTA — next best action */}
+                {wfNext&&<div style={{marginTop:20}}>
+                  <button onClick={wfNext.action} style={{...btnPrimary,padding:"11px 20px"}}>{wfNext.label} <ArrowRight size={14} /></button>
+                </div>}
+                {!wfNext&&<div style={{marginTop:20,fontSize:13,color:_.green,fontWeight:500}}>All steps complete</div>}
+              </div>
 
               {/* ATTENTION — structured list */}
               {alerts.length>0&&<div style={{paddingTop:32,borderTop:`1px solid ${_.line}`}}>
@@ -550,16 +561,24 @@ export default function IBuild(){
               </div>}
             </div>
 
-            {/* ── RIGHT: Actions + Activity ── */}
+            {/* ── RIGHT: Context-aware next step + Activity ── */}
             <div style={{position:mobile?"static":"sticky",top:48}}>
 
-              {/* Quick actions — clean stacked, no panel */}
+              {/* Next step — context-aware, single CTA */}
               <div style={{marginBottom:40,paddingBottom:32,borderBottom:`1px solid ${_.line}`}}>
-                <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:14}}>Quick actions</div>
-                <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                  <button onClick={()=>go("quote")} style={{...btnPrimary,width:"100%",justifyContent:"center",padding:"10px 18px"}}>Build Quote</button>
-                  <button onClick={()=>go("plans")} style={{...btnSecondary,width:"100%",justifyContent:"center",padding:"10px 18px"}}><Upload size={14} /> Upload Plans</button>
-                </div>
+                <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:14}}>Next step</div>
+                {wfNext ? (<>
+                  <div style={{fontSize:14,fontWeight:500,color:_.ink,marginBottom:4}}>{wfNext.label}</div>
+                  <div style={{fontSize:12,color:_.muted,marginBottom:12}}>{wfNext.detail}</div>
+                  <button onClick={wfNext.action} style={{...btnPrimary,width:"100%",justifyContent:"center",padding:"10px 18px"}}>{wfNext.label} <ArrowRight size={14} /></button>
+                </>) : (<>
+                  <div style={{fontSize:14,fontWeight:500,color:_.ink,marginBottom:4}}>Project ready</div>
+                  <div style={{fontSize:12,color:_.muted,marginBottom:12}}>All setup steps complete</div>
+                  {quoteSent
+                    ?<button onClick={()=>go("invoices")} style={{...btnPrimary,width:"100%",justifyContent:"center",padding:"10px 18px"}}>Manage invoices <ArrowRight size={14} /></button>
+                    :<button onClick={()=>go("quote")} style={{...btnPrimary,width:"100%",justifyContent:"center",padding:"10px 18px"}}>View quote <ArrowRight size={14} /></button>
+                  }
+                </>)}
               </div>
 
               {/* Activity — structured list, dividers between items */}
@@ -656,24 +675,26 @@ export default function IBuild(){
             })}
           </div>
 
-          {/* Summary */}
-          {T.curr>0&&<div style={{paddingTop:_.s7,borderTop:`1px solid ${_.line}`,marginBottom:_.s7}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:_.s4}}>
-              <div style={{fontSize:18,fontWeight:600,color:_.ink}}>Contract Total</div>
-              <div style={{fontSize:mobile?40:56,fontWeight:700,letterSpacing:"-0.04em",lineHeight:1,fontVariantNumeric:"tabular-nums",color:_.ink}}>{fmt(T.curr)}</div>
+          {/* Review — distinct "ready to send" section */}
+          {T.curr>0&&<div style={{paddingTop:_.s8,marginTop:_.s4,borderTop:`2px solid ${_.ink}`,marginBottom:_.s7}}>
+            <div style={{fontSize:11,color:_.body,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:16}}>Review</div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:_.s5}}>
+              <div style={{fontSize:20,fontWeight:600,color:_.ink}}>Contract Total</div>
+              <div style={{fontSize:mobile?40:56,fontWeight:700,letterSpacing:"-0.04em",lineHeight:1,fontVariantNumeric:"tabular-nums",color:"#0a0f1a"}}>{fmt(T.curr)}</div>
             </div>
-            <div style={{display:"flex",justifyContent:"flex-end"}}>
-              <div style={{textAlign:"right"}}>
-                <div style={{fontSize:13,color:_.muted,lineHeight:1.8}}>
-                  Subtotal {fmt(T.sub)}<br/>
-                  Margin {p.margin}% {fmt(T.mar)}<br/>
-                  Contingency {p.contingency}% {fmt(T.con)}<br/>
-                  GST {fmt(T.gst)}
-                </div>
+            <div style={{display:"flex",justifyContent:"flex-end",marginBottom:_.s6}}>
+              <div style={{textAlign:"right",minWidth:200}}>
+                {[["Subtotal",fmt(T.sub)],[`Margin ${p.margin}%`,fmt(T.mar)],[`Contingency ${p.contingency}%`,fmt(T.con)],["GST",fmt(T.gst)]].map(([l2,v2])=>(
+                  <div key={l2} style={{display:"flex",justifyContent:"space-between",padding:"3px 0",fontSize:13,color:_.muted}}>
+                    <span>{l2}</span><span style={{fontVariantNumeric:"tabular-nums",marginLeft:24}}>{v2}</span>
+                  </div>
+                ))}
               </div>
             </div>
-            <div style={{display:"flex",gap:_.s2,marginTop:_.s6}}>
-              <button onClick={()=>createProp()} style={btnPrimary}>Generate proposal <ArrowRight size={14} /></button>
+            <div style={{display:"flex",gap:_.s2}}>
+              {quoteReady
+                ?<button onClick={()=>createProp()} style={{...btnPrimary,padding:"11px 24px",fontSize:14}}>Generate proposal <ArrowRight size={14} /></button>
+                :<button onClick={()=>{}} style={{...btnPrimary,opacity:0.4,cursor:"default",padding:"11px 24px",fontSize:14}}>Add client details first</button>}
               <button onClick={()=>go("costs")} style={btnGhost}>Cost tracker</button>
             </div>
           </div>}
@@ -682,15 +703,16 @@ export default function IBuild(){
         {/* ════ PLANS AI ════ */}
         {tab==="plans"&&<Section key={anim}>
           <h1 style={{fontSize:40,fontWeight:700,letterSpacing:"-0.03em",marginBottom:4}}>Plans AI</h1>
-          <div style={{fontSize:14,color:_.muted,marginBottom:_.s8}}>Upload floor plans for AI-powered analysis and scope extraction</div>
+          <div style={{fontSize:14,color:_.muted,marginBottom:_.s3}}>Upload floor plans for AI-powered scope extraction</div>
+          <div style={{fontSize:12,color:_.faint,marginBottom:_.s8}}>Analyses your plan image and suggests construction line items with Australian rates. Works with the local server ({`npm run server`}).</div>
 
           {/* Upload zone */}
-          <div style={{textAlign:"center",padding:`${_.s9}px ${_.s7}px`,border:`2px dashed ${_.line2}`,borderRadius:_.r,marginBottom:_.s7,transition:"border-color 0.15s"}} onMouseEnter={e=>e.currentTarget.style.borderColor=_.ac} onMouseLeave={e=>e.currentTarget.style.borderColor=_.line2}>
-            <Ruler size={32} strokeWidth={1.5} color={_.faint} style={{marginBottom:12}} />
-            <div style={{fontSize:15,color:_.body,marginBottom:4,fontWeight:500}}>Drop your floor plan here</div>
+          {!planData&&!planLoad&&<div style={{textAlign:"center",padding:`${_.s9}px ${_.s7}px`,border:`1.5px dashed ${_.line2}`,borderRadius:_.r,marginBottom:_.s7,transition:"border-color 0.15s"}} onMouseEnter={e=>e.currentTarget.style.borderColor=_.ink} onMouseLeave={e=>e.currentTarget.style.borderColor=_.line2}>
+            <Upload size={28} strokeWidth={1.5} color={_.muted} style={{marginBottom:12}} />
+            <div style={{fontSize:15,color:_.ink,marginBottom:4,fontWeight:500}}>Upload a floor plan</div>
             <div style={{fontSize:13,color:_.muted,marginBottom:_.s5}}>PNG, JPG, or PDF up to 20MB</div>
             <label style={btnPrimary}><input ref={planFileRef} type="file" accept="image/*,.pdf" style={{display:"none"}} onChange={e=>{if(e.target.files[0])analysePlan(e.target.files[0])}} />Choose file</label>
-          </div>
+          </div>}
 
           {/* Loading */}
           {planLoad&&<div style={{textAlign:"center",padding:_.s9}}>
@@ -760,13 +782,16 @@ export default function IBuild(){
                   <div style={{fontWeight:600,textAlign:"right",fontVariantNumeric:"tabular-nums"}}>{fmt(si.rate*si.qty)}</div>
                 </div>
               ))}
-              <div style={{marginTop:_.s6}}>
-                <button onClick={addPlanItems} style={btnPrimary}>Add {planData.scope_items.length} items to Quote <ArrowRight size={14} /></button>
+              {/* Handoff CTA — prominent */}
+              <div style={{marginTop:_.s7,paddingTop:_.s6,borderTop:`1px solid ${_.line}`,display:"flex",alignItems:"center",gap:_.s3}}>
+                <button onClick={addPlanItems} style={{...btnPrimary,padding:"12px 24px",fontSize:14}}>Add {planData.scope_items.length} items to Quote <ArrowRight size={14} /></button>
+                <label style={{...btnGhost,cursor:"pointer"}}><input ref={planFileRef} type="file" accept="image/*,.pdf" style={{display:"none"}} onChange={e=>{if(e.target.files[0])analysePlan(e.target.files[0])}} />Re-upload</label>
               </div>
             </div>}
 
-            {!planData.scope_items?.length&&<div style={{marginTop:_.s5}}>
-              <button onClick={()=>{up(pr=>{pr.area=String(planData.total_m2);return pr});log("Plan analysed: "+planData.total_m2+"m²");go("quote");notify(planData.total_m2+"m² applied")}} style={btnPrimary}>Apply {planData.total_m2}m² to project <ArrowRight size={14} /></button>
+            {!planData.scope_items?.length&&<div style={{marginTop:_.s6,display:"flex",alignItems:"center",gap:_.s3}}>
+              <button onClick={()=>{up(pr=>{pr.area=String(planData.total_m2);return pr});log("Plan analysed: "+planData.total_m2+"m²");go("quote");notify(planData.total_m2+"m² applied")}} style={{...btnPrimary,padding:"12px 24px",fontSize:14}}>Apply {planData.total_m2}m² to project <ArrowRight size={14} /></button>
+              <label style={{...btnGhost,cursor:"pointer"}}><input type="file" accept="image/*,.pdf" style={{display:"none"}} onChange={e=>{if(e.target.files[0])analysePlan(e.target.files[0])}} />Re-upload</label>
             </div>}
           </div>}
 
@@ -806,96 +831,86 @@ export default function IBuild(){
 
         {/* ════ SCHEDULE ════ */}
         {tab==="schedule"&&<Section key={anim}>
-          <h1 style={{fontSize:40,fontWeight:700,letterSpacing:"-0.03em",marginBottom:4}}>Progress Schedule</h1>
-          <div style={{fontSize:14,color:_.muted,marginBottom:_.s7}}>{p.milestones.filter(m=>m.done).length} of {p.milestones.length} milestones · {p.milestones.length>0?Math.round((p.milestones.filter(m=>m.done).length/p.milestones.length)*100):0}% complete</div>
-
-          {/* Progress hero */}
-          <div style={{paddingBottom:_.s6,marginBottom:_.s7,borderBottom:`1px solid ${_.line}`,borderLeft:`2px solid ${_.ac}`,paddingLeft:_.s5}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:16}}>
-              <div>
-                <div style={{fontSize:11,color:_.ac,letterSpacing:"0.06em",fontWeight:600,textTransform:"uppercase",marginBottom:4}}>Build Progress</div>
-                <div style={{fontSize:mobile?40:56,fontWeight:700,letterSpacing:"-0.04em",lineHeight:1,fontVariantNumeric:"tabular-nums",color:_.ink}}>{p.milestones.length>0?Math.round((p.milestones.filter(m=>m.done).length/p.milestones.length)*100):0}<span style={{fontSize:mobile?16:20,color:_.muted}}>%</span></div>
-              </div>
-              <div style={{textAlign:"right"}}>
-                <div style={{fontSize:13,color:_.body}}>{p.milestones.findIndex(m=>!m.done)>=0?p.milestones[p.milestones.findIndex(m=>!m.done)].name:"All complete"}</div>
-                <div style={{fontSize:11,color:_.muted,marginTop:2}}>{p.milestones.findIndex(m=>!m.done)>=0?"Next milestone":"🎉"}</div>
-              </div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:_.s7}}>
+            <div>
+              <h1 style={{fontSize:40,fontWeight:700,letterSpacing:"-0.03em",marginBottom:4}}>Schedule</h1>
+              <div style={{fontSize:14,color:_.muted}}>{p.milestones.filter(m=>m.done).length} of {p.milestones.length} milestones · {p.milestones.length>0?Math.round((p.milestones.filter(m=>m.done).length/p.milestones.length)*100):0}%</div>
             </div>
-            {/* Stage progress bar */}
-            <div style={{display:"flex",gap:3}}>
-              {p.milestones.map((ms,i)=>(
-                <div key={i} style={{flex:1,height:6,borderRadius:3,background:ms.done?_.ac:_.line,transition:"background 0.3s"}} title={ms.name} />
-              ))}
+            {/* TODO: Wire to real PDF export when backend supports it */}
+            <button onClick={()=>notify("Export coming soon")} style={btnSecondary}><Printer size={14} /> Export</button>
+          </div>
+
+          {/* Progress + shift controls */}
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:_.s6,paddingBottom:_.s6,borderBottom:`1px solid ${_.line}`}}>
+            <div>
+              <div style={{fontSize:11,color:_.body,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:8}}>Build Progress</div>
+              <div style={{fontSize:48,fontWeight:700,letterSpacing:"-0.04em",lineHeight:1,fontVariantNumeric:"tabular-nums",color:_.ink}}>{p.milestones.length>0?Math.round((p.milestones.filter(m=>m.done).length/p.milestones.length)*100):0}<span style={{fontSize:18,color:_.muted}}>%</span></div>
+            </div>
+            {/* Shift schedule control */}
+            <div style={{display:"flex",alignItems:"center",gap:_.s2}}>
+              <span style={{fontSize:12,color:_.muted}}>Shift undone by</span>
+              <input type="number" style={{width:56,padding:"5px 8px",background:_.well,border:`1px solid ${_.line}`,borderRadius:_.rXs,color:_.ink,fontSize:13,textAlign:"center",outline:"none",fontWeight:600}} value={shiftWeeks} onChange={e=>setShiftWeeks(e.target.value)} placeholder="0" />
+              <span style={{fontSize:12,color:_.muted}}>wks</span>
+              <button onClick={()=>{const w=parseInt(shiftWeeks);if(!w)return;up(pr=>{pr.milestones.forEach(ms=>{if(!ms.done)ms.wk=Math.max(0,(ms.wk||0)+w)});return pr});log(`Schedule shifted ${w>0?"+":""}${w} weeks`);setShiftWeeks("");notify(`Shifted ${w>0?"+":""}${w} weeks`)}} style={{...btnSecondary,padding:"5px 12px",fontSize:12}}>Shift</button>
             </div>
           </div>
 
-          {/* Timeline visual */}
+          {/* Gantt bar */}
           <div style={{marginBottom:_.s7}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:_.s4}}>
-              <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase"}}>Timeline</div>
-              <div style={{fontSize:12,color:_.muted}}>Week {Math.max(...p.milestones.filter(m=>m.wk!==undefined).map(m=>m.wk),0)}</div>
-            </div>
-            {/* Gantt-style bar */}
-            <div style={{position:"relative",height:28,background:_.well,borderRadius:_.r,marginBottom:_.s5,overflow:"hidden"}}>
-              <div style={{position:"absolute",left:0,top:0,bottom:0,width:`${ganttPct}%`,background:_.ac,borderRadius:_.r,transition:"width 0.6s ease"}} />
+            <div style={{position:"relative",height:24,background:_.well,borderRadius:_.rSm,marginBottom:_.s3,overflow:"hidden"}}>
+              <div style={{position:"absolute",left:0,top:0,bottom:0,width:`${ganttPct}%`,background:_.ink,borderRadius:_.rSm,transition:"width 0.6s ease"}} />
               {p.milestones.map((ms,i)=>{
                 const left=ganttMaxWk?((ms.wk||0)/ganttMaxWk)*100:0;
                 return(
-                  <div key={i} style={{position:"absolute",left:`${left}%`,top:"50%",transform:"translate(-50%,-50%)",width:ms.done?10:8,height:ms.done?10:8,borderRadius:"50%",background:ms.done?"#fff":_.line2,border:ms.done?"none":`2px solid ${_.muted}`,zIndex:1,cursor:"pointer",transition:"all 0.2s"}} title={`${ms.name} — Wk ${ms.wk||0}`} />
+                  <div key={i} style={{position:"absolute",left:`${left}%`,top:"50%",transform:"translate(-50%,-50%)",width:ms.done?8:6,height:ms.done?8:6,borderRadius:"50%",background:ms.done?"#fff":_.line2,border:ms.done?"none":`1.5px solid ${_.muted}`,zIndex:1,transition:"all 0.2s"}} title={`${ms.name} — Wk ${ms.wk||0}`} />
                 );
               })}
             </div>
-            {/* Week labels */}
-            <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:_.faint,marginBottom:_.s5}}>
-              <span>Wk 0</span>
-              {[9,18,27].map(w=><span key={w}>Wk {w}</span>)}
-              <span>Wk 36</span>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:_.faint}}>
+              <span>Wk 0</span><span>Wk {ganttMaxWk}</span>
             </div>
           </div>
 
-          {/* Milestone list */}
+          {/* Milestone table header */}
+          <div style={{display:"grid",gridTemplateColumns:"32px 1fr 60px 120px 120px 80px",gap:8,padding:"8px 0",borderBottom:`2px solid ${_.ink}`,fontSize:10,color:_.muted,fontWeight:600,letterSpacing:"0.04em",textTransform:"uppercase"}}>
+            <span></span><span>Milestone</span><span style={{textAlign:"center"}}>Week</span><span>Planned</span><span>Completed</span><span></span>
+          </div>
+
+          {/* Milestone rows */}
           {p.milestones.map((ms,i)=>{
             const isNext=i===p.milestones.findIndex(m=>!m.done)&&!ms.done;
+            const isEditing=editMsIdx===i;
             return(
-              <div key={i} style={{display:"flex",alignItems:"stretch",gap:0,marginBottom:0}}>
-                {/* Timeline rail */}
-                <div style={{width:32,display:"flex",flexDirection:"column",alignItems:"center",flexShrink:0}}>
-                  <div style={{width:2,flex:"1 1 0",background:i===0?"transparent":ms.done?_.ac:_.line,transition:"background 0.3s"}} />
-                  <div onClick={()=>{const wasDone=ms.done;up(pr=>{pr.milestones[i]={...ms,done:!ms.done,date:!ms.done?ds():ms.date};return pr});if(!wasDone)log("Milestone: "+ms.name)}} style={{width:ms.done?20:isNext?18:14,height:ms.done?20:isNext?18:14,borderRadius:"50%",border:ms.done?"none":`2px solid ${isNext?_.ac:_.line2}`,background:ms.done?_.ac:isNext?`${_.ac}14`:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,cursor:"pointer",transition:"all 0.25s",zIndex:1}}>{ms.done&&<Check size={11} strokeWidth={3} color="#fff" />}</div>
-                  <div style={{width:2,flex:"1 1 0",background:i===p.milestones.length-1?"transparent":p.milestones[i+1]?.done||ms.done?_.ac:_.line,transition:"background 0.3s"}} />
-                </div>
-                {/* Content */}
-                <div style={{flex:1,padding:`${_.s3}px 0 ${_.s3}px ${_.s3}px`,borderBottom:`1px solid ${_.line}`,display:"flex",justifyContent:"space-between",alignItems:"center",minHeight:52}}>
-                  <div style={{flex:1}}>
-                    <div style={{display:"flex",alignItems:"center",gap:_.s2}}>
-                      <span style={{fontSize:15,fontWeight:ms.done?600:isNext?500:400,color:ms.done?_.ink:isNext?_.ink:_.muted}}>{ms.name}</span>
-                      {isNext&&<span style={{...badge(_.ac),fontSize:10}}>Next</span>}
-                    </div>
-                    <div style={{display:"flex",gap:_.s4,marginTop:3,fontSize:12,color:_.muted}}>
-                      <span style={{fontVariantNumeric:"tabular-nums"}}>Wk {ms.wk||0}</span>
-                      {ms.done&&ms.date&&<span style={{color:_.green}}>✓ {ms.date}</span>}
-                      {ms.planned&&!ms.done&&<span>Planned: {ms.planned}</span>}
-                    </div>
-                  </div>
-                  <div style={{display:"flex",alignItems:"center",gap:_.s2}}>
-                    <input type="date" value={ms.planned||""} onChange={e=>up(pr=>{pr.milestones[i]={...ms,planned:e.target.value};return pr})} style={{padding:"3px 6px",background:_.well,border:`1px solid ${_.line}`,borderRadius:6,color:_.ink,fontSize:11,outline:"none",cursor:"pointer",width:120}} title="Set planned date" />
-                  </div>
+              <div key={i} style={{display:"grid",gridTemplateColumns:"32px 1fr 60px 120px 120px 80px",gap:8,padding:"10px 0",borderBottom:`1px solid ${_.line}`,alignItems:"center",fontSize:13,background:isNext?`${_.ac}06`:"transparent"}}>
+                {/* Done toggle */}
+                <div onClick={()=>{const wasDone=ms.done;up(pr=>{pr.milestones[i]={...ms,done:!ms.done,date:!ms.done?ds():ms.date};return pr});if(!wasDone)log("Milestone: "+ms.name)}} style={{width:18,height:18,borderRadius:9,border:ms.done?"none":`1.5px solid ${isNext?_.ac:_.line2}`,background:ms.done?_.ink:"transparent",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",transition:"all 0.15s"}}>{ms.done&&<Check size={10} strokeWidth={3} color="#fff" />}</div>
+                {/* Name — inline edit */}
+                {isEditing
+                  ?<input autoFocus style={{fontSize:13,fontWeight:500,color:_.ink,border:"none",borderBottom:`1px solid ${_.ac}`,outline:"none",padding:"2px 0",background:"transparent",fontFamily:"inherit"}} value={editMsName} onChange={e=>setEditMsName(e.target.value)} onBlur={()=>{if(editMsName.trim())up(pr=>{pr.milestones[i].name=editMsName.trim();return pr});setEditMsIdx(null)}} onKeyDown={e=>{if(e.key==="Enter"){if(editMsName.trim())up(pr=>{pr.milestones[i].name=editMsName.trim();return pr});setEditMsIdx(null)}if(e.key==="Escape")setEditMsIdx(null)}} />
+                  :<div onClick={()=>{setEditMsIdx(i);setEditMsName(ms.name)}} style={{cursor:"text",display:"flex",alignItems:"center",gap:6}}>
+                    <span style={{fontWeight:ms.done?500:isNext?600:400,color:ms.done?_.muted:_.ink}}>{ms.name}</span>
+                    {isNext&&<span style={{fontSize:10,fontWeight:600,color:_.ac}}>NEXT</span>}
+                  </div>}
+                {/* Week — editable */}
+                <input type="number" style={{width:48,padding:"3px 6px",background:_.well,border:`1px solid ${_.line}`,borderRadius:_.rXs,color:_.ink,fontSize:12,textAlign:"center",outline:"none",fontWeight:600,fontFamily:"inherit"}} value={ms.wk||0} onChange={e=>up(pr=>{pr.milestones[i].wk=parseInt(e.target.value)||0;return pr})} />
+                {/* Planned date */}
+                <input type="date" value={ms.planned||""} onChange={e=>up(pr=>{pr.milestones[i]={...ms,planned:e.target.value};return pr})} style={{padding:"3px 6px",background:_.well,border:`1px solid ${_.line}`,borderRadius:_.rXs,color:_.ink,fontSize:11,outline:"none",cursor:"pointer",fontFamily:"inherit"}} />
+                {/* Completed date */}
+                <div style={{fontSize:12,color:ms.done?_.green:_.faint}}>{ms.done&&ms.date?ms.date:"—"}</div>
+                {/* Actions: move up/down, delete */}
+                <div style={{display:"flex",alignItems:"center",gap:2}}>
+                  {i>0&&<div onClick={()=>up(pr=>{const tmp=pr.milestones[i];pr.milestones[i]=pr.milestones[i-1];pr.milestones[i-1]=tmp;return pr})} style={{cursor:"pointer",color:_.faint,padding:2,display:"flex"}} onMouseEnter={e=>e.currentTarget.style.color=_.ink} onMouseLeave={e=>e.currentTarget.style.color=_.faint}><ChevronRight size={12} style={{transform:"rotate(-90deg)"}} /></div>}
+                  {i<p.milestones.length-1&&<div onClick={()=>up(pr=>{const tmp=pr.milestones[i];pr.milestones[i]=pr.milestones[i+1];pr.milestones[i+1]=tmp;return pr})} style={{cursor:"pointer",color:_.faint,padding:2,display:"flex"}} onMouseEnter={e=>e.currentTarget.style.color=_.ink} onMouseLeave={e=>e.currentTarget.style.color=_.faint}><ChevronRight size={12} style={{transform:"rotate(90deg)"}} /></div>}
+                  <div onClick={()=>{if(p.milestones.length<=1)return;up(pr=>{pr.milestones.splice(i,1);return pr});notify("Removed")}} style={{cursor:"pointer",color:_.faint,padding:2,display:"flex"}} onMouseEnter={e=>e.currentTarget.style.color=_.red} onMouseLeave={e=>e.currentTarget.style.color=_.faint}><X size={12} /></div>
                 </div>
               </div>
             );
           })}
 
           {/* Add milestone */}
-          <div style={{display:"flex",gap:_.s2,marginTop:_.s5,paddingTop:_.s5,borderTop:`1px solid ${_.line}`}}>
+          <div style={{display:"flex",gap:_.s2,marginTop:_.s4,paddingTop:_.s4,borderTop:`1px solid ${_.line}`}}>
             <input style={{...input,flex:1}} placeholder="Add milestone…" value={newMs} onChange={e=>setNewMs(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&newMs.trim()){const maxWk=Math.max(...p.milestones.map(m=>m.wk||0),0);up(pr=>{pr.milestones.push({name:newMs.trim(),wk:maxWk+4,done:false,date:"",planned:""});return pr});log("Milestone added: "+newMs.trim());setNewMs("");notify("Milestone added")}}} />
             <button onClick={()=>{if(!newMs.trim())return;const maxWk=Math.max(...p.milestones.map(m=>m.wk||0),0);up(pr=>{pr.milestones.push({name:newMs.trim(),wk:maxWk+4,done:false,date:"",planned:""});return pr});log("Milestone added: "+newMs.trim());setNewMs("");notify("Milestone added")}} style={btnPrimary}>Add</button>
-          </div>
-
-          {/* Legend */}
-          <div style={{display:"flex",gap:_.s5,marginTop:_.s5,fontSize:11,color:_.muted}}>
-            <span style={{display:"flex",alignItems:"center",gap:4}}><div style={{width:8,height:8,borderRadius:4,background:_.ac}} /> Complete</span>
-            <span style={{display:"flex",alignItems:"center",gap:4}}><div style={{width:8,height:8,borderRadius:4,border:`2px solid ${_.ac}`,background:`${_.ac}14`}} /> Next</span>
-            <span style={{display:"flex",alignItems:"center",gap:4}}><div style={{width:8,height:8,borderRadius:4,border:`2px solid ${_.line2}`}} /> Upcoming</span>
           </div>
         </Section>}
 
