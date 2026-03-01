@@ -174,7 +174,14 @@ export default function ScopePage() {
                   <span style={{ fontSize: 14, fontWeight: n > 0 ? 600 : 400, color: n > 0 ? _.ink : _.muted }}>{cat}</span>
                   {n > 0 && <span style={{ fontSize: 11, fontWeight: 600, color: _.ac, marginLeft: 4 }}>{n}</span>}
                 </div>
-                {catT > 0 && <span style={{ fontSize: 14, fontWeight: 700, fontVariantNumeric: "tabular-nums", color: _.ink }}>{fmt(catT)}</span>}
+                <div style={{ display: "flex", alignItems: "center", gap: _.s3 }}>
+                  {catT > 0 && <span style={{ fontSize: 14, fontWeight: 700, fontVariantNumeric: "tabular-nums", color: _.ink }}>{fmt(catT)}</span>}
+                  <div onClick={e => { e.stopPropagation(); if (confirm(`Delete category "${cat}" and all its items?`)) up(pr => { delete pr.scope[cat]; return pr; }); }}
+                    style={{ cursor: "pointer", color: _.faint, transition: "color 0.15s", padding: 2 }}
+                    onMouseEnter={e => e.currentTarget.style.color = _.red}
+                    onMouseLeave={e => e.currentTarget.style.color = _.faint}
+                  ><X size={13} /></div>
+                </div>
               </div>
               {open && (
                 <div style={{ paddingBottom: _.s4, paddingLeft: 24, borderLeft: `2px solid ${_.line}`, marginLeft: 0 }}>
