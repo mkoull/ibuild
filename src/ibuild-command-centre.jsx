@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { FileText, Ruler, Receipt, BookOpen, BarChart3, ClipboardList, Search, Wrench, FolderOpen, PenLine, Upload, Plus, ChevronRight, ChevronDown, X, Check, AlertTriangle, ArrowRight, Printer, ArrowUpRight, DollarSign, Menu } from "lucide-react";
+import { getNextStep } from "./lib/nextStep.js";
 
 // ═══ RATE DATA ═══
 const RATES = {
@@ -355,16 +356,17 @@ export default function IBuild(){
 
   const recentActivity=projects.flatMap((pr,idx)=>(pr.activity||[]).slice(0,4).map(a=>({...a,project:pName(pr),idx}))).slice(0,8);
 
-  // ═══ Workflow stepper — "Next Best Action" engine ═══
-  const wfSteps=[
-    {key:"plans",label:"Upload plans",done:!!planData||T.items>0,detail:planData?`${planData.total_m2}m² analysed`:"Optional — AI scope extraction",action:()=>go("plans"),optional:true,Ic:Ruler},
-    {key:"scope",label:"Build scope",done:T.items>0,detail:T.items>0?`${T.items} items · ${fmt(T.sub)}`:"Select items from rate library",action:()=>go("quote"),Ic:PenLine},
-    {key:"client",label:"Add client details",done:!!p.client,detail:p.client?pName(p):"Name, address, contact",action:()=>go("quote"),Ic:FileText},
-    {key:"proposal",label:"Generate proposal",done:p.proposals.length>0,detail:p.proposals.length>0?`${p.proposals.length} saved`:"Requires scope + client",action:()=>{if(quoteReady)createProp();else go("quote")},Ic:FileText},
-    {key:"schedule",label:"Set schedule",done:p.milestones.some(m=>m.planned),detail:`${p.milestones.filter(m=>m.planned).length} of ${p.milestones.length} dates set`,action:()=>go("schedule"),Ic:ClipboardList},
-  ];
-  const wfNext=wfSteps.find(s=>!s.done&&!s.optional)||wfSteps.find(s=>!s.done);
-  const wfDone=wfSteps.filter(s=>s.done).length;
+  // ═══ Workflow stepper — uses getNextStep() from src/lib/nextStep.js ═══
+  const {steps:wfSteps,next:wfNext,done:wfDone}=getNextStep({project:p,totals:T,hasPlanData:!!planData});
+  const stepIcons={plans:Ruler,scope:PenLine,client:FileText,proposal:FileText,schedule:ClipboardList};
+  const stepAction=(step)=>{
+    if(step.key==="proposal"){
+      if(step.needsQuote)go("quote");
+      else createProp();
+      return;
+    }
+    go(step.tab);
+  };
   // Pre-compute detail views (eliminates IIFEs that caused focus bugs)
   const ganttMaxWk=Math.max(...p.milestones.map(m=>m.wk||0),36);
   const ganttLastDoneIdx=[...p.milestones].reverse().findIndex(m=>m.done);
@@ -533,11 +535,11 @@ export default function IBuild(){
                   <div style={{fontSize:14,fontWeight:600,color:_.ink}}>Project setup</div>
                   <div style={{fontSize:12,color:_.muted}}>{wfDone} of {wfSteps.length}</div>
                 </div>
-                {wfSteps.map((step,i)=>(
-                  <div key={step.key} onClick={step.action} style={{display:"flex",alignItems:"center",gap:14,padding:"12px 0",cursor:"pointer",borderBottom:`1px solid ${_.line}`,transition:"padding-left 0.12s"}} onMouseEnter={e=>e.currentTarget.style.paddingLeft="4px"} onMouseLeave={e=>e.currentTarget.style.paddingLeft="0"}>
+                {wfSteps.map((step)=>(
+                  <div key={step.key} onClick={()=>stepAction(step)} style={{display:"flex",alignItems:"center",gap:14,padding:"12px 0",cursor:"pointer",borderBottom:`1px solid ${_.line}`,transition:"padding-left 0.12s"}} onMouseEnter={e=>e.currentTarget.style.paddingLeft="4px"} onMouseLeave={e=>e.currentTarget.style.paddingLeft="0"}>
                     <div style={{width:20,height:20,borderRadius:10,background:step.done?_.ink:"transparent",border:step.done?"none":`1.5px solid ${_.line2}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{step.done&&<Check size={10} strokeWidth={3} color="#fff" />}</div>
                     <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:13,fontWeight:step.done?500:500,color:step.done?_.muted:_.ink}}>{step.label}{step.optional?<span style={{fontSize:11,color:_.faint,marginLeft:6}}>Optional</span>:""}</div>
+                      <div style={{fontSize:13,fontWeight:500,color:step.done?_.muted:_.ink}}>{step.label}{step.optional?<span style={{fontSize:11,color:_.faint,marginLeft:6}}>Optional</span>:""}</div>
                       <div style={{fontSize:12,color:step.done?_.faint:_.muted,marginTop:1}}>{step.detail}</div>
                     </div>
                     {!step.done&&<ArrowRight size={13} color={_.faint} />}
@@ -546,7 +548,7 @@ export default function IBuild(){
 
                 {/* Single primary CTA — next best action */}
                 {wfNext&&<div style={{marginTop:20}}>
-                  <button onClick={wfNext.action} style={{...btnPrimary,padding:"11px 20px"}}>Continue setup <ArrowRight size={14} /></button>
+                  <button onClick={()=>stepAction(wfNext)} style={{...btnPrimary,padding:"11px 20px"}}>Continue setup <ArrowRight size={14} /></button>
                 </div>}
                 {!wfNext&&<div style={{marginTop:20,fontSize:13,color:_.green,fontWeight:500}}>All steps complete</div>}
               </div>
