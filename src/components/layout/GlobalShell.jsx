@@ -2,6 +2,7 @@ import { Outlet } from "react-router-dom";
 import _ from "../../theme/tokens.js";
 import { useApp } from "../../context/AppContext.jsx";
 import Sidebar from "./Sidebar.jsx";
+import TopBar from "./TopBar.jsx";
 import MobileHeader from "./MobileHeader.jsx";
 import MobileBottomTabs from "./MobileBottomTabs.jsx";
 import Toast from "../ui/Toast.jsx";
@@ -14,9 +15,12 @@ export default function GlobalShell() {
       <Toast toast={toast} />
       {!mobile && <Sidebar />}
       {mobile && <MobileHeader />}
-      <main style={{ flex: 1, overflowY: "auto", padding: mobile ? "72px 16px 88px" : "48px 64px 80px" }}>
-        <Outlet />
-      </main>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        {!mobile && <TopBar />}
+        <main style={{ flex: 1, overflowY: "auto", padding: mobile ? "72px 16px 88px" : "48px 64px 80px" }}>
+          <Outlet />
+        </main>
+      </div>
       {mobile && <MobileBottomTabs />}
       <style>{`
         *{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;box-sizing:border-box}

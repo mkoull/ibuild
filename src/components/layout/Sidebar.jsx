@@ -1,5 +1,5 @@
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { BarChart3, PenLine, Ruler, DollarSign, ClipboardList, FileText, ArrowUpRight, Receipt, BookOpen, AlertTriangle, Wrench, FolderOpen, Users, Building2, Library, Settings, LayoutDashboard, ArrowLeft } from "lucide-react";
+import { BarChart3, PenLine, Ruler, DollarSign, ClipboardList, FileText, ArrowUpRight, Receipt, BookOpen, AlertTriangle, Wrench, FolderOpen, Users, Building2, Library, Settings, LayoutDashboard, ArrowLeft, Calendar, PieChart } from "lucide-react";
 import _ from "../../theme/tokens.js";
 import { useApp } from "../../context/AppContext.jsx";
 import { pName } from "../../theme/styles.js";
@@ -8,6 +8,8 @@ const GLOBAL_NAV = [
   { group: "MAIN", items: [
     { path: "/dashboard", label: "Dashboard", Ic: LayoutDashboard },
     { path: "/projects", label: "Projects", Ic: FolderOpen },
+    { path: null, label: "Calendar", Ic: Calendar, disabled: true },
+    { path: null, label: "Reports", Ic: PieChart, disabled: true },
   ]},
   { group: "MASTER DATA", items: [
     { path: "/clients", label: "Clients", Ic: Users },
@@ -111,7 +113,19 @@ export default function Sidebar() {
               {g.group}
             </div>
             {g.items.map(item => {
-              const active = isActive(item.path);
+              const active = item.path ? isActive(item.path) : false;
+              if (item.disabled) {
+                return (
+                  <div key={item.label} style={{
+                    display: "flex", alignItems: "center", gap: 8, padding: "7px 16px", fontSize: 13,
+                    borderLeft: "2px solid transparent", color: _.faint, cursor: "default",
+                  }}>
+                    <item.Ic size={15} strokeWidth={1.5} />
+                    {item.label}
+                    <span style={{ fontSize: 9, fontWeight: 600, color: _.faint, marginLeft: "auto" }}>SOON</span>
+                  </div>
+                );
+              }
               return (
                 <div key={item.path} onClick={() => {
                   if (isProjectMode) navigate(`/projects/${params.id}/${item.path}`);
