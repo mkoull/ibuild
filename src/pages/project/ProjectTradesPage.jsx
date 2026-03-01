@@ -2,15 +2,17 @@ import { useState } from "react";
 import { useProject } from "../../context/ProjectContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
 import _ from "../../theme/tokens.js";
-import { input, label, btnPrimary, badge } from "../../theme/styles.js";
+import { input, label, btnPrimary, btnGhost, badge } from "../../theme/styles.js";
 import Section from "../../components/ui/Section.jsx";
 import Empty from "../../components/ui/Empty.jsx";
-import { Wrench, X, Plus, Check } from "lucide-react";
+import { Wrench, X, Plus, Check, Pencil } from "lucide-react";
 
 export default function ProjectTradesPage() {
   const { project: p, update: up, log } = useProject();
   const { trades, mobile, notify } = useApp();
   const [trForm, setTrForm] = useState({ trade: "", company: "", contact: "", phone: "" });
+  const [editTradeIdx, setEditTradeIdx] = useState(null);
+  const [editTrade, setEditTrade] = useState({});
 
   // Legacy trades stored on project directly
   const projectTrades = p.trades || [];
@@ -86,20 +88,41 @@ export default function ProjectTradesPage() {
 
       {projectTrades.length === 0 && assignedTradeIds.length === 0 && <Empty icon={Wrench} text="No trades assigned" />}
       {projectTrades.map((tr, i) => (
-        <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${_.s4}px 0`, borderBottom: `1px solid ${_.line}` }}>
-          <div>
-            <span style={badge(_.ink)}>{tr.trade}</span>
-            <div style={{ fontSize: 14, fontWeight: 500, marginTop: 6 }}>{tr.company}</div>
-            {tr.contact && <div style={{ fontSize: 12, color: _.muted, marginTop: 1 }}>{tr.contact}</div>}
-          </div>
-          <div style={{ display: "flex", gap: _.s2, alignItems: "center" }}>
-            {tr.phone && <a href={`tel:${tr.phone}`} style={{ fontSize: 13, color: _.ac, textDecoration: "none", fontWeight: 500 }}>{tr.phone}</a>}
-            <div onClick={() => { up(pr => { pr.trades.splice(i, 1); return pr; }); notify("Removed"); }}
-              style={{ cursor: "pointer", color: _.faint, transition: "color 0.15s" }}
-              onMouseEnter={e => e.currentTarget.style.color = _.red}
-              onMouseLeave={e => e.currentTarget.style.color = _.faint}
-            ><X size={14} /></div>
-          </div>
+        <div key={i} style={{ padding: `${_.s4}px 0`, borderBottom: `1px solid ${_.line}` }}>
+          {editTradeIdx === i ? (
+            <div>
+              <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr", gap: _.s3, marginBottom: _.s2 }}>
+                {[["Trade", "trade"], ["Company", "company"], ["Contact", "contact"], ["Phone", "phone"]].map(([l, k]) => (
+                  <div key={k}><label style={label}>{l}</label><input style={input} value={editTrade[k]} onChange={e => setEditTrade({ ...editTrade, [k]: e.target.value })} /></div>
+                ))}
+              </div>
+              <div style={{ display: "flex", gap: _.s2 }}>
+                <button onClick={() => { up(pr => { pr.trades[i] = { ...editTrade }; return pr; }); setEditTradeIdx(null); notify("Updated"); }} style={btnPrimary}>Save</button>
+                <button onClick={() => setEditTradeIdx(null)} style={btnGhost}>Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <span style={badge(_.ink)}>{tr.trade}</span>
+                <div style={{ fontSize: 14, fontWeight: 500, marginTop: 6 }}>{tr.company}</div>
+                {tr.contact && <div style={{ fontSize: 12, color: _.muted, marginTop: 1 }}>{tr.contact}</div>}
+              </div>
+              <div style={{ display: "flex", gap: _.s2, alignItems: "center" }}>
+                {tr.phone && <a href={`tel:${tr.phone}`} style={{ fontSize: 13, color: _.ac, textDecoration: "none", fontWeight: 500 }}>{tr.phone}</a>}
+                <div onClick={() => { setEditTradeIdx(i); setEditTrade({ trade: tr.trade || "", company: tr.company || "", contact: tr.contact || "", phone: tr.phone || "" }); }}
+                  style={{ cursor: "pointer", color: _.faint, transition: "color 0.15s" }}
+                  onMouseEnter={e => e.currentTarget.style.color = _.ac}
+                  onMouseLeave={e => e.currentTarget.style.color = _.faint}
+                ><Pencil size={13} /></div>
+                <div onClick={() => { up(pr => { pr.trades.splice(i, 1); return pr; }); notify("Removed"); }}
+                  style={{ cursor: "pointer", color: _.faint, transition: "color 0.15s" }}
+                  onMouseEnter={e => e.currentTarget.style.color = _.red}
+                  onMouseLeave={e => e.currentTarget.style.color = _.faint}
+                ><X size={14} /></div>
+              </div>
+            </div>
+          )}
         </div>
       ))}
     </Section>

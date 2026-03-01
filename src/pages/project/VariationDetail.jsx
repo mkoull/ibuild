@@ -3,10 +3,10 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useProject } from "../../context/ProjectContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
 import _ from "../../theme/tokens.js";
-import { fmt, btnPrimary, btnSecondary, btnGhost, badge, pName, ds } from "../../theme/styles.js";
+import { fmt, input, label, btnPrimary, btnSecondary, btnGhost, badge, pName, ds } from "../../theme/styles.js";
 import Section from "../../components/ui/Section.jsx";
 import SignatureCanvas from "../../components/ui/SignatureCanvas.jsx";
-import { ArrowRight, Printer } from "lucide-react";
+import { ArrowRight, Printer, X } from "lucide-react";
 import { useState } from "react";
 
 export default function VariationDetail() {
@@ -18,6 +18,8 @@ export default function VariationDetail() {
   const voD = p.variations[idx];
   const voDocRef = useRef(null);
   const [voSignAs, setVoSignAs] = useState("builder");
+  const [editing, setEditing] = useState(false);
+  const [editVO, setEditVO] = useState({});
 
   // Signature canvas
   const sig = SignatureCanvas({ width: 500, height: 100 });
@@ -40,8 +42,29 @@ export default function VariationDetail() {
         <span style={{ fontSize: 22, fontWeight: 600 }}>{voD.id}</span>
         <span style={badge(voD.status === "approved" ? _.green : voD.status === "pending" ? _.amber : _.muted)}>{voD.status}</span>
         <div style={{ flex: 1 }} />
+        {voD.status === "draft" && <button onClick={() => { if (editing) { setEditing(false); } else { setEditVO({ description: voD.description, category: voD.category, amount: String(voD.amount), reason: voD.reason }); setEditing(true); } }} style={btnGhost}>{editing ? "Cancel" : "Edit"}</button>}
+        <div onClick={() => { if (confirm(`Delete "${voD.id}"?`)) { up(pr => { pr.variations.splice(idx, 1); return pr; }); navigate("../variations"); } }}
+          style={{ cursor: "pointer", color: _.faint, transition: "color 0.15s", padding: 4 }}
+          onMouseEnter={e => e.currentTarget.style.color = _.red}
+          onMouseLeave={e => e.currentTarget.style.color = _.faint}
+        ><X size={16} /></div>
         <button onClick={printEl} style={btnGhost}><Printer size={14} /> Print</button>
       </div>
+
+      {editing && (
+        <div style={{ padding: _.s4, background: _.well, borderRadius: _.r, marginBottom: _.s4 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: `${_.s3}px ${_.s4}px`, marginBottom: _.s3 }}>
+            <div><label style={label}>Description</label><input style={input} value={editVO.description} onChange={e => setEditVO({ ...editVO, description: e.target.value })} /></div>
+            <div><label style={label}>Category</label><input style={input} value={editVO.category} onChange={e => setEditVO({ ...editVO, category: e.target.value })} /></div>
+            <div><label style={label}>Amount (inc GST)</label><input type="number" style={input} value={editVO.amount} onChange={e => setEditVO({ ...editVO, amount: e.target.value })} /></div>
+            <div><label style={label}>Reason</label><input style={input} value={editVO.reason} onChange={e => setEditVO({ ...editVO, reason: e.target.value })} /></div>
+          </div>
+          <button onClick={() => {
+            up(pr => { const v = pr.variations[idx]; v.description = editVO.description; v.category = editVO.category; v.amount = parseFloat(editVO.amount) || 0; v.reason = editVO.reason; return pr; });
+            notify("Updated"); setEditing(false);
+          }} style={btnPrimary}>Save</button>
+        </div>
+      )}
 
       <div ref={voDocRef} style={{ background: "#fff", fontFamily: "'Inter',sans-serif", borderRadius: _.r, overflow: "hidden", boxShadow: "0 4px 24px rgba(0,0,0,0.06)", border: `1px solid ${_.line}` }}>
         <div style={{ background: _.ink, color: "#fff", padding: "18px 28px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>

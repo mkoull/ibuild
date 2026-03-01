@@ -15,6 +15,8 @@ export default function ScopePage() {
   const navigate = useNavigate();
   const [exp, setExp] = useState({});
   const [newCat, setNewCat] = useState("");
+  const [editCat, setEditCat] = useState(null);
+  const [editCatName, setEditCatName] = useState("");
   const clientRef = useRef(null);
 
   const stage = p.stage || p.status;
@@ -172,7 +174,26 @@ export default function ScopePage() {
                   <span style={{ transform: open ? "rotate(90deg)" : "none", display: "inline-flex", transition: "transform 0.15s" }}>
                     <ChevronRight size={13} color={n > 0 ? _.ac : _.muted} />
                   </span>
-                  <span style={{ fontSize: 14, fontWeight: n > 0 ? 600 : 400, color: n > 0 ? _.ink : _.muted }}>{cat}</span>
+                  {editCat === cat ? (
+                    <input autoFocus style={{ fontSize: 14, fontWeight: 600, color: _.ink, background: _.well, border: `1px solid ${_.line}`, borderRadius: _.rXs, padding: "2px 6px", outline: "none", fontFamily: "inherit" }}
+                      value={editCatName} onChange={e => setEditCatName(e.target.value)}
+                      onClick={e => e.stopPropagation()}
+                      onKeyDown={e => {
+                        if (e.key === "Enter") { e.target.blur(); }
+                        if (e.key === "Escape") { setEditCat(null); setEditCatName(""); }
+                      }}
+                      onBlur={() => {
+                        const nm = editCatName.trim();
+                        if (!nm || nm === cat) { setEditCat(null); return; }
+                        if (p.scope[nm]) { notify("Category already exists", "error"); return; }
+                        up(pr => { pr.scope[nm] = pr.scope[cat]; delete pr.scope[cat]; return pr; });
+                        setExp(e2 => { const n2 = { ...e2, [nm]: e2[cat] }; delete n2[cat]; return n2; });
+                        setEditCat(null); setEditCatName("");
+                      }}
+                    />
+                  ) : (
+                    <span onClick={e => { e.stopPropagation(); setEditCat(cat); setEditCatName(cat); }} style={{ fontSize: 14, fontWeight: n > 0 ? 600 : 400, color: n > 0 ? _.ink : _.muted, cursor: "text" }}>{cat}</span>
+                  )}
                   {n > 0 && <span style={{ fontSize: 11, fontWeight: 600, color: _.ac, marginLeft: 4 }}>{n}</span>}
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: _.s3 }}>

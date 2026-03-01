@@ -2,15 +2,17 @@ import { useState } from "react";
 import { useProject } from "../../context/ProjectContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
 import _ from "../../theme/tokens.js";
-import { input, label, btnPrimary, ds } from "../../theme/styles.js";
+import { input, label, btnPrimary, btnGhost, ds } from "../../theme/styles.js";
 import Section from "../../components/ui/Section.jsx";
 import Empty from "../../components/ui/Empty.jsx";
-import { Search, Check } from "lucide-react";
+import { Search, Check, X, Pencil } from "lucide-react";
 
 export default function DefectsPage() {
   const { project: p, update: up, log } = useProject();
   const { mobile, notify } = useApp();
   const [defectForm, setDefectForm] = useState({ location: "", desc: "", assignee: "" });
+  const [editIdx, setEditIdx] = useState(null);
+  const [editDefect, setEditDefect] = useState({});
 
   return (
     <Section>
@@ -32,26 +34,52 @@ export default function DefectsPage() {
 
       {p.defects.length === 0 && <Empty icon={Search} text="No defects" />}
       {p.defects.map((d, i) => (
-        <div key={i} onClick={() => {
-          const wasDone = d.done;
-          up(pr => { pr.defects[i] = { ...d, done: !d.done }; return pr; });
-          if (!wasDone) log("Defect resolved: " + d.desc);
-          notify(d.done ? "Reopened" : "Resolved");
-        }} style={{
+        <div key={i} style={{
           display: "flex", alignItems: "center", gap: _.s4, padding: `${_.s3}px 0`,
-          borderBottom: `1px solid ${_.line}`, cursor: "pointer",
+          borderBottom: `1px solid ${_.line}`,
           opacity: d.done ? 0.4 : 1, transition: "opacity 0.2s",
         }}>
-          <div style={{
-            width: 20, height: 20, borderRadius: 10,
+          <div onClick={() => {
+            const wasDone = d.done;
+            up(pr => { pr.defects[i] = { ...d, done: !d.done }; return pr; });
+            if (!wasDone) log("Defect resolved: " + d.desc);
+            notify(d.done ? "Reopened" : "Resolved");
+          }} style={{
+            width: 20, height: 20, borderRadius: 10, cursor: "pointer",
             border: `1.5px solid ${d.done ? _.green : _.line2}`,
             background: d.done ? _.green : "transparent",
             display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
           }}>{d.done && <Check size={11} strokeWidth={3} color="#fff" />}</div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 14, fontWeight: 500 }}>{d.desc}</div>
-            <div style={{ fontSize: 12, color: _.muted, marginTop: 1 }}>{[d.location, d.assignee && `→ ${d.assignee}`, d.date].filter(Boolean).join(" · ")}</div>
-          </div>
+          {editIdx === i ? (
+            <div style={{ flex: 1 }}>
+              <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "1fr 1fr 1fr", gap: _.s3, marginBottom: _.s2 }}>
+                <div><label style={label}>Location</label><input style={input} value={editDefect.location} onChange={e => setEditDefect({ ...editDefect, location: e.target.value })} /></div>
+                <div><label style={label}>Description</label><input style={input} value={editDefect.desc} onChange={e => setEditDefect({ ...editDefect, desc: e.target.value })} /></div>
+                <div><label style={label}>Assigned to</label><input style={input} value={editDefect.assignee} onChange={e => setEditDefect({ ...editDefect, assignee: e.target.value })} /></div>
+              </div>
+              <div style={{ display: "flex", gap: _.s2 }}>
+                <button onClick={() => { up(pr => { pr.defects[i] = { ...pr.defects[i], location: editDefect.location, desc: editDefect.desc, assignee: editDefect.assignee }; return pr; }); setEditIdx(null); notify("Updated"); }} style={btnPrimary}>Save</button>
+                <button onClick={() => setEditIdx(null)} style={btnGhost}>Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 14, fontWeight: 500 }}>{d.desc}</div>
+                <div style={{ fontSize: 12, color: _.muted, marginTop: 1 }}>{[d.location, d.assignee && `→ ${d.assignee}`, d.date].filter(Boolean).join(" · ")}</div>
+              </div>
+              <div onClick={() => { setEditIdx(i); setEditDefect({ location: d.location || "", desc: d.desc, assignee: d.assignee || "" }); }}
+                style={{ cursor: "pointer", color: _.faint, transition: "color 0.15s", flexShrink: 0 }}
+                onMouseEnter={e => e.currentTarget.style.color = _.ac}
+                onMouseLeave={e => e.currentTarget.style.color = _.faint}
+              ><Pencil size={13} /></div>
+              <div onClick={() => { if (confirm(`Delete "${d.desc}"?`)) { up(pr => { pr.defects.splice(i, 1); return pr; }); notify("Deleted"); } }}
+                style={{ cursor: "pointer", color: _.faint, transition: "color 0.15s", flexShrink: 0 }}
+                onMouseEnter={e => e.currentTarget.style.color = _.red}
+                onMouseLeave={e => e.currentTarget.style.color = _.faint}
+              ><X size={14} /></div>
+            </>
+          )}
         </div>
       ))}
     </Section>

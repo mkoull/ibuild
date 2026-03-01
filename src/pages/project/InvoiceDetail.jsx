@@ -1,17 +1,20 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useProject } from "../../context/ProjectContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
 import _ from "../../theme/tokens.js";
-import { fmt, btnGhost, pName } from "../../theme/styles.js";
+import { fmt, input, label, btnGhost, btnPrimary, pName } from "../../theme/styles.js";
 import Section from "../../components/ui/Section.jsx";
-import { ArrowRight, Printer } from "lucide-react";
+import { ArrowRight, Printer, X } from "lucide-react";
 
 export default function InvoiceDetail() {
   const { invIndex } = useParams();
   const navigate = useNavigate();
-  const { project: p, T } = useProject();
-  const { clients } = useApp();
+  const { project: p, update: up, T, log } = useProject();
+  const { clients, notify } = useApp();
+  const [editing, setEditing] = useState(false);
+  const [editDesc, setEditDesc] = useState("");
+  const [editPct, setEditPct] = useState("");
   const invDocRef = useRef(null);
   const idx = parseInt(invIndex);
   const invD = p.invoices[idx];
@@ -33,8 +36,28 @@ export default function InvoiceDetail() {
         <button onClick={() => navigate("../invoices")} style={btnGhost}><ArrowRight size={14} style={{ transform: "rotate(180deg)" }} /> Back</button>
         <span style={{ fontSize: 22, fontWeight: 600 }}>{invD.id}</span>
         <div style={{ flex: 1 }} />
+        <button onClick={() => { if (editing) { setEditing(false); } else { setEditDesc(invD.desc); setEditPct(String(invD.pct)); setEditing(true); } }} style={btnGhost}>{editing ? "Cancel" : "Edit"}</button>
+        <div onClick={() => { if (confirm(`Delete "${invD.id}"?`)) { up(pr => { pr.invoices.splice(idx, 1); return pr; }); navigate("../invoices"); } }}
+          style={{ cursor: "pointer", color: _.faint, transition: "color 0.15s", padding: 4 }}
+          onMouseEnter={e => e.currentTarget.style.color = _.red}
+          onMouseLeave={e => e.currentTarget.style.color = _.faint}
+        ><X size={16} /></div>
         <button onClick={printEl} style={btnGhost}><Printer size={14} /> Print</button>
       </div>
+
+      {invD.proposalId && (() => { const lp = p.proposals.find(pp => pp.id === invD.proposalId); return lp ? <div style={{ padding: `${_.s3}px ${_.s4}px`, background: `${_.ac}0a`, borderRadius: _.rXs, fontSize: 13, color: _.ac, fontWeight: 500, marginBottom: _.s4 }}>Linked to {lp.name}</div> : null; })()}
+
+      {editing && (
+        <div style={{ padding: _.s4, background: _.well, borderRadius: _.r, marginBottom: _.s4, display: "flex", gap: _.s3, alignItems: "end", flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 160 }}><label style={label}>Description</label><input style={input} value={editDesc} onChange={e => setEditDesc(e.target.value)} /></div>
+          <div style={{ width: 80 }}><label style={label}>%</label><input type="number" style={{ ...input, textAlign: "center", fontWeight: 700 }} value={editPct} onChange={e => setEditPct(e.target.value)} /></div>
+          <button onClick={() => {
+            const pc = parseFloat(editPct); if (!pc) { notify("Enter %", "error"); return; }
+            up(pr => { pr.invoices[idx].desc = editDesc; pr.invoices[idx].pct = pc; pr.invoices[idx].amount = T.curr * (pc / 100); return pr; });
+            notify("Updated"); setEditing(false);
+          }} style={btnPrimary}>Save</button>
+        </div>
+      )}
 
       <div ref={invDocRef} style={{ background: "#fff", fontFamily: "'Inter',sans-serif", borderRadius: _.r, overflow: "hidden", boxShadow: "0 4px 24px rgba(0,0,0,0.06)", border: `1px solid ${_.line}` }}>
         <div style={{ background: _.ink, color: "#fff", padding: "18px 28px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>

@@ -6,7 +6,7 @@ import _ from "../../theme/tokens.js";
 import { fmt, input, label, btnPrimary, badge, uid, ds } from "../../theme/styles.js";
 import Section from "../../components/ui/Section.jsx";
 import Empty from "../../components/ui/Empty.jsx";
-import { Receipt, ChevronRight, AlertTriangle } from "lucide-react";
+import { Receipt, ChevronRight, AlertTriangle, X } from "lucide-react";
 
 export default function InvoicesPage() {
   const { project: p, update: up, T, log } = useProject();
@@ -14,6 +14,7 @@ export default function InvoicesPage() {
   const navigate = useNavigate();
   const [invPct, setInvPct] = useState("");
   const [invDesc, setInvDesc] = useState("");
+  const [invProposalId, setInvProposalId] = useState("");
 
   return (
     <Section>
@@ -34,12 +35,13 @@ export default function InvoicesPage() {
         <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "80px 1fr auto", gap: _.s2, alignItems: mobile ? "stretch" : "end" }}>
           <div><label style={label}>%</label><input type="text" inputMode="decimal" style={{ ...input, fontSize: 20, fontWeight: 700, textAlign: "center" }} value={invPct} onChange={e => { const v = e.target.value; if (v === "" || /^\d*\.?\d*$/.test(v)) setInvPct(v); }} placeholder="25" /></div>
           <div><label style={label}>Description</label><input style={input} value={invDesc} onChange={e => setInvDesc(e.target.value)} placeholder="Frame stage" /></div>
+          {p.proposals.length > 0 && <div><label style={label}>Link to proposal</label><select style={{ ...input, cursor: "pointer" }} value={invProposalId} onChange={e => { setInvProposalId(e.target.value); if (e.target.value) { const lp = p.proposals.find(pp => pp.id === e.target.value); if (lp && !invDesc) setInvDesc(lp.name); } }}><option value="">None</option>{p.proposals.map(pp => <option key={pp.id} value={pp.id}>{pp.name}</option>)}</select></div>}
           <button onClick={() => {
             const pc = parseFloat(invPct); if (!pc) { notify("Enter %", "error"); return; }
             const amt = T.curr * (pc / 100);
-            up(pr => { pr.invoices.push({ id: `INV-${uid()}`, date: ds(), pct: pc, amount: amt, desc: invDesc || `Claim ${pr.invoices.length + 1}`, status: "pending" }); return pr; });
+            up(pr => { const inv = { id: `INV-${uid()}`, date: ds(), pct: pc, amount: amt, desc: invDesc || `Claim ${pr.invoices.length + 1}`, status: "pending" }; if (invProposalId) inv.proposalId = invProposalId; pr.invoices.push(inv); return pr; });
             log(`Invoice: ${invDesc || "Claim"} (${fmt(amt)})`); notify(`Invoice — ${fmt(amt)}`);
-            setInvPct(""); setInvDesc("");
+            setInvPct(""); setInvDesc(""); setInvProposalId("");
           }} style={btnPrimary}>Generate</button>
         </div>
         {invPct && <div style={{ marginTop: _.s2, fontSize: 15, fontWeight: 600, color: (T.inv + T.curr * (parseFloat(invPct) || 0) / 100 > T.curr) ? _.red : _.ac, display: "flex", alignItems: "center", gap: 4 }}>
@@ -65,6 +67,11 @@ export default function InvoicesPage() {
               log(`Invoice ${inv.status === "paid" ? "unpaid" : "paid"}: ${inv.desc}`);
               notify(inv.status === "paid" ? "Unpaid" : "Paid");
             }} style={{ ...badge(inv.status === "paid" ? _.green : _.amber), cursor: "pointer" }}>{inv.status}</div>
+            <div onClick={e => { e.stopPropagation(); if (confirm(`Delete "${inv.desc}"?`)) { up(pr => { pr.invoices.splice(i, 1); return pr; }); notify("Deleted"); } }}
+              style={{ cursor: "pointer", color: _.faint, transition: "color 0.15s" }}
+              onMouseEnter={e => e.currentTarget.style.color = _.red}
+              onMouseLeave={e => e.currentTarget.style.color = _.faint}
+            ><X size={14} /></div>
             <ChevronRight size={14} color={_.faint} />
           </div>
         </div>

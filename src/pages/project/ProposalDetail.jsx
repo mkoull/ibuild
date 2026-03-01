@@ -1,12 +1,12 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useProject } from "../../context/ProjectContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
 import _ from "../../theme/tokens.js";
-import { fmt, btnGhost, badge } from "../../theme/styles.js";
+import { fmt, input, btnGhost, badge } from "../../theme/styles.js";
 import Section from "../../components/ui/Section.jsx";
 import SignatureCanvas from "../../components/ui/SignatureCanvas.jsx";
-import { ArrowRight, Printer, Check } from "lucide-react";
+import { ArrowRight, Printer, Check, X } from "lucide-react";
 
 export default function ProposalDetail() {
   const { propIndex } = useParams();
@@ -16,6 +16,8 @@ export default function ProposalDetail() {
   const propRef = useRef(null);
   const idx = parseInt(propIndex);
   const propD = p.proposals[idx];
+  const [editName, setEditName] = useState(false);
+  const [editValid, setEditValid] = useState(false);
 
   const sig = SignatureCanvas({ width: 600, height: 100 });
 
@@ -35,9 +37,22 @@ export default function ProposalDetail() {
     <Section>
       <div style={{ display: "flex", alignItems: "center", gap: _.s2, marginBottom: _.s5 }}>
         <button onClick={() => navigate("../proposals")} style={btnGhost}><ArrowRight size={14} style={{ transform: "rotate(180deg)" }} /> Back</button>
-        <span style={{ fontSize: 22, fontWeight: 600 }}>{propD.name}</span>
+        {editName ? (
+          <input autoFocus style={{ ...input, fontSize: 22, fontWeight: 600, padding: "2px 8px", maxWidth: 260 }}
+            value={propD.name} onChange={e => up(pr => { pr.proposals[idx].name = e.target.value; return pr; })}
+            onKeyDown={e => { if (e.key === "Enter") setEditName(false); if (e.key === "Escape") setEditName(false); }}
+            onBlur={() => setEditName(false)}
+          />
+        ) : (
+          <span onClick={() => setEditName(true)} style={{ fontSize: 22, fontWeight: 600, cursor: "text" }}>{propD.name}</span>
+        )}
         <span style={badge(propD.status === "signed" ? _.green : propD.status === "declined" ? _.red : propD.status === "sent" ? _.blue : _.amber)}>{propD.status}</span>
         <div style={{ flex: 1 }} />
+        <div onClick={() => { if (confirm(`Delete "${propD.name}"?`)) { up(pr => { pr.proposals.splice(idx, 1); return pr; }); navigate("../proposals"); } }}
+          style={{ cursor: "pointer", color: _.faint, transition: "color 0.15s", padding: 4 }}
+          onMouseEnter={e => e.currentTarget.style.color = _.red}
+          onMouseLeave={e => e.currentTarget.style.color = _.faint}
+        ><X size={16} /></div>
         <button onClick={printEl} style={btnGhost}><Printer size={14} /> Print</button>
       </div>
 
@@ -67,10 +82,23 @@ export default function ProposalDetail() {
           <div style={{ fontSize: 14, color: _.body, marginTop: 6 }}>{propD.address}{propD.suburb ? `, ${propD.suburb}` : ""}</div>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", borderBottom: `1px solid ${_.line}` }}>
-          {[["Date", propD.date], ["Type", propD.type + (propD.stories ? ` · ${propD.stories}` : "")], ["Valid", `${propD.validDays || 30} days`], ["Value", fmt(propD.pricing.total)]].map(([l, v], i) => (
-            <div key={l} style={{ padding: "14px 20px", borderRight: i < 3 ? `1px solid ${_.line}` : "none" }}>
+          {[["Date", propD.date], ["Type", propD.type + (propD.stories ? ` · ${propD.stories}` : "")], ["Valid", null], ["Value", fmt(propD.pricing.total)]].map(([l, v], ci) => (
+            <div key={l} style={{ padding: "14px 20px", borderRight: ci < 3 ? `1px solid ${_.line}` : "none" }}>
               <div style={{ fontSize: 9, color: _.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>{l}</div>
-              <div style={{ fontSize: 13, fontWeight: i === 3 ? 700 : 500, color: _.ink, marginTop: 3 }}>{v}</div>
+              {l === "Valid" ? (
+                editValid ? (
+                  <input autoFocus type="number" style={{ fontSize: 13, fontWeight: 500, color: _.ink, marginTop: 3, background: _.well, border: `1px solid ${_.line}`, borderRadius: _.rXs, padding: "2px 6px", width: 60, outline: "none", fontFamily: "inherit" }}
+                    value={propD.validDays || 30}
+                    onChange={e => up(pr => { pr.proposals[idx].validDays = parseInt(e.target.value) || 30; return pr; })}
+                    onKeyDown={e => { if (e.key === "Enter" || e.key === "Escape") setEditValid(false); }}
+                    onBlur={() => setEditValid(false)}
+                  />
+                ) : (
+                  <div onClick={() => setEditValid(true)} style={{ fontSize: 13, fontWeight: 500, color: _.ink, marginTop: 3, cursor: "text" }}>{propD.validDays || 30} days</div>
+                )
+              ) : (
+                <div style={{ fontSize: 13, fontWeight: ci === 3 ? 700 : 500, color: _.ink, marginTop: 3 }}>{v}</div>
+              )}
             </div>
           ))}
         </div>

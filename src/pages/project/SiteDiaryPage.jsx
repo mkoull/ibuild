@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useProject } from "../../context/ProjectContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
 import _ from "../../theme/tokens.js";
-import { input, label, btnPrimary, badge, ds } from "../../theme/styles.js";
+import { input, label, btnPrimary, btnGhost, badge, ds } from "../../theme/styles.js";
 import { WEATHER } from "../../data/defaults.js";
 import Section from "../../components/ui/Section.jsx";
 import Empty from "../../components/ui/Empty.jsx";
@@ -12,6 +12,8 @@ export default function SiteDiaryPage() {
   const { project: p, update: up, log } = useProject();
   const { mobile, notify } = useApp();
   const [diaryForm, setDiaryForm] = useState({ date: "", weather: "Clear", trades: "", notes: "" });
+  const [editIdx, setEditIdx] = useState(null);
+  const [editDiary, setEditDiary] = useState({});
 
   return (
     <Section>
@@ -35,19 +37,38 @@ export default function SiteDiaryPage() {
       {p.diary.length === 0 && <Empty icon={BookOpen} text="No entries yet" />}
       {p.diary.map((d, i) => (
         <div key={i} style={{ padding: `${_.s4}px 0`, borderBottom: `1px solid ${_.line}` }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: _.s2 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: _.s2 }}>
-              <span style={{ fontSize: 14, fontWeight: 600 }}>{d.date}</span>
-              <span style={badge(_.muted)}>{d.weather}</span>
+          {editIdx === i ? (
+            <div>
+              <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "1fr 1fr", gap: `${_.s3}px ${_.s4}px`, marginBottom: _.s3 }}>
+                <div><label style={label}>Weather</label><select style={{ ...input, cursor: "pointer" }} value={editDiary.weather} onChange={e => setEditDiary({ ...editDiary, weather: e.target.value })}>{WEATHER.map(w => <option key={w}>{w}</option>)}</select></div>
+                <div><label style={label}>Trades on site</label><input style={input} value={editDiary.trades} onChange={e => setEditDiary({ ...editDiary, trades: e.target.value })} /></div>
+              </div>
+              <div><label style={label}>Notes</label><textarea style={{ ...input, minHeight: 64, resize: "vertical" }} value={editDiary.notes} onChange={e => setEditDiary({ ...editDiary, notes: e.target.value })} /></div>
+              <div style={{ display: "flex", gap: _.s2, marginTop: _.s2 }}>
+                <button onClick={() => { up(pr => { pr.diary[i] = { ...pr.diary[i], weather: editDiary.weather, trades: editDiary.trades, notes: editDiary.notes }; return pr; }); setEditIdx(null); notify("Updated"); }} style={btnPrimary}>Save</button>
+                <button onClick={() => setEditIdx(null)} style={btnGhost}>Cancel</button>
+              </div>
             </div>
-            <div onClick={() => { up(pr => { pr.diary.splice(i, 1); return pr; }); notify("Removed"); }}
-              style={{ cursor: "pointer", color: _.faint, transition: "color 0.15s" }}
-              onMouseEnter={e => e.currentTarget.style.color = _.red}
-              onMouseLeave={e => e.currentTarget.style.color = _.faint}
-            ><X size={14} /></div>
-          </div>
-          {d.trades && <div style={{ fontSize: 13, color: _.ac, fontWeight: 500, marginBottom: 2 }}>{d.trades}</div>}
-          {d.notes && <div style={{ fontSize: 14, color: _.body, lineHeight: 1.6 }}>{d.notes}</div>}
+          ) : (
+            <>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: _.s2 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: _.s2 }}>
+                  <span style={{ fontSize: 14, fontWeight: 600 }}>{d.date}</span>
+                  <span style={badge(_.muted)}>{d.weather}</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: _.s3 }}>
+                  <span onClick={() => { setEditIdx(i); setEditDiary({ weather: d.weather, trades: d.trades || "", notes: d.notes || "" }); }} style={{ fontSize: 12, color: _.ac, cursor: "pointer", fontWeight: 500 }}>Edit</span>
+                  <div onClick={() => { up(pr => { pr.diary.splice(i, 1); return pr; }); notify("Removed"); }}
+                    style={{ cursor: "pointer", color: _.faint, transition: "color 0.15s" }}
+                    onMouseEnter={e => e.currentTarget.style.color = _.red}
+                    onMouseLeave={e => e.currentTarget.style.color = _.faint}
+                  ><X size={14} /></div>
+                </div>
+              </div>
+              {d.trades && <div style={{ fontSize: 13, color: _.ac, fontWeight: 500, marginBottom: 2 }}>{d.trades}</div>}
+              {d.notes && <div style={{ fontSize: 14, color: _.body, lineHeight: 1.6 }}>{d.notes}</div>}
+            </>
+          )}
         </div>
       ))}
     </Section>

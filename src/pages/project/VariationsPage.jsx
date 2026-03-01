@@ -6,7 +6,7 @@ import _ from "../../theme/tokens.js";
 import { fmt, input, label, btnPrimary, badge, uid, ds } from "../../theme/styles.js";
 import Section from "../../components/ui/Section.jsx";
 import Empty from "../../components/ui/Empty.jsx";
-import { ClipboardList, ChevronRight, ArrowRight } from "lucide-react";
+import { ClipboardList, ChevronRight, ArrowRight, X } from "lucide-react";
 
 export default function VariationsPage() {
   const { project: p, update: up, T, log } = useProject();
@@ -67,6 +67,11 @@ export default function VariationsPage() {
           <div style={{ display: "flex", alignItems: "center", gap: _.s3 }}>
             <span style={{ fontSize: 16, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{v.amount >= 0 ? "+" : ""}{fmt(v.amount)}</span>
             <span style={badge(v.status === "approved" ? _.green : v.status === "rejected" ? _.red : _.amber)}>{v.status}</span>
+            <div onClick={e => { e.stopPropagation(); if (confirm(`Delete "${v.id}"?`)) { up(pr => { pr.variations.splice(i, 1); return pr; }); notify("Deleted"); } }}
+              style={{ cursor: "pointer", color: _.faint, transition: "color 0.15s" }}
+              onMouseEnter={e => e.currentTarget.style.color = _.red}
+              onMouseLeave={e => e.currentTarget.style.color = _.faint}
+            ><X size={14} /></div>
             <ChevronRight size={14} color={_.faint} />
           </div>
         </div>

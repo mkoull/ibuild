@@ -6,7 +6,7 @@ import { fmt, btnPrimary, badge, uid, ds } from "../../theme/styles.js";
 import { calc } from "../../lib/calc.js";
 import Section from "../../components/ui/Section.jsx";
 import Empty from "../../components/ui/Empty.jsx";
-import { FileText, Plus, ChevronRight } from "lucide-react";
+import { FileText, Plus, ChevronRight, X } from "lucide-react";
 
 export default function ProposalsPage() {
   const { project: p, update: up, T, log } = useProject();
@@ -57,6 +57,11 @@ export default function ProposalsPage() {
           <div style={{ display: "flex", alignItems: "center", gap: _.s3 }}>
             <span style={{ fontSize: 16, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{fmt(prop.pricing.total)}</span>
             <span style={badge(prop.status === "signed" ? _.green : prop.status === "declined" ? _.red : prop.status === "sent" ? _.blue : _.amber)}>{prop.status}</span>
+            <div onClick={e => { e.stopPropagation(); if (confirm(`Delete "${prop.name}"?`)) { up(pr => { pr.proposals.splice(i, 1); return pr; }); notify("Deleted"); } }}
+              style={{ cursor: "pointer", color: _.faint, transition: "color 0.15s" }}
+              onMouseEnter={e => e.currentTarget.style.color = _.red}
+              onMouseLeave={e => e.currentTarget.style.color = _.faint}
+            ><X size={14} /></div>
             <ChevronRight size={14} color={_.faint} />
           </div>
         </div>
