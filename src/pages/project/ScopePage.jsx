@@ -14,6 +14,7 @@ export default function ScopePage() {
   const { clients, clientsHook, mobile, notify } = useApp();
   const navigate = useNavigate();
   const [exp, setExp] = useState({});
+  const [newCat, setNewCat] = useState("");
   const clientRef = useRef(null);
 
   const stage = p.stage || p.status;
@@ -219,6 +220,22 @@ export default function ScopePage() {
             </div>
           );
         })}
+        <div style={{ display: "flex", gap: _.s2, alignItems: "center", marginTop: _.s4 }}>
+          <input style={{ ...input, flex: 1, maxWidth: 240 }} value={newCat} onChange={e => setNewCat(e.target.value)} placeholder="New category name" onKeyDown={e => {
+            if (e.key === "Enter" && newCat.trim()) {
+              up(pr => { if (!pr.scope[newCat.trim()]) pr.scope[newCat.trim()] = []; return pr; });
+              setExp(e2 => ({ ...e2, [newCat.trim()]: true }));
+              setNewCat("");
+            }
+          }} />
+          <button onClick={() => {
+            if (!newCat.trim()) { notify("Enter a category name", "error"); return; }
+            if (p.scope[newCat.trim()]) { notify("Category already exists", "error"); return; }
+            up(pr => { pr.scope[newCat.trim()] = []; return pr; });
+            setExp(e2 => ({ ...e2, [newCat.trim()]: true }));
+            setNewCat("");
+          }} style={{ ...btnGhost, whiteSpace: "nowrap" }}><Plus size={13} /> Add category</button>
+        </div>
       </div>
 
       {/* Review */}
