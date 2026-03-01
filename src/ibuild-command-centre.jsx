@@ -162,10 +162,6 @@ const btnSecondary = {
 const btnGhost = {
   ...btnPrimary,background:"transparent",color:_.body,padding:"9px 12px",
 };
-const card = {
-  background:_.surface,borderRadius:_.r,border:`1px solid ${_.line}`,
-  padding:24,
-};
 const stCol=s=>s==="Active"||s==="Invoiced"?_.green:s==="Approved"?_.blue:s==="Complete"?_.ac:s==="Quote"?_.violet:_.amber;
 const stBg=()=>_.well;
 const badge=(c)=>({fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:_.rFull,background:`${c}14`,color:c});
@@ -206,7 +202,7 @@ const Empty=({icon:Ic,text,action,actionText})=>(
     {action&&<button onClick={action} style={{...btnPrimary,marginTop:_.s5}}>{actionText} <ArrowRight size={14} /></button>}
   </div>
 );
-const Section=({children})=>(<div style={{animation:"fadeUp 0.2s ease",maxWidth:1440}}>{children}</div>);
+const Section=({children})=>(<div style={{animation:"fadeUp 0.2s ease",maxWidth:1200}}>{children}</div>);
 
 function calc(p){
   const sub=Object.values(p.scope).flat().filter(i=>i.on).reduce((t,i)=>t+i.rate*i.qty,0);
@@ -379,23 +375,23 @@ export default function IBuild(){
       {toast&&<div style={{position:"fixed",top:20,left:"50%",transform:"translateX(-50%)",zIndex:999,padding:"10px 24px",borderRadius:_.rFull,fontSize:13,fontWeight:600,color:"#fff",background:toast.type==="error"?_.red:_.ink,boxShadow:_.sh3,animation:"fadeUp 0.2s ease"}}>{toast.msg}</div>}
 
       {/* ═══ SIDEBAR ═══ */}
-      <aside style={{width:240,flexShrink:0,background:_.sidebar,borderRight:`1px solid ${_.line}`,display:mobile?"none":"flex",flexDirection:"column"}}>
+      <aside style={{width:240,flexShrink:0,background:"#ECEDF0",borderRight:`1px solid ${_.line}`,display:mobile?"none":"flex",flexDirection:"column"}}>
         {/* Logo */}
-        <div style={{padding:"20px 18px 16px",display:"flex",alignItems:"center",gap:9}}>
-          <div style={{width:28,height:28,background:_.ac,borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:800,color:"#fff"}}>i</div>
-          <span style={{fontSize:15,fontWeight:700,color:_.ink,letterSpacing:"-0.02em"}}>iBuild</span>
+        <div style={{padding:"20px 16px 16px",display:"flex",alignItems:"center",gap:8,borderBottom:`1px solid ${_.line}`}}>
+          <div style={{width:24,height:24,background:_.ink,borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,color:"#fff"}}>i</div>
+          <span style={{fontSize:14,fontWeight:700,color:_.ink,letterSpacing:"-0.03em"}}>iBuild</span>
           <div style={{flex:1}} />
           {saveStatus&&<span style={{fontSize:10,color:_.faint,fontWeight:500,whiteSpace:"nowrap"}}>{saveStatus==="saving"?"Saving\u2026":`Saved ${saveStatus}`}</span>}
         </div>
 
         {/* Project switcher */}
-        <div style={{padding:"8px 12px 10px",borderBottom:`1px solid ${_.line}`,position:"relative",zIndex:30}}>
-          <div onClick={()=>setSw(!sw)} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 10px",background:"rgba(255,255,255,0.6)",borderRadius:_.rSm,cursor:"pointer",transition:"background 0.15s"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,0.9)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,0.6)"}>
+        <div style={{padding:"10px 12px",borderBottom:`1px solid ${_.line}`,position:"relative",zIndex:30}}>
+          <div onClick={()=>setSw(!sw)} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 10px",background:"rgba(255,255,255,0.5)",borderRadius:_.rSm,cursor:"pointer",transition:"background 0.15s"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,0.8)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,0.5)"}>
             <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:13,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{pName(p)}</div>
+              <div style={{fontSize:13,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:_.ink}}>{pName(p)}</div>
               <div style={{fontSize:11,color:_.muted,marginTop:1}}>{p.status} · {p.type}</div>
             </div>
-            <ChevronDown size={14} color={_.muted} style={{flexShrink:0,transform:sw?"rotate(180deg)":"none",transition:"transform 0.15s"}} />
+            <ChevronDown size={13} color={_.muted} style={{flexShrink:0,transform:sw?"rotate(180deg)":"none",transition:"transform 0.15s"}} />
           </div>
           {sw&&<div style={{position:"absolute",top:"100%",left:4,right:4,background:_.surface,borderRadius:_.r,zIndex:100,boxShadow:_.sh3+",0 0 0 1px rgba(0,0,0,0.06)",maxHeight:360,overflowY:"auto",marginTop:4,animation:"slideDown 0.15s ease"}}>
             {projects.map((pr,i)=>(
@@ -412,19 +408,20 @@ export default function IBuild(){
         </div>
 
         {/* Nav groups */}
-        <div style={{flex:1,overflowY:"auto",padding:"8px 10px"}}>
+        <div style={{flex:1,overflowY:"auto",padding:"8px 0"}}>
           {NAV_ITEMS.map(g=>(
-            <div key={g.group} style={{marginBottom:12}}>
-              <div style={{padding:"12px 10px 4px",fontSize:10,fontWeight:700,color:_.muted,letterSpacing:"0.08em",textTransform:"uppercase"}}>{g.group}</div>
+            <div key={g.group} style={{marginBottom:8}}>
+              <div style={{padding:"12px 16px 4px",fontSize:10,fontWeight:700,color:_.muted,letterSpacing:"0.08em",textTransform:"uppercase"}}>{g.group}</div>
               {g.items.map(item=>(
                 <div key={item.id} onClick={()=>go(item.id)} style={{
-                  display:"flex",alignItems:"center",gap:9,padding:"7px 10px",fontSize:13,cursor:"pointer",
-                  borderRadius:_.rSm,margin:"1px 0",
-                  background:tab===item.id?"rgba(0,0,0,0.07)":"transparent",color:tab===item.id?_.ink:_.body,
+                  display:"flex",alignItems:"center",gap:8,padding:"7px 16px",fontSize:13,cursor:"pointer",
+                  borderLeft:tab===item.id?`2px solid ${_.ink}`:"2px solid transparent",
+                  background:tab===item.id?"rgba(0,0,0,0.05)":"transparent",
+                  color:tab===item.id?_.ink:_.body,
                   fontWeight:tab===item.id?600:400,
-                  transition:"background 0.1s ease",
-                }} onMouseEnter={e=>{if(tab!==item.id)e.currentTarget.style.background="rgba(0,0,0,0.04)"}} onMouseLeave={e=>{if(tab!==item.id)e.currentTarget.style.background=tab===item.id?"rgba(0,0,0,0.07)":"transparent"}}>
-                  <item.Ic size={16} strokeWidth={tab===item.id?2:1.5} />
+                  transition:"all 0.1s ease",
+                }} onMouseEnter={e=>{if(tab!==item.id)e.currentTarget.style.background="rgba(0,0,0,0.03)"}} onMouseLeave={e=>{if(tab!==item.id)e.currentTarget.style.background="transparent"}}>
+                  <item.Ic size={15} strokeWidth={tab===item.id?2:1.5} />
                   {item.l}
                 </div>
               ))}
@@ -455,85 +452,82 @@ export default function IBuild(){
       </div>}
 
       {/* ═══ MAIN CONTENT ═══ */}
-      <main style={{flex:1,overflowY:"auto",padding:mobile?"72px 16px 88px":"48px 56px 64px"}}>
+      <main style={{flex:1,overflowY:"auto",padding:mobile?"72px 16px 88px":"48px 64px 80px"}}>
 
         {/* ════════════════════════════════════
-            DASHBOARD — Builder OS
+            OVERVIEW — Structural OS
         ════════════════════════════════════ */}
-        {tab==="dash"&&<div style={{animation:"fadeUp 0.2s ease",maxWidth:1440}} key={anim}>
+        {tab==="dash"&&<div style={{animation:"fadeUp 0.2s ease",maxWidth:1200}} key={anim}>
 
-          {/* ═══ Two-column command centre — 70/30 ═══ */}
-          <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"1fr 340px",gap:mobile?24:48,alignItems:"start"}}>
+          {/* ═══ Two-column layout — content / sidebar ═══ */}
+          <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"1fr 300px",gap:mobile?32:64,alignItems:"start"}}>
 
-            {/* ── LEFT: Primary panel ── */}
+            {/* ── LEFT: Primary ── */}
             <div>
-              {/* Page header */}
-              <div style={{marginBottom:mobile?28:40}}>
+
+              {/* HEADER — title + metadata, no container */}
+              <div style={{marginBottom:mobile?32:48}}>
                 <h1 style={{fontSize:mobile?28:40,fontWeight:700,letterSpacing:"-0.03em",margin:0,lineHeight:1.1,color:_.ink}}>
-                  {pName(p)==="New Project"?"Command Centre":pName(p)}
+                  {pName(p)==="New Project"?"Overview":pName(p)}
                 </h1>
-                <div style={{fontSize:13,color:_.muted,marginTop:6}}>{p.status} · {p.type}{p.area?` · ${p.area}m²`:""} · {ds()}</div>
+                <div style={{fontSize:13,color:_.muted,marginTop:8,letterSpacing:"-0.01em"}}>{p.status} · {p.type}{p.area?` · ${p.area}m²`:""} · {ds()}</div>
               </div>
 
-              {/* Contract value hero */}
-              <div style={{marginBottom:36}}>
-                <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.05em",textTransform:"uppercase",marginBottom:8}}>Contract Value</div>
+              {/* PRIMARY METRIC — contract value, typographic dominance */}
+              <div style={{marginBottom:48,paddingBottom:40,borderBottom:`1px solid ${_.line}`}}>
+                <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:10}}>Contract Value</div>
                 <div style={{fontSize:mobile?44:56,fontWeight:700,letterSpacing:"-0.04em",lineHeight:1,fontVariantNumeric:"tabular-nums",color:T.curr>0?_.ink:_.faint}}>{fmt(T.curr)}</div>
+
+                {/* Progress pipeline — minimal dots + thin line */}
+                <div style={{marginTop:32}}>
+                  <div style={{display:"flex",alignItems:"center",gap:0}}>
+                    {STAGES.map((s,i)=>(
+                      <div key={s} style={{flex:1,display:"flex",alignItems:"center"}}>
+                        <div style={{width:8,height:8,borderRadius:"50%",background:i<=sIdx(p.status)?_.ink:_.line2,flexShrink:0,zIndex:1,transition:"background 0.2s"}} />
+                        {i<STAGES.length-1&&<div style={{flex:1,height:1,background:i<sIdx(p.status)?_.ink:_.line,transition:"background 0.2s"}} />}
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{display:"flex",justifyContent:"space-between",marginTop:8}}>
+                    {STAGES.map((s,i)=>(<span key={s} style={{fontSize:10,color:i<=sIdx(p.status)?_.ink:_.faint,fontWeight:i===sIdx(p.status)?600:400,letterSpacing:"0.01em"}}>{s}</span>))}
+                  </div>
+                </div>
               </div>
 
-              {/* Status progression — inline, structural */}
-              <div style={{marginBottom:36,paddingBottom:32,borderBottom:`1px solid ${_.line}`}}>
-                <div style={{display:"flex",alignItems:"center",gap:0}}>
-                  {STAGES.map((s,i)=>(
-                    <div key={s} style={{flex:1,display:"flex",alignItems:"center"}}>
-                      <div style={{width:10,height:10,borderRadius:"50%",background:i<=sIdx(p.status)?_.ac:_.line2,flexShrink:0,zIndex:1,transition:"background 0.2s"}} />
-                      {i<STAGES.length-1&&<div style={{flex:1,height:2,background:i<sIdx(p.status)?_.ac:_.line,transition:"background 0.2s"}} />}
-                    </div>
-                  ))}
-                </div>
-                <div style={{display:"flex",justifyContent:"space-between",marginTop:8}}>
-                  {STAGES.map((s,i)=>(<span key={s} style={{fontSize:11,color:i<=sIdx(p.status)?_.ac:_.faint,fontWeight:i===sIdx(p.status)?700:400}}>{s}</span>))}
-                </div>
-              </div>
-
-              {/* Metrics row — inline blocks, not floating cards */}
-              <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"1fr 1fr 1fr",gap:0,marginBottom:36,borderBottom:`1px solid ${_.line}`}}>
+              {/* SECONDARY METRICS — inline, vertical dividers, no backgrounds */}
+              <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"1fr 1fr 1fr",gap:0,marginBottom:48,paddingBottom:40,borderBottom:`1px solid ${_.line}`}}>
                 {[["Pipeline",pipeV,`${allT.filter(x=>["Quote","Approved"].includes(x.status)).length} quotes`,_.amber],
                   ["Active Jobs",actV,`${allT.filter(x=>x.status==="Active").length} active`,_.green],
                   ["Outstanding",allT.reduce((s,x)=>s+x.inv-x.paid,0),`${allT.reduce((s,x)=>s+x.invoices.filter(i2=>i2.status==="pending").length,0)} unpaid`,_.red],
                 ].map(([lb,val,sub,c],idx)=>(
-                  <div key={lb} style={{padding:"20px 0",borderRight:!mobile&&idx<2?`1px solid ${_.line}`:"none",paddingLeft:!mobile&&idx>0?24:0,paddingRight:!mobile&&idx<2?24:0}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:4}}>
-                      <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.04em",textTransform:"uppercase"}}>{lb}</div>
-                      <div style={{fontSize:11,color:c,fontWeight:600}}>{sub}</div>
-                    </div>
-                    <div style={{fontSize:28,fontWeight:700,letterSpacing:"-0.03em",color:val===0?_.faint:_.ink,fontVariantNumeric:"tabular-nums"}}>{fmt(val)}</div>
+                  <div key={lb} style={{padding:"0",borderRight:!mobile&&idx<2?`1px solid ${_.line}`:"none",paddingLeft:!mobile&&idx>0?32:0,paddingRight:!mobile&&idx<2?32:0}}>
+                    <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.04em",textTransform:"uppercase",marginBottom:6}}>{lb}</div>
+                    <div style={{fontSize:28,fontWeight:700,letterSpacing:"-0.03em",color:val===0?_.faint:_.ink,fontVariantNumeric:"tabular-nums",marginBottom:4}}>{fmt(val)}</div>
+                    <div style={{fontSize:12,color:c,fontWeight:500}}>{sub}</div>
                   </div>
                 ))}
               </div>
 
-              {/* Get started or contextual actions */}
+              {/* CONTENT — get started or actions */}
               {T.items===0&&!p.client ? (
-                <div style={{marginBottom:32}}>
-                  <div style={{fontSize:18,fontWeight:600,color:_.ink,marginBottom:16}}>Get started</div>
-                  <div style={{display:"flex",flexDirection:"column",gap:1}}>
-                    {[["Build your first quote","Add client details and scope items",()=>go("quote"),PenLine],
-                      ["Upload plans","Use AI to extract scope from floor plans",()=>{go("plans");setTimeout(()=>{if(planFileRef.current)planFileRef.current.click()},150)},Upload],
-                      ["Add scope items","Select items from the rate library",()=>{go("quote");setExp(e2=>{const first=Object.keys(p.scope)[0];return first?{...e2,[first]:true}:e2})},Plus]
-                    ].map(([title,desc,action,Ic])=>(
-                      <div key={title} onClick={action} style={{display:"flex",alignItems:"center",gap:14,padding:"14px 0",cursor:"pointer",borderBottom:`1px solid ${_.line}`,transition:"padding-left 0.15s"}} onMouseEnter={e=>e.currentTarget.style.paddingLeft="6px"} onMouseLeave={e=>e.currentTarget.style.paddingLeft="0"}>
-                        <div style={{width:36,height:36,borderRadius:_.rSm,background:_.well,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><Ic size={16} color={_.body} strokeWidth={1.5} /></div>
-                        <div style={{flex:1}}>
-                          <div style={{fontSize:14,fontWeight:600,color:_.ink}}>{title}</div>
-                          <div style={{fontSize:12,color:_.muted,marginTop:1}}>{desc}</div>
-                        </div>
-                        <ArrowRight size={14} color={_.faint} />
+                <div style={{marginBottom:48}}>
+                  <div style={{fontSize:18,fontWeight:600,color:_.ink,marginBottom:20}}>Get started</div>
+                  {[["Build your first quote","Add client details and scope items",()=>go("quote"),PenLine],
+                    ["Upload plans","Use AI to extract scope from floor plans",()=>{go("plans");setTimeout(()=>{if(planFileRef.current)planFileRef.current.click()},150)},Upload],
+                    ["Add scope items","Select items from the rate library",()=>{go("quote");setExp(e2=>{const first=Object.keys(p.scope)[0];return first?{...e2,[first]:true}:e2})},Plus]
+                  ].map(([title,desc,action,Ic],idx)=>(
+                    <div key={title} onClick={action} style={{display:"flex",alignItems:"center",gap:16,padding:"16px 0",cursor:"pointer",borderBottom:`1px solid ${_.line}`,transition:"padding-left 0.15s"}} onMouseEnter={e=>e.currentTarget.style.paddingLeft="4px"} onMouseLeave={e=>e.currentTarget.style.paddingLeft="0"}>
+                      <Ic size={18} color={_.muted} strokeWidth={1.5} />
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:14,fontWeight:500,color:_.ink}}>{title}</div>
+                        <div style={{fontSize:13,color:_.muted,marginTop:2}}>{desc}</div>
                       </div>
-                    ))}
-                  </div>
+                      <ArrowRight size={14} color={_.faint} />
+                    </div>
+                  ))}
                 </div>
               ) : (
-                <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:48}}>
                   {!quoteReady&&<button onClick={()=>go("quote")} style={btnPrimary}>Build quote <ArrowRight size={14} /></button>}
                   {quoteReady&&!quoteSent&&<button onClick={()=>createProp()} style={btnPrimary}>Generate proposal <ArrowRight size={14} /></button>}
                   {quoteSent&&<button onClick={()=>go("invoices")} style={btnPrimary}>Manage invoices <ArrowRight size={14} /></button>}
@@ -541,11 +535,11 @@ export default function IBuild(){
                 </div>
               )}
 
-              {/* Needs attention — inline */}
-              {alerts.length>0&&<div style={{marginTop:32,paddingTop:24,borderTop:`1px solid ${_.line}`}}>
-                <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.04em",textTransform:"uppercase",marginBottom:12}}>Needs attention</div>
+              {/* ATTENTION — structured list */}
+              {alerts.length>0&&<div style={{paddingTop:32,borderTop:`1px solid ${_.line}`}}>
+                <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:16}}>Needs attention</div>
                 {alerts.slice(0,5).map((a,i)=>(
-                  <div key={i} onClick={()=>{setAi(a.idx);go(a.tab)}} style={{padding:"8px 0",display:"flex",alignItems:"center",gap:10,cursor:"pointer",borderBottom:i<Math.min(alerts.length,5)-1?`1px solid ${_.well}`:"none"}} onMouseEnter={e=>e.currentTarget.style.opacity="0.7"} onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
+                  <div key={i} onClick={()=>{setAi(a.idx);go(a.tab)}} style={{padding:"10px 0",display:"flex",alignItems:"center",gap:12,cursor:"pointer",borderBottom:i<Math.min(alerts.length,5)-1?`1px solid ${_.line}`:"none"}} onMouseEnter={e=>e.currentTarget.style.opacity="0.7"} onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
                     <div style={{width:6,height:6,borderRadius:3,background:a.c,flexShrink:0}} />
                     <span style={{fontSize:13,color:_.body,lineHeight:1.4}}>{a.text}</span>
                   </div>
@@ -553,28 +547,29 @@ export default function IBuild(){
               </div>}
             </div>
 
-            {/* ── RIGHT: Activity + Quick Actions ── */}
-            <div style={{position:mobile?"static":"sticky",top:36}}>
-              {/* Quick actions */}
-              <div style={{marginBottom:28}}>
-                <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.04em",textTransform:"uppercase",marginBottom:12}}>Quick actions</div>
-                <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                  <button onClick={()=>go("quote")} style={{...btnPrimary,width:"100%",justifyContent:"center",padding:"11px 18px"}}>Build Quote</button>
-                  <button onClick={()=>go("plans")} style={{...btnSecondary,width:"100%",justifyContent:"center",padding:"11px 18px"}}><Upload size={14} /> Upload Plans</button>
+            {/* ── RIGHT: Actions + Activity ── */}
+            <div style={{position:mobile?"static":"sticky",top:48}}>
+
+              {/* Quick actions — clean stacked, no panel */}
+              <div style={{marginBottom:40,paddingBottom:32,borderBottom:`1px solid ${_.line}`}}>
+                <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:14}}>Quick actions</div>
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  <button onClick={()=>go("quote")} style={{...btnPrimary,width:"100%",justifyContent:"center",padding:"10px 18px"}}>Build Quote</button>
+                  <button onClick={()=>go("plans")} style={{...btnSecondary,width:"100%",justifyContent:"center",padding:"10px 18px"}}><Upload size={14} /> Upload Plans</button>
                 </div>
               </div>
 
-              {/* Activity feed */}
+              {/* Activity — structured list, dividers between items */}
               <div>
-                <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.04em",textTransform:"uppercase",marginBottom:12}}>Activity</div>
+                <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:14}}>Activity</div>
                 {recentActivity.length===0 ? (
                   <div style={{fontSize:13,color:_.faint,padding:"8px 0"}}>No activity yet</div>
                 ) : recentActivity.slice(0,8).map((a,i)=>(
-                  <div key={i} style={{padding:"8px 0",display:"flex",alignItems:"flex-start",gap:10,borderBottom:i<Math.min(recentActivity.length,8)-1?`1px solid ${_.well}`:"none"}}>
-                    <div style={{width:6,height:6,borderRadius:3,background:_.line2,flexShrink:0,marginTop:6}} />
+                  <div key={i} style={{padding:"10px 0",display:"flex",alignItems:"flex-start",gap:10,borderBottom:i<Math.min(recentActivity.length,8)-1?`1px solid ${_.line}`:"none"}}>
+                    <div style={{width:5,height:5,borderRadius:3,background:_.line2,flexShrink:0,marginTop:6}} />
                     <div>
-                      <div style={{fontSize:13,color:_.body,lineHeight:1.4}}>{a.action}</div>
-                      <div style={{fontSize:11,color:_.faint,marginTop:1}}>{a.project} · {a.time}</div>
+                      <div style={{fontSize:13,color:_.body,lineHeight:1.5}}>{a.action}</div>
+                      <div style={{fontSize:11,color:_.faint,marginTop:2}}>{a.project} · {a.time}</div>
                     </div>
                   </div>
                 ))}
@@ -812,7 +807,7 @@ export default function IBuild(){
           <div style={{fontSize:14,color:_.muted,marginBottom:_.s7}}>{p.milestones.filter(m=>m.done).length} of {p.milestones.length} milestones · {p.milestones.length>0?Math.round((p.milestones.filter(m=>m.done).length/p.milestones.length)*100):0}% complete</div>
 
           {/* Progress hero */}
-          <div style={{...card,borderLeft:`4px solid ${_.ac}`,marginBottom:_.s7}}>
+          <div style={{paddingBottom:_.s6,marginBottom:_.s7,borderBottom:`1px solid ${_.line}`,borderLeft:`2px solid ${_.ac}`,paddingLeft:_.s5}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:16}}>
               <div>
                 <div style={{fontSize:11,color:_.ac,letterSpacing:"0.06em",fontWeight:600,textTransform:"uppercase",marginBottom:4}}>Build Progress</div>
