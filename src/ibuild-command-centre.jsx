@@ -349,9 +349,6 @@ export default function IBuild(){
 
   const alerts=[];
   projects.forEach((pr,idx)=>{pr.invoices.forEach(inv=>{if(inv.status==="pending")alerts.push({text:`${pName(pr)}: ${inv.desc} — ${fmt(inv.amount)}`,c:_.red,idx,tab:"invoices"})});pr.variations.forEach(v=>{if(v.status==="draft"||v.status==="pending")alerts.push({text:`${pName(pr)}: ${v.id} needs signature`,c:_.amber,idx,tab:"variations"})});pr.defects.forEach(d=>{if(!d.done)alerts.push({text:`${pName(pr)}: ${d.desc}`,c:_.blue,idx,tab:"defects"})})});
-  const allT=projects.map(pr=>({...pr,...calc(pr)}));
-  const pipeV=allT.filter(x=>["Quote","Approved"].includes(x.status)).reduce((s,x)=>s+x.curr,0);
-  const actV=allT.filter(x=>x.status==="Active").reduce((s,x)=>s+x.curr,0);
   const quoteReady=p.client&&T.items>0;
 
   const recentActivity=projects.flatMap((pr,idx)=>(pr.activity||[]).slice(0,4).map(a=>({...a,project:pName(pr),idx}))).slice(0,8);
@@ -477,84 +474,69 @@ export default function IBuild(){
         ════════════════════════════════════ */}
         {tab==="dash"&&<div style={{animation:"fadeUp 0.2s ease",maxWidth:1200}} key={anim}>
 
-          {/* ═══ Two-column layout — content / sidebar ═══ */}
+          {/* ═══ HERO — Header + Contract Value + Stage ═══ */}
+          <div style={{marginBottom:mobile?40:64}}>
+
+            {/* HEADER */}
+            <div style={{marginBottom:mobile?32:48}}>
+              <h1 style={{fontSize:mobile?28:40,fontWeight:700,letterSpacing:"-0.03em",margin:0,lineHeight:1.1,color:_.ink}}>
+                {pName(p)==="New Project"?"Overview":pName(p)}
+              </h1>
+              <div style={{fontSize:13,color:_.muted,marginTop:8,letterSpacing:"-0.01em"}}>{p.status} · {p.type}{p.area?` · ${p.area}m²`:""} · {ds()}</div>
+            </div>
+
+            {/* CONTRACT VALUE */}
+            <div style={{marginBottom:40}}>
+              <div style={{fontSize:11,color:_.body,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:12}}>Contract Value</div>
+              <div style={{fontSize:mobile?48:72,fontWeight:700,letterSpacing:"-0.045em",lineHeight:1,fontVariantNumeric:"tabular-nums",color:T.curr>0?"#0a0f1a":_.faint}}>{fmt(T.curr)}</div>
+            </div>
+
+            {/* STAGE TRACKER */}
+            <div style={{paddingTop:24,paddingBottom:8}}>
+              <div style={{display:"flex",alignItems:"center",gap:0}}>
+                {STAGES.map((s,i)=>(
+                  <div key={s} style={{flex:1,display:"flex",alignItems:"center"}}>
+                    <div style={{width:5,height:5,borderRadius:"50%",background:i<=sIdx(p.status)?"#0a0f1a":_.line2,flexShrink:0,zIndex:1,transition:"background 0.2s"}} />
+                    {i<STAGES.length-1&&<div style={{flex:1,height:0.5,background:i<sIdx(p.status)?"#0a0f1a":_.line,transition:"background 0.2s"}} />}
+                  </div>
+                ))}
+              </div>
+              <div style={{display:"flex",justifyContent:"space-between",marginTop:8}}>
+                {STAGES.map((s,i)=>(<span key={s} style={{fontSize:10,color:i<=sIdx(p.status)?"#0a0f1a":_.faint,fontWeight:i===sIdx(p.status)?700:400,letterSpacing:"0.02em"}}>{s}</span>))}
+              </div>
+            </div>
+
+            {/* Continue setup CTA — inline with hero */}
+            {wfNext&&<div style={{marginTop:32}}>
+              <button onClick={()=>stepAction(wfNext)} style={{...btnPrimary,padding:"11px 20px"}}>Continue setup <ArrowRight size={14} /></button>
+            </div>}
+            {!wfNext&&<div style={{marginTop:32,fontSize:13,color:_.green,fontWeight:500}}>All steps complete</div>}
+          </div>
+
+          <div style={{height:1,background:_.line,marginBottom:mobile?32:48}} />
+
+          {/* ═══ Two-column — Setup checklist / Activity ═══ */}
           <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"1fr 300px",gap:mobile?32:64,alignItems:"start"}}>
 
-            {/* ── LEFT: Primary ── */}
+            {/* ── LEFT: Setup progress ── */}
             <div>
-
-              {/* HEADER — title + metadata, no container */}
-              <div style={{marginBottom:mobile?32:48}}>
-                <h1 style={{fontSize:mobile?28:40,fontWeight:700,letterSpacing:"-0.03em",margin:0,lineHeight:1.1,color:_.ink}}>
-                  {pName(p)==="New Project"?"Overview":pName(p)}
-                </h1>
-                <div style={{fontSize:13,color:_.muted,marginTop:8,letterSpacing:"-0.01em"}}>{p.status} · {p.type}{p.area?` · ${p.area}m²`:""} · {ds()}</div>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:20}}>
+                <div style={{fontSize:14,fontWeight:600,color:_.ink}}>Project setup</div>
+                <div style={{fontSize:12,color:_.muted}}>{wfDone} of {wfSteps.length}</div>
               </div>
-
-              {/* PRIMARY METRIC — contract value, executive dominance */}
-              <div style={{marginBottom:0}}>
-                <div style={{fontSize:11,color:_.body,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:12}}>Contract Value</div>
-                <div style={{fontSize:mobile?48:72,fontWeight:700,letterSpacing:"-0.045em",lineHeight:1,fontVariantNumeric:"tabular-nums",color:T.curr>0?"#0a0f1a":_.faint}}>{fmt(T.curr)}</div>
-              </div>
-
-              {/* Pipeline status — reduced noise, wider breathing room */}
-              <div style={{marginTop:40,marginBottom:0,paddingTop:32,paddingBottom:32}}>
-                <div style={{display:"flex",alignItems:"center",gap:0}}>
-                  {STAGES.map((s,i)=>(
-                    <div key={s} style={{flex:1,display:"flex",alignItems:"center"}}>
-                      <div style={{width:6,height:6,borderRadius:"50%",background:i<=sIdx(p.status)?"#0a0f1a":_.line2,flexShrink:0,zIndex:1,transition:"background 0.2s"}} />
-                      {i<STAGES.length-1&&<div style={{flex:1,height:1,background:i<sIdx(p.status)?"#0a0f1a":_.line,transition:"background 0.2s"}} />}
-                    </div>
-                  ))}
-                </div>
-                <div style={{display:"flex",justifyContent:"space-between",marginTop:10}}>
-                  {STAGES.map((s,i)=>(<span key={s} style={{fontSize:10,color:i<=sIdx(p.status)?"#0a0f1a":_.faint,fontWeight:i===sIdx(p.status)?700:400,letterSpacing:"0.02em"}}>{s}</span>))}
-                </div>
-              </div>
-
-              {/* Clear separation — large whitespace break */}
-              <div style={{height:1,background:_.line,marginBottom:56}} />
-
-              {/* SECONDARY METRICS — structured, aligned, divider lines */}
-              <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"1fr 1fr 1fr",gap:0,marginBottom:56,paddingBottom:48,borderBottom:`1px solid ${_.line}`}}>
-                {[["Pipeline",pipeV,`${allT.filter(x=>["Quote","Approved"].includes(x.status)).length} quotes`,_.amber],
-                  ["Active Jobs",actV,`${allT.filter(x=>x.status==="Active").length} active`,_.green],
-                  ["Outstanding",allT.reduce((s,x)=>s+x.inv-x.paid,0),`${allT.reduce((s,x)=>s+x.invoices.filter(i2=>i2.status==="pending").length,0)} unpaid`,_.red],
-                ].map(([lb,val,sub,c],idx)=>(
-                  <div key={lb} style={{borderRight:!mobile&&idx<2?`1px solid ${_.line}`:"none",paddingLeft:!mobile&&idx>0?32:0,paddingRight:!mobile&&idx<2?32:0}}>
-                    <div style={{fontSize:11,color:_.body,fontWeight:600,letterSpacing:"0.05em",textTransform:"uppercase",marginBottom:8}}>{lb}</div>
-                    <div style={{fontSize:24,fontWeight:700,letterSpacing:"-0.03em",color:val===0?_.faint:_.ink,fontVariantNumeric:"tabular-nums",marginBottom:6}}>{fmt(val)}</div>
-                    <div style={{fontSize:12,color:c,fontWeight:500}}>{sub}</div>
+              {wfSteps.map((step)=>(
+                <div key={step.key} onClick={()=>stepAction(step)} style={{display:"flex",alignItems:"center",gap:14,padding:"12px 0",cursor:"pointer",borderBottom:`1px solid ${_.line}`,transition:"padding-left 0.12s"}} onMouseEnter={e=>e.currentTarget.style.paddingLeft="4px"} onMouseLeave={e=>e.currentTarget.style.paddingLeft="0"}>
+                  <div style={{width:20,height:20,borderRadius:10,background:step.done?_.ink:"transparent",border:step.done?"none":`1.5px solid ${_.line2}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{step.done&&<Check size={10} strokeWidth={3} color="#fff" />}</div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:13,fontWeight:500,color:step.done?_.muted:_.ink}}>{step.label}{step.optional?<span style={{fontSize:11,color:_.faint,marginLeft:6}}>Optional</span>:""}</div>
+                    <div style={{fontSize:12,color:step.done?_.faint:_.muted,marginTop:1}}>{step.detail}</div>
                   </div>
-                ))}
-              </div>
-
-              {/* PROJECT SETUP — workflow stepper */}
-              <div style={{marginBottom:48}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:20}}>
-                  <div style={{fontSize:14,fontWeight:600,color:_.ink}}>Project setup</div>
-                  <div style={{fontSize:12,color:_.muted}}>{wfDone} of {wfSteps.length}</div>
+                  {!step.done&&<ArrowRight size={13} color={_.faint} />}
                 </div>
-                {wfSteps.map((step)=>(
-                  <div key={step.key} onClick={()=>stepAction(step)} style={{display:"flex",alignItems:"center",gap:14,padding:"12px 0",cursor:"pointer",borderBottom:`1px solid ${_.line}`,transition:"padding-left 0.12s"}} onMouseEnter={e=>e.currentTarget.style.paddingLeft="4px"} onMouseLeave={e=>e.currentTarget.style.paddingLeft="0"}>
-                    <div style={{width:20,height:20,borderRadius:10,background:step.done?_.ink:"transparent",border:step.done?"none":`1.5px solid ${_.line2}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{step.done&&<Check size={10} strokeWidth={3} color="#fff" />}</div>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:13,fontWeight:500,color:step.done?_.muted:_.ink}}>{step.label}{step.optional?<span style={{fontSize:11,color:_.faint,marginLeft:6}}>Optional</span>:""}</div>
-                      <div style={{fontSize:12,color:step.done?_.faint:_.muted,marginTop:1}}>{step.detail}</div>
-                    </div>
-                    {!step.done&&<ArrowRight size={13} color={_.faint} />}
-                  </div>
-                ))}
-
-                {/* Single primary CTA — next best action */}
-                {wfNext&&<div style={{marginTop:20}}>
-                  <button onClick={()=>stepAction(wfNext)} style={{...btnPrimary,padding:"11px 20px"}}>Continue setup <ArrowRight size={14} /></button>
-                </div>}
-                {!wfNext&&<div style={{marginTop:20,fontSize:13,color:_.green,fontWeight:500}}>All steps complete</div>}
-              </div>
+              ))}
 
               {/* ATTENTION — structured list */}
-              {alerts.length>0&&<div style={{paddingTop:32,borderTop:`1px solid ${_.line}`}}>
+              {alerts.length>0&&<div style={{paddingTop:32,marginTop:16,borderTop:`1px solid ${_.line}`}}>
                 <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:16}}>Needs attention</div>
                 {alerts.slice(0,5).map((a,i)=>(
                   <div key={i} onClick={()=>{setAi(a.idx);go(a.tab)}} style={{padding:"10px 0",display:"flex",alignItems:"center",gap:12,cursor:"pointer",borderBottom:i<Math.min(alerts.length,5)-1?`1px solid ${_.line}`:"none"}} onMouseEnter={e=>e.currentTarget.style.opacity="0.7"} onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
@@ -565,24 +547,20 @@ export default function IBuild(){
               </div>}
             </div>
 
-            {/* ── RIGHT: Context-aware next step + Activity ── */}
+            {/* ── RIGHT: Activity ── */}
             <div style={{position:mobile?"static":"sticky",top:48}}>
-
-              {/* Activity — structured list, dividers between items */}
-              <div>
-                <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:14}}>Activity</div>
-                {recentActivity.length===0 ? (
-                  <div style={{fontSize:13,color:_.faint,padding:"8px 0"}}>No activity yet</div>
-                ) : recentActivity.slice(0,8).map((a,i)=>(
-                  <div key={i} style={{padding:"10px 0",display:"flex",alignItems:"flex-start",gap:10,borderBottom:i<Math.min(recentActivity.length,8)-1?`1px solid ${_.line}`:"none"}}>
-                    <div style={{width:5,height:5,borderRadius:3,background:_.line2,flexShrink:0,marginTop:6}} />
-                    <div>
-                      <div style={{fontSize:13,color:_.body,lineHeight:1.5}}>{a.action}</div>
-                      <div style={{fontSize:11,color:_.faint,marginTop:2}}>{a.project} · {a.time}</div>
-                    </div>
+              <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:14}}>Activity</div>
+              {recentActivity.length===0 ? (
+                <div style={{fontSize:13,color:_.faint,padding:"8px 0"}}>No activity yet</div>
+              ) : recentActivity.slice(0,8).map((a,i)=>(
+                <div key={i} style={{padding:"10px 0",display:"flex",alignItems:"flex-start",gap:10,borderBottom:i<Math.min(recentActivity.length,8)-1?`1px solid ${_.line}`:"none"}}>
+                  <div style={{width:5,height:5,borderRadius:3,background:_.line2,flexShrink:0,marginTop:6}} />
+                  <div>
+                    <div style={{fontSize:13,color:_.body,lineHeight:1.5}}>{a.action}</div>
+                    <div style={{fontSize:11,color:_.faint,marginTop:2}}>{a.project} · {a.time}</div>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>}
