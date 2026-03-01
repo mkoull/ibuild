@@ -6,11 +6,11 @@ import { calc } from "../../lib/calc.js";
 import { STAGES } from "../../data/defaults.js";
 import Section from "../../components/ui/Section.jsx";
 import Empty from "../../components/ui/Empty.jsx";
-import { Plus, FolderOpen } from "lucide-react";
+import { Plus, FolderOpen, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 export default function ProjectsListPage() {
-  const { projects, clients, create, mobile, notify } = useApp();
+  const { projects, clients, create, remove, mobile, notify } = useApp();
   const navigate = useNavigate();
   const [filter, setFilter] = useState("All");
 
@@ -60,7 +60,20 @@ export default function ProjectsListPage() {
                 {pr.buildType || pr.type}{T.curr > 0 ? ` · ${fmt(T.curr)}` : ""}
               </div>
             </div>
-            <span style={badge(stCol(stage))}>{stage}</span>
+            <div style={{ display: "flex", alignItems: "center", gap: _.s3 }}>
+              <span style={badge(stCol(stage))}>{stage}</span>
+              <div onClick={e => {
+                e.stopPropagation();
+                if (confirm(`Delete "${pName(pr, clients)}"? This cannot be undone.`)) {
+                  remove(pr.id);
+                  notify("Project deleted");
+                }
+              }}
+                style={{ cursor: "pointer", color: _.faint, transition: "color 0.15s", padding: 4 }}
+                onMouseEnter={e => e.currentTarget.style.color = _.red}
+                onMouseLeave={e => e.currentTarget.style.color = _.faint}
+              ><Trash2 size={14} /></div>
+            </div>
           </div>
         );
       })}
