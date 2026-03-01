@@ -61,3 +61,20 @@ export const stCol = s =>
   : _.amber;
 
 export const stBg = () => _.well;
+
+export const focusRing = {
+  outline: "none",
+  boxShadow: _.focusRing,
+  borderColor: _.ac,
+};
+
+export const btnDanger = {
+  ...btnPrimary, background: _.red,
+};
+
+export const card = {
+  background: _.surface,
+  border: `1px solid ${_.line}`,
+  borderRadius: _.r,
+  padding: 24,
+};

@@ -31,6 +31,12 @@ const _ = {
   sh1: "0 1px 2px rgba(0,0,0,0.03)",
   sh2: "0 1px 3px rgba(0,0,0,0.04)",
   sh3: "0 2px 8px rgba(0,0,0,0.06)",
+  // Focus
+  focusRing: "0 0 0 2px #2563eb30",
+  // Transition
+  tr: "0.15s ease",
+  // Overlay
+  overlay: "rgba(0,0,0,0.35)",
 };
 
 export default _;
