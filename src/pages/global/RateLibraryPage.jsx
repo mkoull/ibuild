@@ -3,6 +3,7 @@ import { useApp } from "../../context/AppContext.jsx";
 import _ from "../../theme/tokens.js";
 import { fmt, input, label, btnPrimary, btnSecondary } from "../../theme/styles.js";
 import Section from "../../components/ui/Section.jsx";
+import SearchInput from "../../components/ui/SearchInput.jsx";
 import { ChevronRight, Plus, X } from "lucide-react";
 
 export default function RateLibraryPage() {
@@ -10,11 +11,22 @@ export default function RateLibraryPage() {
   const { categories, items, addCategory, updateCategory, removeCategory, addItem, updateItem, removeItem, getItemsByCategory } = rateLibrary;
   const [exp, setExp] = useState({});
   const [newCat, setNewCat] = useState("");
+  const [search, setSearch] = useState("");
+
+  // Filter categories + items by search
+  const filteredCategories = categories.filter(cat => {
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    if (cat.name.toLowerCase().includes(q)) return true;
+    return getItemsByCategory(cat.id).some(i => i.name.toLowerCase().includes(q) || (i.supplierCode || "").toLowerCase().includes(q));
+  });
 
   return (
     <Section>
       <h1 style={{ fontSize: mobile ? 28 : 40, fontWeight: 700, letterSpacing: "-0.03em", marginBottom: 8 }}>Rate Library</h1>
-      <div style={{ fontSize: 14, color: _.muted, marginBottom: 32 }}>{categories.length} categories · {items.length} items</div>
+      <div style={{ fontSize: 14, color: _.muted, marginBottom: 24 }}>{categories.length} categories · {items.length} items</div>
+
+      <SearchInput value={search} onChange={setSearch} placeholder="Search items..." style={{ marginBottom: 24, maxWidth: 320 }} />
 
       {/* Add category */}
       <div style={{ display: "flex", gap: _.s2, marginBottom: 32, paddingBottom: 24, borderBottom: `1px solid ${_.line}` }}>
@@ -24,9 +36,12 @@ export default function RateLibraryPage() {
       </div>
 
       {/* Categories accordion */}
-      {categories.map(cat => {
+      {filteredCategories.map(cat => {
         const catItems = getItemsByCategory(cat.id);
-        const open = exp[cat.id];
+        const displayItems = search.trim()
+          ? catItems.filter(i => i.name.toLowerCase().includes(search.toLowerCase()) || (i.supplierCode || "").toLowerCase().includes(search.toLowerCase()) || cat.name.toLowerCase().includes(search.toLowerCase()))
+          : catItems;
+        const open = exp[cat.id] || (search.trim() && displayItems.length > 0);
         const catTotal = catItems.reduce((t, i) => t + i.unitRate * i.defaultQty, 0);
 
         return (
@@ -55,17 +70,25 @@ export default function RateLibraryPage() {
             {open && (
               <div style={{ paddingBottom: _.s4, paddingLeft: 24, borderLeft: `2px solid ${_.line}` }}>
                 {/* Items table header */}
-                {catItems.length > 0 && (
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 70px 80px 50px auto", gap: 6, padding: "4px 0", fontSize: 10, color: _.muted, fontWeight: 600, textTransform: "uppercase" }}>
-                    <span>Item</span><span>Unit</span><span>Rate</span><span>Qty</span><span></span>
+                {displayItems.length > 0 && (
+                  <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr 70px 80px 50px auto" : "1fr 70px 80px 50px 70px 80px auto", gap: 6, padding: "4px 0", fontSize: 10, color: _.muted, fontWeight: 600, textTransform: "uppercase" }}>
+                    <span>Item</span><span>Unit</span><span>Rate</span><span>Qty</span>
+                    {!mobile && <><span>Margin %</span><span>Supplier</span></>}
+                    <span></span>
                   </div>
                 )}
-                {catItems.map(item => (
-                  <div key={item.id} style={{ display: "grid", gridTemplateColumns: "1fr 70px 80px 50px auto", gap: 6, padding: "5px 0", alignItems: "center", borderBottom: `1px solid ${_.line}` }}>
+                {displayItems.map(item => (
+                  <div key={item.id} style={{ display: "grid", gridTemplateColumns: mobile ? "1fr 70px 80px 50px auto" : "1fr 70px 80px 50px 70px 80px auto", gap: 6, padding: "5px 0", alignItems: "center", borderBottom: `1px solid ${_.line}` }}>
                     <input style={{ ...input, padding: "4px 8px", fontSize: 13 }} value={item.name} onChange={e => updateItem(item.id, { name: e.target.value })} />
                     <input style={{ ...input, padding: "4px 8px", fontSize: 12 }} value={item.unit} onChange={e => updateItem(item.id, { unit: e.target.value })} />
                     <input type="number" style={{ ...input, padding: "4px 8px", fontSize: 12, textAlign: "right" }} value={item.unitRate} onChange={e => updateItem(item.id, { unitRate: parseFloat(e.target.value) || 0 })} />
                     <input type="number" style={{ ...input, padding: "4px 8px", fontSize: 12, textAlign: "center" }} value={item.defaultQty} onChange={e => updateItem(item.id, { defaultQty: parseFloat(e.target.value) || 0 })} />
+                    {!mobile && (
+                      <>
+                        <input type="number" style={{ ...input, padding: "4px 8px", fontSize: 12, textAlign: "center" }} value={item.margin || 0} onChange={e => updateItem(item.id, { margin: parseFloat(e.target.value) || 0 })} />
+                        <input style={{ ...input, padding: "4px 8px", fontSize: 11 }} value={item.supplierCode || ""} onChange={e => updateItem(item.id, { supplierCode: e.target.value })} placeholder="Code" />
+                      </>
+                    )}
                     <div onClick={() => removeItem(item.id)} style={{ cursor: "pointer", color: _.faint, padding: 2 }}
                       onMouseEnter={e => e.currentTarget.style.color = _.red}
                       onMouseLeave={e => e.currentTarget.style.color = _.faint}

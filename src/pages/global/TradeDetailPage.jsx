@@ -9,12 +9,17 @@ import { ArrowLeft, Plus, X } from "lucide-react";
 export default function TradeDetailPage() {
   const { tradeId } = useParams();
   const navigate = useNavigate();
-  const { tradesHook, mobile } = useApp();
+  const { tradesHook, rateLibrary, mobile } = useApp();
 
   const trade = tradesHook.find(tradeId);
   if (!trade) return <Section><div style={{ color: _.muted }}>Trade not found</div></Section>;
 
   const up = (fn) => tradesHook.update(tradeId, fn);
+
+  // Ensure arrays exist for backwards compat
+  const regions = trade.regions || [];
+  const tags = trade.tags || [];
+  const defaultRateIds = trade.defaultRateIds || [];
 
   return (
     <Section>
@@ -36,11 +41,57 @@ export default function TradeDetailPage() {
           </div>
           <div><label style={label}>Licence Info</label><input style={input} value={trade.licenceInfo} onChange={e => up(t => { t.licenceInfo = e.target.value; })} placeholder="Licence number" /></div>
           <div><label style={label}>Insurance Info</label><input style={input} value={trade.insuranceInfo} onChange={e => up(t => { t.insuranceInfo = e.target.value; })} placeholder="Insurance details" /></div>
+          <div>
+            <label style={label}>Regions</label>
+            <input style={input} value={regions.join(", ")} onChange={e => up(t => { t.regions = e.target.value.split(",").map(s => s.trim()).filter(Boolean); })} placeholder="Melbourne, Geelong, Ballarat" />
+          </div>
+          <div style={{ gridColumn: mobile ? "1" : "1 / -1" }}>
+            <label style={label}>Tags</label>
+            <input style={input} value={tags.join(", ")} onChange={e => up(t => { t.tags = e.target.value.split(",").map(s => s.trim()).filter(Boolean); })} placeholder="Residential, Commercial, Heritage" />
+          </div>
         </div>
         <div style={{ marginTop: _.s3 }}>
           <label style={label}>Notes</label>
           <textarea style={{ ...input, minHeight: 56, resize: "vertical" }} value={trade.notes} onChange={e => up(t => { t.notes = e.target.value; })} />
         </div>
+      </div>
+
+      {/* Default Rates */}
+      <div style={{ paddingTop: 24, borderTop: `1px solid ${_.line}`, marginBottom: 32 }}>
+        <div style={{ fontSize: 18, fontWeight: 600, color: _.ink, marginBottom: 8 }}>Default Rates</div>
+        <div style={{ fontSize: 12, color: _.muted, marginBottom: 16 }}>Link rate library items this trade commonly supplies.</div>
+        {rateLibrary.items.length === 0 ? (
+          <div style={{ fontSize: 13, color: _.faint }}>No rate library items yet. <span onClick={() => navigate("/rate-library")} style={{ color: _.ac, cursor: "pointer" }}>Add some</span>.</div>
+        ) : (
+          <>
+            {defaultRateIds.length > 0 && (
+              <div style={{ marginBottom: 12 }}>
+                {defaultRateIds.map(rId => {
+                  const item = rateLibrary.items.find(i => i.id === rId);
+                  if (!item) return null;
+                  return (
+                    <div key={rId} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: `1px solid ${_.line}` }}>
+                      <span style={{ fontSize: 13, color: _.ink }}>{item.name} — {item.unit} @ ${item.unitRate}</span>
+                      <div onClick={() => up(t => { t.defaultRateIds = (t.defaultRateIds || []).filter(id => id !== rId); })}
+                        style={{ cursor: "pointer", color: _.faint, padding: 2 }}
+                        onMouseEnter={e => e.currentTarget.style.color = _.red}
+                        onMouseLeave={e => e.currentTarget.style.color = _.faint}
+                      ><X size={12} /></div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <select style={{ ...input, cursor: "pointer", maxWidth: 300 }} value="" onChange={e => {
+              if (e.target.value) up(t => { t.defaultRateIds = [...(t.defaultRateIds || []), e.target.value]; });
+            }}>
+              <option value="">Add rate item...</option>
+              {rateLibrary.items.filter(i => !defaultRateIds.includes(i.id)).map(i => (
+                <option key={i.id} value={i.id}>{i.name} — {i.unit} @ ${i.unitRate}</option>
+              ))}
+            </select>
+          </>
+        )}
       </div>
 
       {/* Contacts */}

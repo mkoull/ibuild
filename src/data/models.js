@@ -38,6 +38,9 @@ export function mkTrade(overrides = {}) {
     licenceInfo: "",
     insuranceInfo: "",
     notes: "",
+    regions: [],
+    tags: [],
+    defaultRateIds: [],
     createdAt: now,
     updatedAt: now,
     ...overrides,
@@ -57,6 +60,8 @@ export function mkRateItem(overrides = {}) {
     unitRate: 0,
     defaultQty: 0,
     description: "",
+    margin: 0,
+    supplierCode: "",
     ...overrides,
   };
 }
