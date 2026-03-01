@@ -473,36 +473,39 @@ export default function IBuild(){
                 <div style={{fontSize:13,color:_.muted,marginTop:8,letterSpacing:"-0.01em"}}>{p.status} · {p.type}{p.area?` · ${p.area}m²`:""} · {ds()}</div>
               </div>
 
-              {/* PRIMARY METRIC — contract value, typographic dominance */}
-              <div style={{marginBottom:48,paddingBottom:40,borderBottom:`1px solid ${_.line}`}}>
-                <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:10}}>Contract Value</div>
-                <div style={{fontSize:mobile?44:56,fontWeight:700,letterSpacing:"-0.04em",lineHeight:1,fontVariantNumeric:"tabular-nums",color:T.curr>0?_.ink:_.faint}}>{fmt(T.curr)}</div>
+              {/* PRIMARY METRIC — contract value, executive dominance */}
+              <div style={{marginBottom:0}}>
+                <div style={{fontSize:11,color:_.body,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:12}}>Contract Value</div>
+                <div style={{fontSize:mobile?48:72,fontWeight:700,letterSpacing:"-0.045em",lineHeight:1,fontVariantNumeric:"tabular-nums",color:T.curr>0?"#0a0f1a":_.faint}}>{fmt(T.curr)}</div>
+              </div>
 
-                {/* Progress pipeline — minimal dots + thin line */}
-                <div style={{marginTop:32}}>
-                  <div style={{display:"flex",alignItems:"center",gap:0}}>
-                    {STAGES.map((s,i)=>(
-                      <div key={s} style={{flex:1,display:"flex",alignItems:"center"}}>
-                        <div style={{width:8,height:8,borderRadius:"50%",background:i<=sIdx(p.status)?_.ink:_.line2,flexShrink:0,zIndex:1,transition:"background 0.2s"}} />
-                        {i<STAGES.length-1&&<div style={{flex:1,height:1,background:i<sIdx(p.status)?_.ink:_.line,transition:"background 0.2s"}} />}
-                      </div>
-                    ))}
-                  </div>
-                  <div style={{display:"flex",justifyContent:"space-between",marginTop:8}}>
-                    {STAGES.map((s,i)=>(<span key={s} style={{fontSize:10,color:i<=sIdx(p.status)?_.ink:_.faint,fontWeight:i===sIdx(p.status)?600:400,letterSpacing:"0.01em"}}>{s}</span>))}
-                  </div>
+              {/* Pipeline status — reduced noise, wider breathing room */}
+              <div style={{marginTop:40,marginBottom:0,paddingTop:32,paddingBottom:32}}>
+                <div style={{display:"flex",alignItems:"center",gap:0}}>
+                  {STAGES.map((s,i)=>(
+                    <div key={s} style={{flex:1,display:"flex",alignItems:"center"}}>
+                      <div style={{width:6,height:6,borderRadius:"50%",background:i<=sIdx(p.status)?"#0a0f1a":_.line2,flexShrink:0,zIndex:1,transition:"background 0.2s"}} />
+                      {i<STAGES.length-1&&<div style={{flex:1,height:1,background:i<sIdx(p.status)?"#0a0f1a":_.line,transition:"background 0.2s"}} />}
+                    </div>
+                  ))}
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",marginTop:10}}>
+                  {STAGES.map((s,i)=>(<span key={s} style={{fontSize:10,color:i<=sIdx(p.status)?"#0a0f1a":_.faint,fontWeight:i===sIdx(p.status)?700:400,letterSpacing:"0.02em"}}>{s}</span>))}
                 </div>
               </div>
 
-              {/* SECONDARY METRICS — inline, vertical dividers, no backgrounds */}
-              <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"1fr 1fr 1fr",gap:0,marginBottom:48,paddingBottom:40,borderBottom:`1px solid ${_.line}`}}>
+              {/* Clear separation — large whitespace break */}
+              <div style={{height:1,background:_.line,marginBottom:56}} />
+
+              {/* SECONDARY METRICS — structured, aligned, divider lines */}
+              <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"1fr 1fr 1fr",gap:0,marginBottom:56,paddingBottom:48,borderBottom:`1px solid ${_.line}`}}>
                 {[["Pipeline",pipeV,`${allT.filter(x=>["Quote","Approved"].includes(x.status)).length} quotes`,_.amber],
                   ["Active Jobs",actV,`${allT.filter(x=>x.status==="Active").length} active`,_.green],
                   ["Outstanding",allT.reduce((s,x)=>s+x.inv-x.paid,0),`${allT.reduce((s,x)=>s+x.invoices.filter(i2=>i2.status==="pending").length,0)} unpaid`,_.red],
                 ].map(([lb,val,sub,c],idx)=>(
-                  <div key={lb} style={{padding:"0",borderRight:!mobile&&idx<2?`1px solid ${_.line}`:"none",paddingLeft:!mobile&&idx>0?32:0,paddingRight:!mobile&&idx<2?32:0}}>
-                    <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.04em",textTransform:"uppercase",marginBottom:6}}>{lb}</div>
-                    <div style={{fontSize:28,fontWeight:700,letterSpacing:"-0.03em",color:val===0?_.faint:_.ink,fontVariantNumeric:"tabular-nums",marginBottom:4}}>{fmt(val)}</div>
+                  <div key={lb} style={{borderRight:!mobile&&idx<2?`1px solid ${_.line}`:"none",paddingLeft:!mobile&&idx>0?32:0,paddingRight:!mobile&&idx<2?32:0}}>
+                    <div style={{fontSize:11,color:_.body,fontWeight:600,letterSpacing:"0.05em",textTransform:"uppercase",marginBottom:8}}>{lb}</div>
+                    <div style={{fontSize:24,fontWeight:700,letterSpacing:"-0.03em",color:val===0?_.faint:_.ink,fontVariantNumeric:"tabular-nums",marginBottom:6}}>{fmt(val)}</div>
                     <div style={{fontSize:12,color:c,fontWeight:500}}>{sub}</div>
                   </div>
                 ))}
