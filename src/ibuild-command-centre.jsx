@@ -110,44 +110,45 @@ const mkProject=()=>({id:uid(),status:"Lead",created:ds(),client:"",email:"",pho
 // ═══════════════════════════════════════════════
 const _ = {
   // Surfaces
-  bg:"#f8f9fb",
+  bg:"#f5f6f8",
   surface:"#ffffff",
   raised:"#ffffff",
-  well:"#f1f3f5",
-  sidebar:"#eef0f4",
+  well:"#f0f1f3",
+  sidebar:"#e8eaee",
   // Borders
-  line:"#e8eaed",
-  line2:"#d0d4da",
+  line:"#e5e7eb",
+  line2:"#d1d5db",
   // Text hierarchy
-  ink:"#111827",
-  body:"#4b5563",
-  muted:"#9ca3af",
-  faint:"#d1d5db",
+  ink:"#0f172a",
+  body:"#475569",
+  muted:"#94a3b8",
+  faint:"#cbd5e1",
   // Accent
   ac:"#2563eb",
   acDark:"#1d4ed8",
   acLight:"#eff6ff",
   acBorder:"#bfdbfe",
+  acFaint:"#dbeafe",
   // Semantic
-  green:"#059669",greenBg:"#ecfdf5",
-  red:"#dc2626",redBg:"#fef2f2",
-  amber:"#d97706",amberBg:"#fffbeb",
-  blue:"#2563eb",blueBg:"#eff6ff",
-  violet:"#7c3aed",
-  // Spacing (8px base grid)
+  green:"#10b981",greenBg:"#ecfdf5",
+  red:"#ef4444",redBg:"#fef2f2",
+  amber:"#f59e0b",amberBg:"#fffbeb",
+  blue:"#3b82f6",blueBg:"#eff6ff",
+  violet:"#8b5cf6",
+  // Spacing
   s1:4,s2:8,s3:12,s4:16,s5:20,s6:24,s7:32,s8:40,s9:48,s10:64,
-  // Radius
-  r:"10px",rSm:"8px",rXs:"6px",rFull:"999px",
-  // Shadows
-  sh1:"0 1px 2px rgba(0,0,0,0.04),0 1px 3px rgba(0,0,0,0.06)",
-  sh2:"0 2px 8px rgba(0,0,0,0.06),0 1px 2px rgba(0,0,0,0.04)",
-  sh3:"0 8px 24px rgba(0,0,0,0.08),0 2px 6px rgba(0,0,0,0.04)",
+  // Radius — tighter, structural
+  r:"10px",rMd:"8px",rSm:"6px",rXs:"4px",rFull:"999px",
+  // Shadows — minimal
+  sh1:"0 1px 3px rgba(0,0,0,0.04)",
+  sh2:"0 1px 2px rgba(0,0,0,0.03), 0 2px 8px rgba(0,0,0,0.04)",
+  sh3:"0 4px 16px rgba(0,0,0,0.08)",
 };
 
 const input = {
   width:"100%",padding:"9px 12px",background:_.well,border:"1.5px solid transparent",
-  borderRadius:_.rXs,color:_.ink,fontSize:14,fontFamily:"inherit",outline:"none",
-  transition:"all 0.15s ease",
+  borderRadius:_.rSm,color:_.ink,fontSize:14,fontFamily:"inherit",outline:"none",
+  transition:"border-color 0.15s ease",
 };
 const label = {
   fontSize:11,color:_.muted,marginBottom:5,display:"block",fontWeight:600,
@@ -155,19 +156,22 @@ const label = {
 };
 const btnPrimary = {
   padding:"9px 18px",background:_.ac,color:"#fff",border:"none",borderRadius:_.rSm,
-  fontSize:13,fontWeight:600,cursor:"pointer",transition:"all 0.12s ease",
+  fontSize:13,fontWeight:600,cursor:"pointer",transition:"background 0.15s ease",
   display:"inline-flex",alignItems:"center",gap:6,
 };
 const btnSecondary = {
-  ...btnPrimary,background:_.well,color:_.body,border:`1.5px solid ${_.line}`,
+  ...btnPrimary,background:_.surface,color:_.body,border:`1.5px solid ${_.line}`,
 };
 const btnGhost = {
   ...btnPrimary,background:"transparent",color:_.body,padding:"9px 12px",
 };
-const card = {background:_.surface,borderRadius:_.r,border:`1px solid ${_.line}`,padding:24,boxShadow:_.sh1,transition:"box-shadow 0.18s ease, transform 0.18s ease"};
+const card = {
+  background:_.surface,borderRadius:_.r,border:`1px solid ${_.line}`,
+  padding:24,
+};
 const stCol=s=>s==="Active"||s==="Invoiced"?_.green:s==="Approved"?_.blue:s==="Complete"?_.ac:s==="Quote"?_.violet:_.amber;
 const stBg=s=>s==="Active"||s==="Invoiced"?_.greenBg:s==="Approved"?_.blueBg:s==="Complete"?_.acLight:s==="Quote"?"#f5f3ff":_.amberBg;
-const badge=(c,bg)=>({fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:_.rFull,background:bg||`${c}12`,color:c,letterSpacing:"0.01em"});
+const badge=(c,bg)=>({fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:_.rFull,background:bg||`${c}14`,color:c});
 
 // ═══ STORAGE WRAPPER ═══
 const STORAGE_VERSION=1;
@@ -199,13 +203,13 @@ const NAV_ITEMS=[
 
 // ═══ Stable components — MUST live outside IBuild to avoid remount on every keystroke ═══
 const Empty=({icon:Ic,text,action,actionText})=>(
-  <div style={{textAlign:"center",padding:`${_.s10}px ${_.s7}px`,background:_.well,borderRadius:_.r,border:`1.5px dashed ${_.line2}`}}>
-    {Ic&&<div style={{marginBottom:_.s4,display:"flex",justifyContent:"center"}}><div style={{width:56,height:56,borderRadius:"50%",background:_.surface,boxShadow:_.sh1,display:"flex",alignItems:"center",justifyContent:"center"}}><Ic size={24} strokeWidth={1.5} color={_.muted} /></div></div>}
-    <div style={{fontSize:15,color:_.body,lineHeight:1.5,fontWeight:500}}>{text}</div>
+  <div style={{textAlign:"center",padding:`${_.s9}px ${_.s7}px`,borderRadius:_.r,border:`1.5px dashed ${_.line2}`}}>
+    {Ic&&<div style={{marginBottom:_.s4,display:"flex",justifyContent:"center"}}><Ic size={28} strokeWidth={1.5} color={_.faint} /></div>}
+    <div style={{fontSize:14,color:_.muted,lineHeight:1.5}}>{text}</div>
     {action&&<button onClick={action} style={{...btnPrimary,marginTop:_.s5}}>{actionText} <ArrowRight size={14} /></button>}
   </div>
 );
-const Section=({children})=>(<div style={{animation:"fadeUp 0.25s ease",maxWidth:960}}>{children}</div>);
+const Section=({children})=>(<div style={{animation:"fadeUp 0.2s ease",maxWidth:1440}}>{children}</div>);
 
 function calc(p){
   const sub=Object.values(p.scope).flat().filter(i=>i.on).reduce((t,i)=>t+i.rate*i.qty,0);
@@ -276,14 +280,14 @@ export default function IBuild(){
 
   useEffect(()=>{const h=()=>setMobile(window.innerWidth<768);window.addEventListener("resize",h);return()=>window.removeEventListener("resize",h)},[]);
 
-  // Autosave projects (debounced 400ms)
+  // Autosave projects (debounced 300ms)
   useEffect(()=>{
     if(saveTimer.current)clearTimeout(saveTimer.current);
     setSaveStatus("saving");
     saveTimer.current=setTimeout(()=>{
       store.set("ib_projects",{v:STORAGE_VERSION,projects,ai});
       setSaveStatus(new Date().toLocaleTimeString("en-AU",{hour:"numeric",minute:"2-digit"}));
-    },400);
+    },300);
     return()=>{if(saveTimer.current)clearTimeout(saveTimer.current)};
   },[projects,ai]);
 
@@ -302,14 +306,36 @@ export default function IBuild(){
     return{onMouseDown:e=>{dr.current=true;const[x,y]=gp(e);ctx.current.beginPath();ctx.current.moveTo(x,y)},onMouseMove:e=>{if(!dr.current)return;const[x,y]=gp(e);ctx.current.lineTo(x,y);ctx.current.stroke()},onMouseUp:()=>{dr.current=false;done?.()},onMouseLeave:()=>{dr.current=false},onTouchStart:e=>{dr.current=true;const[x,y]=gp(e);ctx.current.beginPath();ctx.current.moveTo(x,y)},onTouchMove:e=>{if(!dr.current)return;e.preventDefault();const[x,y]=gp(e);ctx.current.lineTo(x,y);ctx.current.stroke()},onTouchEnd:()=>{dr.current=false;done?.()}};
   };
   const clr=(ref,ctx)=>{if(ctx.current&&ref.current)ctx.current.clearRect(0,0,ref.current.width,ref.current.height)};
+  const planFileRef=useRef(null);
   const analysePlan=async file=>{
-    const endpoint=import.meta.env.VITE_FLOORPLAN_ANALYSE_ENDPOINT;
-    if(!endpoint){notify("Set VITE_FLOORPLAN_ANALYSE_ENDPOINT to enable AI analysis","error");return}
     setPlanLoad(true);setPlanData(null);
-    try{const b64=await new Promise((r,j)=>{const fr=new FileReader();fr.onload=()=>r(fr.result.split(",")[1]);fr.onerror=j;fr.readAsDataURL(file)});const mt=file.type||"image/png";setPlanImg(`data:${mt};base64,${b64}`);
-      const resp=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({image:b64,media_type:mt})});
-      const d=await resp.json();setPlanData(JSON.parse((d.content?.map(b=>b.text||"").join("")||"").replace(/```json|```/g,"").trim()));
-    }catch(e){setPlanData({error:"Analysis failed — try a clearer image."})}setPlanLoad(false);
+    try{
+      const url=URL.createObjectURL(file);setPlanImg(url);
+      const fd=new FormData();fd.append("file",file);
+      const resp=await fetch("http://localhost:3001/api/floorplan/analyse",{method:"POST",body:fd});
+      if(!resp.ok)throw new Error(`Server returned ${resp.status}`);
+      const d=await resp.json();
+      if(d.error)throw new Error(d.error);
+      setPlanData(d);
+    }catch(e){setPlanData({error:e.message||"Analysis failed — is the server running? (npm run server)"})}
+    setPlanLoad(false);
+  };
+  const addPlanItems=()=>{
+    if(!planData?.scope_items?.length)return;
+    up(pr=>{
+      planData.scope_items.forEach(si=>{
+        const cat=si.category;
+        if(!pr.scope[cat])return;
+        const exists=pr.scope[cat].find(x=>x.item===si.item);
+        if(exists){exists.on=true;exists.qty=si.qty;exists.rate=si.rate;}
+        else{pr.scope[cat].push({item:si.item,unit:si.unit,rate:si.rate,qty:si.qty,on:true,actual:0,custom:true,_id:uid()});}
+      });
+      if(planData.total_m2)pr.area=String(planData.total_m2);
+      return pr;
+    });
+    log("Plan items added: "+planData.scope_items.length+" items");
+    notify(planData.scope_items.length+" items added to quote");
+    go("quote");
   };
   const printEl=ref=>{if(!ref.current)return;const w=window.open("","_blank");w.document.write('<!DOCTYPE html><html><head><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>*{margin:0;padding:0;box-sizing:border-box}@media print{body{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}@page{margin:0;size:A4}}</style></head><body>'+ref.current.outerHTML+'</body></html>');w.document.close();setTimeout(()=>w.print(),600)};
   const dupeProject=idx=>{const src=JSON.parse(JSON.stringify(projects[idx]));src.id=uid();src.status="Lead";src.created=ds();src.client+=" (Copy)";src.invoices=[];src.variations=[];src.milestones=MILESTONES.map(m=>({name:m.name,wk:m.wk,done:false,date:"",planned:""}));src.diary=[];src.defects=[];src.sigData=null;src.proposals=[];src.activity=[{action:"Duplicated from "+pName(projects[idx]),time:ts(),date:ds()}];setProjects(pv=>[...pv,src]);setAi(projects.length);setSw(false);go("quote");notify("Project duplicated")};
@@ -356,25 +382,25 @@ export default function IBuild(){
       {toast&&<div style={{position:"fixed",top:20,left:"50%",transform:"translateX(-50%)",zIndex:999,padding:"10px 24px",borderRadius:_.rFull,fontSize:13,fontWeight:600,color:"#fff",background:toast.type==="error"?_.red:_.ink,boxShadow:_.sh3,animation:"fadeUp 0.2s ease"}}>{toast.msg}</div>}
 
       {/* ═══ SIDEBAR ═══ */}
-      <aside style={{width:260,flexShrink:0,background:_.sidebar,borderRight:`1px solid ${_.line}`,display:mobile?"none":"flex",flexDirection:"column"}}>
+      <aside style={{width:240,flexShrink:0,background:_.sidebar,borderRight:`1px solid ${_.line}`,display:mobile?"none":"flex",flexDirection:"column"}}>
         {/* Logo */}
-        <div style={{padding:"20px 20px 16px",display:"flex",alignItems:"center",gap:10}}>
-          <div style={{width:30,height:30,background:`linear-gradient(135deg,${_.ac},${_.acDark})`,borderRadius:9,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:"#fff",boxShadow:`0 2px 8px ${_.ac}30`}}>i</div>
-          <span style={{fontSize:16,fontWeight:700,color:_.ink,letterSpacing:"-0.02em"}}>iBuild</span>
+        <div style={{padding:"20px 18px 16px",display:"flex",alignItems:"center",gap:9}}>
+          <div style={{width:28,height:28,background:_.ac,borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:800,color:"#fff"}}>i</div>
+          <span style={{fontSize:15,fontWeight:700,color:_.ink,letterSpacing:"-0.02em"}}>iBuild</span>
           <div style={{flex:1}} />
           {saveStatus&&<span style={{fontSize:10,color:_.faint,fontWeight:500,whiteSpace:"nowrap"}}>{saveStatus==="saving"?"Saving\u2026":`Saved ${saveStatus}`}</span>}
         </div>
 
         {/* Project switcher */}
-        <div style={{padding:"12px 16px",borderBottom:`1px solid ${_.line}`,position:"relative",zIndex:30}}>
-          <div onClick={()=>setSw(!sw)} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 12px",background:"rgba(255,255,255,0.5)",borderRadius:_.rSm,cursor:"pointer",transition:"all 0.15s"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,0.8)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,0.5)"}>
+        <div style={{padding:"8px 12px 10px",borderBottom:`1px solid ${_.line}`,position:"relative",zIndex:30}}>
+          <div onClick={()=>setSw(!sw)} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 10px",background:"rgba(255,255,255,0.6)",borderRadius:_.rSm,cursor:"pointer",transition:"background 0.15s"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,0.9)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,0.6)"}>
             <div style={{flex:1,minWidth:0}}>
               <div style={{fontSize:13,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{pName(p)}</div>
               <div style={{fontSize:11,color:_.muted,marginTop:1}}>{p.status} · {p.type}</div>
             </div>
             <ChevronDown size={14} color={_.muted} style={{flexShrink:0,transform:sw?"rotate(180deg)":"none",transition:"transform 0.15s"}} />
           </div>
-          {sw&&<div style={{position:"absolute",top:"100%",left:8,right:8,background:_.surface,borderRadius:_.r,zIndex:100,boxShadow:"0 12px 36px rgba(0,0,0,0.12),0 0 0 1px rgba(0,0,0,0.04)",maxHeight:360,overflowY:"auto",marginTop:4,animation:"slideDown 0.15s ease"}}>
+          {sw&&<div style={{position:"absolute",top:"100%",left:4,right:4,background:_.surface,borderRadius:_.r,zIndex:100,boxShadow:_.sh3+",0 0 0 1px rgba(0,0,0,0.06)",maxHeight:360,overflowY:"auto",marginTop:4,animation:"slideDown 0.15s ease"}}>
             {projects.map((pr,i)=>(
               <div key={pr.id} style={{padding:"10px 14px",cursor:"pointer",background:i===ai?_.acLight:_.surface,display:"flex",justifyContent:"space-between",alignItems:"center",transition:"background 0.1s"}} onClick={()=>{setAi(i);setSw(false)}} onMouseEnter={e=>{if(i!==ai)e.currentTarget.style.background=_.well}} onMouseLeave={e=>{e.currentTarget.style.background=i===ai?_.acLight:_.surface}}>
                 <div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{pName(pr)}</div><div style={{fontSize:11,color:_.muted,marginTop:1}}>{pr.type}{calc(pr).curr>0?` · ${fmt(calc(pr).curr)}`:""}</div></div>
@@ -389,18 +415,18 @@ export default function IBuild(){
         </div>
 
         {/* Nav groups */}
-        <div style={{flex:1,overflowY:"auto",padding:"12px 12px"}}>
+        <div style={{flex:1,overflowY:"auto",padding:"8px 10px"}}>
           {NAV_ITEMS.map(g=>(
-            <div key={g.group} style={{marginBottom:16}}>
-              <div style={{padding:"14px 12px 6px",fontSize:10,fontWeight:700,color:_.muted,letterSpacing:"0.1em",textTransform:"uppercase",opacity:0.7}}>{g.group}</div>
+            <div key={g.group} style={{marginBottom:12}}>
+              <div style={{padding:"12px 10px 4px",fontSize:10,fontWeight:700,color:_.muted,letterSpacing:"0.08em",textTransform:"uppercase"}}>{g.group}</div>
               {g.items.map(item=>(
                 <div key={item.id} onClick={()=>go(item.id)} style={{
-                  display:"flex",alignItems:"center",gap:10,padding:"8px 12px",fontSize:13,cursor:"pointer",
+                  display:"flex",alignItems:"center",gap:9,padding:"7px 10px",fontSize:13,cursor:"pointer",
                   borderRadius:_.rSm,margin:"1px 0",
-                  background:tab===item.id?"rgba(0,0,0,0.06)":"transparent",color:tab===item.id?_.ink:_.body,
+                  background:tab===item.id?"rgba(0,0,0,0.07)":"transparent",color:tab===item.id?_.ink:_.body,
                   fontWeight:tab===item.id?600:400,
-                  transition:"all 0.12s ease",
-                }} onMouseEnter={e=>{if(tab!==item.id)e.currentTarget.style.background="rgba(0,0,0,0.03)"}} onMouseLeave={e=>{if(tab!==item.id)e.currentTarget.style.background=tab===item.id?"rgba(0,0,0,0.06)":"transparent"}}>
+                  transition:"background 0.1s ease",
+                }} onMouseEnter={e=>{if(tab!==item.id)e.currentTarget.style.background="rgba(0,0,0,0.04)"}} onMouseLeave={e=>{if(tab!==item.id)e.currentTarget.style.background=tab===item.id?"rgba(0,0,0,0.07)":"transparent"}}>
                   <item.Ic size={16} strokeWidth={tab===item.id?2:1.5} />
                   {item.l}
                 </div>
@@ -432,72 +458,76 @@ export default function IBuild(){
       </div>}
 
       {/* ═══ MAIN CONTENT ═══ */}
-      <main style={{flex:1,overflowY:"auto",padding:mobile?"72px 16px 88px":"32px 40px 64px"}}>
+      <main style={{flex:1,overflowY:"auto",padding:mobile?"72px 16px 88px":"36px 56px 64px"}}>
 
         {/* ════════════════════════════════════
             DASHBOARD — Builder OS
         ════════════════════════════════════ */}
-        {tab==="dash"&&<div style={{animation:"fadeUp 0.25s ease",maxWidth:1120}} key={anim}>
-          {/* ═══ Command Header ═══ */}
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:mobile?"flex-start":"center",marginBottom:mobile?28:44,flexWrap:"wrap",gap:16}}>
+        {tab==="dash"&&<div style={{animation:"fadeUp 0.2s ease",maxWidth:1440}} key={anim}>
+
+          {/* ═══ Two-column command centre — 70/30 ═══ */}
+          <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"1fr 340px",gap:mobile?24:48,alignItems:"start"}}>
+
+            {/* ── LEFT: Primary panel ── */}
             <div>
-              <h1 style={{fontSize:mobile?24:28,fontWeight:700,letterSpacing:"-0.03em",margin:0,lineHeight:1.2,color:_.ink}}>
-                Good {new Date().getHours()<12?"morning":new Date().getHours()<17?"afternoon":"evening"}.
-              </h1>
-              <div style={{fontSize:13,color:_.muted,marginTop:6}}>{ds()} · {projects.length} project{projects.length!==1?"s":""}</div>
-            </div>
-            <div style={{display:"flex",alignItems:"center",gap:8}}>
-              <button onClick={()=>go("quote")} style={{...btnPrimary,padding:"10px 22px",fontSize:14,borderRadius:_.rSm}}>Build Quote</button>
-              <button onClick={()=>go("plans")} style={{padding:"10px 18px",background:"transparent",color:_.body,border:`1.5px solid ${_.line}`,borderRadius:_.rSm,fontSize:13,fontWeight:500,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:6,transition:"all 0.12s ease"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=_.line2;e.currentTarget.style.color=_.ink}} onMouseLeave={e=>{e.currentTarget.style.borderColor=_.line;e.currentTarget.style.color=_.body}}>
-                <Upload size={14} /> Upload Plans
-              </button>
-              {!mobile&&<div style={{fontSize:11,color:_.faint,fontWeight:500,padding:"6px 10px",background:_.well,borderRadius:_.rXs,letterSpacing:"0.02em"}}>⌘K</div>}
-            </div>
-          </div>
-
-          {/* ═══ Main Grid — Asymmetric 2/3 + 1/3 ═══ */}
-          <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"1fr 340px",gap:mobile?20:28,alignItems:"start"}}>
-
-            {/* ── LEFT: Project Hero Module ── */}
-            <div style={{background:_.surface,borderRadius:14,padding:mobile?24:32,boxShadow:_.sh1}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20}}>
-                <div>
-                  <span style={{...badge(stCol(p.status),stBg(p.status)),fontSize:11}}>{p.status}</span>
-                  <div style={{fontSize:mobile?20:24,fontWeight:700,color:_.ink,marginTop:10,letterSpacing:"-0.025em",lineHeight:1.2}}>{pName(p)}</div>
-                  {(p.type||p.area||p.assignedTo)&&<div style={{fontSize:13,color:_.muted,marginTop:4}}>{p.type}{p.area?` · ${p.area}m²`:""}{p.assignedTo?` · ${p.assignedTo}`:""}</div>}
-                </div>
+              {/* Page header */}
+              <div style={{marginBottom:mobile?28:40}}>
+                <h1 style={{fontSize:mobile?28:40,fontWeight:700,letterSpacing:"-0.03em",margin:0,lineHeight:1.1,color:_.ink}}>
+                  {pName(p)==="New Project"?"Command Centre":pName(p)}
+                </h1>
+                <div style={{fontSize:13,color:_.muted,marginTop:6}}>{p.status} · {p.type}{p.area?` · ${p.area}m²`:""} · {ds()}</div>
               </div>
 
-              <div style={{fontSize:mobile?36:44,fontWeight:700,letterSpacing:"-0.03em",lineHeight:1,fontVariantNumeric:"tabular-nums",marginBottom:28,color:T.curr>0?_.ink:_.faint}}>{fmt(T.curr)}</div>
+              {/* Contract value hero */}
+              <div style={{marginBottom:36}}>
+                <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.05em",textTransform:"uppercase",marginBottom:8}}>Contract Value</div>
+                <div style={{fontSize:mobile?44:56,fontWeight:700,letterSpacing:"-0.04em",lineHeight:1,fontVariantNumeric:"tabular-nums",color:T.curr>0?_.ink:_.faint}}>{fmt(T.curr)}</div>
+              </div>
 
-              {/* Pipeline visual */}
-              <div style={{marginBottom:28}}>
-                <div style={{display:"flex",alignItems:"center",gap:0,marginBottom:8}}>
+              {/* Status progression — inline, structural */}
+              <div style={{marginBottom:36,paddingBottom:32,borderBottom:`1px solid ${_.line}`}}>
+                <div style={{display:"flex",alignItems:"center",gap:0}}>
                   {STAGES.map((s,i)=>(
                     <div key={s} style={{flex:1,display:"flex",alignItems:"center"}}>
-                      <div style={{width:10,height:10,borderRadius:"50%",background:i<=sIdx(p.status)?_.ac:_.line,transition:"background 0.3s",flexShrink:0,zIndex:1}} />
-                      {i<STAGES.length-1&&<div style={{flex:1,height:2,background:i<sIdx(p.status)?_.ac:_.line,transition:"background 0.3s"}} />}
+                      <div style={{width:10,height:10,borderRadius:"50%",background:i<=sIdx(p.status)?_.ac:_.line2,flexShrink:0,zIndex:1,transition:"background 0.2s"}} />
+                      {i<STAGES.length-1&&<div style={{flex:1,height:2,background:i<sIdx(p.status)?_.ac:_.line,transition:"background 0.2s"}} />}
                     </div>
                   ))}
                 </div>
-                <div style={{display:"flex",justifyContent:"space-between"}}>
-                  {STAGES.map((s,i)=>(<span key={s} style={{fontSize:10,color:i<=sIdx(p.status)?_.ac:_.faint,fontWeight:i===sIdx(p.status)?600:400,letterSpacing:"0.01em"}}>{s}</span>))}
+                <div style={{display:"flex",justifyContent:"space-between",marginTop:8}}>
+                  {STAGES.map((s,i)=>(<span key={s} style={{fontSize:11,color:i<=sIdx(p.status)?_.ac:_.faint,fontWeight:i===sIdx(p.status)?700:400}}>{s}</span>))}
                 </div>
               </div>
 
-              {/* Next Steps (empty) or contextual actions */}
+              {/* Metrics row — inline blocks, not floating cards */}
+              <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"1fr 1fr 1fr",gap:0,marginBottom:36,borderBottom:`1px solid ${_.line}`}}>
+                {[["Pipeline",pipeV,`${allT.filter(x=>["Quote","Approved"].includes(x.status)).length} quotes`,_.amber],
+                  ["Active Jobs",actV,`${allT.filter(x=>x.status==="Active").length} active`,_.green],
+                  ["Outstanding",allT.reduce((s,x)=>s+x.inv-x.paid,0),`${allT.reduce((s,x)=>s+x.invoices.filter(i2=>i2.status==="pending").length,0)} unpaid`,_.red],
+                ].map(([lb,val,sub,c],idx)=>(
+                  <div key={lb} style={{padding:"20px 0",borderRight:!mobile&&idx<2?`1px solid ${_.line}`:"none",paddingLeft:!mobile&&idx>0?24:0,paddingRight:!mobile&&idx<2?24:0}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:4}}>
+                      <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.04em",textTransform:"uppercase"}}>{lb}</div>
+                      <div style={{fontSize:11,color:c,fontWeight:600}}>{sub}</div>
+                    </div>
+                    <div style={{fontSize:28,fontWeight:700,letterSpacing:"-0.03em",color:val===0?_.faint:_.ink,fontVariantNumeric:"tabular-nums"}}>{fmt(val)}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Get started or contextual actions */}
               {T.items===0&&!p.client ? (
-                <div style={{background:_.well,borderRadius:10,padding:mobile?20:24}}>
-                  <div style={{fontSize:13,fontWeight:600,color:_.ink,marginBottom:14}}>Get started</div>
-                  <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                <div style={{marginBottom:32}}>
+                  <div style={{fontSize:18,fontWeight:600,color:_.ink,marginBottom:16}}>Get started</div>
+                  <div style={{display:"flex",flexDirection:"column",gap:1}}>
                     {[["Build your first quote","Add client details and scope items",()=>go("quote"),PenLine],
-                      ["Upload plans","Use AI to extract scope from floor plans",()=>go("plans"),Upload],
-                      ["Add scope items","Select items from the rate library",()=>go("quote"),Plus]
+                      ["Upload plans","Use AI to extract scope from floor plans",()=>{go("plans");setTimeout(()=>{if(planFileRef.current)planFileRef.current.click()},150)},Upload],
+                      ["Add scope items","Select items from the rate library",()=>{go("quote");setExp(e2=>{const first=Object.keys(p.scope)[0];return first?{...e2,[first]:true}:e2})},Plus]
                     ].map(([title,desc,action,Ic])=>(
-                      <div key={title} onClick={action} style={{display:"flex",alignItems:"center",gap:14,padding:"12px 16px",background:_.surface,borderRadius:8,cursor:"pointer",transition:"all 0.15s ease"}} onMouseEnter={e=>{e.currentTarget.style.transform="translateX(4px)"}} onMouseLeave={e=>{e.currentTarget.style.transform="translateX(0)"}}>
-                        <div style={{width:36,height:36,borderRadius:8,background:_.acLight,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><Ic size={16} color={_.ac} strokeWidth={1.5} /></div>
+                      <div key={title} onClick={action} style={{display:"flex",alignItems:"center",gap:14,padding:"14px 0",cursor:"pointer",borderBottom:`1px solid ${_.line}`,transition:"padding-left 0.15s"}} onMouseEnter={e=>e.currentTarget.style.paddingLeft="6px"} onMouseLeave={e=>e.currentTarget.style.paddingLeft="0"}>
+                        <div style={{width:36,height:36,borderRadius:_.rSm,background:_.acLight,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><Ic size={16} color={_.ac} strokeWidth={1.5} /></div>
                         <div style={{flex:1}}>
-                          <div style={{fontSize:13,fontWeight:600,color:_.ink}}>{title}</div>
+                          <div style={{fontSize:14,fontWeight:600,color:_.ink}}>{title}</div>
                           <div style={{fontSize:12,color:_.muted,marginTop:1}}>{desc}</div>
                         </div>
                         <ArrowRight size={14} color={_.faint} />
@@ -506,50 +536,45 @@ export default function IBuild(){
                   </div>
                 </div>
               ) : (
-                <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-                  {!quoteReady&&<button onClick={()=>go("quote")} style={{...btnPrimary,borderRadius:_.rSm}}>Build quote <ArrowRight size={14} /></button>}
-                  {quoteReady&&!quoteSent&&<button onClick={()=>createProp()} style={{...btnPrimary,borderRadius:_.rSm}}>Generate proposal <ArrowRight size={14} /></button>}
-                  {quoteSent&&<button onClick={()=>go("invoices")} style={{...btnPrimary,borderRadius:_.rSm}}>Manage invoices <ArrowRight size={14} /></button>}
+                <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                  {!quoteReady&&<button onClick={()=>go("quote")} style={btnPrimary}>Build quote <ArrowRight size={14} /></button>}
+                  {quoteReady&&!quoteSent&&<button onClick={()=>createProp()} style={btnPrimary}>Generate proposal <ArrowRight size={14} /></button>}
+                  {quoteSent&&<button onClick={()=>go("invoices")} style={btnPrimary}>Manage invoices <ArrowRight size={14} /></button>}
                   <button onClick={()=>go("quote")} style={{...btnGhost,color:_.muted}} onMouseEnter={e=>e.currentTarget.style.color=_.ink} onMouseLeave={e=>e.currentTarget.style.color=_.muted}>View quote</button>
                 </div>
               )}
-            </div>
 
-            {/* ── RIGHT: KPI Stack + Attention + Activity ── */}
-            <div style={{display:"flex",flexDirection:"column",gap:12}}>
-              {/* KPI Stack — compact vertical */}
-              {[["Pipeline",pipeV,`${allT.filter(x=>["Quote","Approved"].includes(x.status)).length} quotes`,_.amber],
-                ["Active Jobs",actV,`${allT.filter(x=>x.status==="Active").length} active`,_.green],
-                ["Outstanding",allT.reduce((s,x)=>s+x.inv-x.paid,0),`${allT.reduce((s,x)=>s+x.invoices.filter(i2=>i2.status==="pending").length,0)} unpaid`,_.red],
-              ].map(([lb,val,sub,c])=>(
-                <div key={lb} style={{background:_.surface,borderRadius:10,padding:"14px 20px",boxShadow:_.sh1}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline"}}>
-                    <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.04em",textTransform:"uppercase"}}>{lb}</div>
-                    <div style={{fontSize:12,color:c,fontWeight:500}}>{sub}</div>
-                  </div>
-                  <div style={{fontSize:22,fontWeight:700,letterSpacing:"-0.02em",color:val===0?_.faint:_.ink,fontVariantNumeric:"tabular-nums",marginTop:4}}>{fmt(val)}</div>
-                </div>
-              ))}
-
-              {/* Needs Attention — only if items exist */}
-              {alerts.length>0&&<div style={{background:_.surface,borderRadius:10,padding:20,boxShadow:_.sh1}}>
+              {/* Needs attention — inline */}
+              {alerts.length>0&&<div style={{marginTop:32,paddingTop:24,borderTop:`1px solid ${_.line}`}}>
                 <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.04em",textTransform:"uppercase",marginBottom:12}}>Needs attention</div>
-                {alerts.slice(0,4).map((a,i)=>(
-                  <div key={i} onClick={()=>{setAi(a.idx);go(a.tab)}} style={{padding:"8px 0",display:"flex",alignItems:"center",gap:10,cursor:"pointer",borderBottom:i<Math.min(alerts.length,4)-1?`1px solid ${_.well}`:"none"}} onMouseEnter={e=>e.currentTarget.style.opacity="0.7"} onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
+                {alerts.slice(0,5).map((a,i)=>(
+                  <div key={i} onClick={()=>{setAi(a.idx);go(a.tab)}} style={{padding:"8px 0",display:"flex",alignItems:"center",gap:10,cursor:"pointer",borderBottom:i<Math.min(alerts.length,5)-1?`1px solid ${_.well}`:"none"}} onMouseEnter={e=>e.currentTarget.style.opacity="0.7"} onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
                     <div style={{width:6,height:6,borderRadius:3,background:a.c,flexShrink:0}} />
                     <span style={{fontSize:13,color:_.body,lineHeight:1.4}}>{a.text}</span>
                   </div>
                 ))}
               </div>}
+            </div>
 
-              {/* Recent Activity */}
-              <div style={{background:_.surface,borderRadius:10,padding:20,boxShadow:_.sh1}}>
+            {/* ── RIGHT: Activity + Quick Actions ── */}
+            <div style={{position:mobile?"static":"sticky",top:36}}>
+              {/* Quick actions */}
+              <div style={{marginBottom:28}}>
+                <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.04em",textTransform:"uppercase",marginBottom:12}}>Quick actions</div>
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                  <button onClick={()=>go("quote")} style={{...btnPrimary,width:"100%",justifyContent:"center",padding:"11px 18px"}}>Build Quote</button>
+                  <button onClick={()=>go("plans")} style={{...btnSecondary,width:"100%",justifyContent:"center",padding:"11px 18px"}}><Upload size={14} /> Upload Plans</button>
+                </div>
+              </div>
+
+              {/* Activity feed */}
+              <div>
                 <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.04em",textTransform:"uppercase",marginBottom:12}}>Activity</div>
                 {recentActivity.length===0 ? (
                   <div style={{fontSize:13,color:_.faint,padding:"8px 0"}}>No activity yet</div>
-                ) : recentActivity.slice(0,5).map((a,i)=>(
-                  <div key={i} style={{padding:"6px 0",display:"flex",alignItems:"flex-start",gap:10}}>
-                    <div style={{width:6,height:6,borderRadius:3,background:_.ac,flexShrink:0,marginTop:6}} />
+                ) : recentActivity.slice(0,8).map((a,i)=>(
+                  <div key={i} style={{padding:"8px 0",display:"flex",alignItems:"flex-start",gap:10,borderBottom:i<Math.min(recentActivity.length,8)-1?`1px solid ${_.well}`:"none"}}>
+                    <div style={{width:6,height:6,borderRadius:3,background:_.line2,flexShrink:0,marginTop:6}} />
                     <div>
                       <div style={{fontSize:13,color:_.body,lineHeight:1.4}}>{a.action}</div>
                       <div style={{fontSize:11,color:_.faint,marginTop:1}}>{a.project} · {a.time}</div>
@@ -564,23 +589,23 @@ export default function IBuild(){
         {/* ════ QUOTE — Clean guided flow ════ */}
         {tab==="quote"&&<Section key={anim}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:_.s2}}>
-            <h1 style={{fontSize:28,fontWeight:600,letterSpacing:"-0.02em"}}>Quote</h1>
-            {T.curr>0&&<span style={{fontSize:28,fontWeight:700,color:_.ac,letterSpacing:"-0.03em",fontVariantNumeric:"tabular-nums"}}>{fmt(T.curr)}</span>}
+            <h1 style={{fontSize:36,fontWeight:700,letterSpacing:"-0.03em"}}>Quote</h1>
+            {T.curr>0&&<span style={{fontSize:36,fontWeight:700,color:_.ink,letterSpacing:"-0.03em",fontVariantNumeric:"tabular-nums"}}>{fmt(T.curr)}</span>}
           </div>
 
-          {/* Minimal step dots */}
-          <div style={{display:"flex",gap:_.s6,marginBottom:_.s8,paddingBottom:_.s6,borderBottom:`1px solid ${_.line}`}}>
+          {/* Step indicator */}
+          <div style={{display:"flex",gap:_.s6,marginBottom:_.s9,paddingBottom:_.s5,borderBottom:`1px solid ${_.line}`}}>
             {[["Details",!!p.client],["Scope",T.items>0],["Review",T.curr>0]].map(([l2,done],i)=>(
               <div key={l2} style={{display:"flex",alignItems:"center",gap:6}}>
-                <div style={{width:20,height:20,borderRadius:10,background:done?_.green:_.well,border:done?"none":`1.5px solid ${_.line2}`,display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.2s"}}>{done&&<Check size={11} strokeWidth={3} color="#fff" />}</div>
+                <div style={{width:20,height:20,borderRadius:10,background:done?_.green:_.well,border:done?"none":`1.5px solid ${_.line2}`,display:"flex",alignItems:"center",justifyContent:"center"}}>{done&&<Check size={11} strokeWidth={3} color="#fff" />}</div>
                 <span style={{fontSize:13,fontWeight:done?600:400,color:done?_.ink:_.muted}}>{l2}</span>
               </div>
             ))}
           </div>
 
           {/* Client details */}
-          <div style={{marginBottom:_.s8}}>
-            <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:_.s4}}>Client & Project</div>
+          <div style={{marginBottom:_.s9}}>
+            <div style={{fontSize:18,fontWeight:600,color:_.ink,marginBottom:_.s5}}>Client & Project</div>
             <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"1fr 1fr",gap:`${_.s3}px ${_.s4}px`}}>
               {[["Client name","client","Johnson Residence"],["Email","email","client@email.com"],["Phone","phone","0412 345 678"],["Site address","address","42 Smith St"],["Suburb","suburb","Richmond"],["Assigned to","assignedTo","Site manager name"],["Build type","type",""],["Storeys","stories",""],["Floor area (m\xB2)","area","280"]].map(([l2,k,ph])=>(
                 <div key={k}>
@@ -599,48 +624,57 @@ export default function IBuild(){
             </div>
           </div>
 
-          {/* Scope — clean accordion */}
-          <div style={{marginBottom:_.s8}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:_.s4}}>
-              <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase"}}>Scope of Works</div>
-              {T.items>0&&<span style={{fontSize:13,color:_.body}}>{T.items} items · {fmt(T.sub)}</span>}
+          {/* Scope of Works */}
+          <div style={{marginBottom:_.s9}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:_.s5}}>
+              <div style={{fontSize:18,fontWeight:600,color:_.ink}}>Scope of Works</div>
+              {T.items>0&&<span style={{fontSize:14,color:_.body}}>{T.items} items · {fmt(T.sub)}</span>}
             </div>
             {Object.entries(p.scope).map(([cat,items])=>{
               const open=exp[cat];const catT=items.filter(i=>i.on).reduce((t,i)=>t+i.rate*i.qty,0);const n=items.filter(i=>i.on).length;
-              return(<div key={cat} style={{borderBottom:`1px solid ${_.line}`}}>
-                <div onClick={()=>setExp(e2=>({...e2,[cat]:!e2[cat]}))} style={{padding:`${_.s3}px 0`,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              return(<div key={cat} style={{marginBottom:2}}>
+                <div onClick={()=>setExp(e2=>({...e2,[cat]:!e2[cat]}))} style={{padding:"10px 12px",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",background:n>0?_.acLight:"transparent",borderRadius:_.rSm,borderLeft:n>0?`3px solid ${_.ac}`:`3px solid transparent`,transition:"background 0.1s"}}>
                   <div style={{display:"flex",alignItems:"center",gap:_.s2}}>
-                    <span style={{transform:open?"rotate(90deg)":"none",display:"inline-flex",transition:"transform 0.15s"}}><ChevronRight size={13} color={_.muted} /></span>
+                    <span style={{transform:open?"rotate(90deg)":"none",display:"inline-flex",transition:"transform 0.15s"}}><ChevronRight size={13} color={n>0?_.ac:_.muted} /></span>
                     <span style={{fontSize:14,fontWeight:n>0?600:400,color:n>0?_.ink:_.muted}}>{cat}</span>
-                    {n>0&&<span style={{fontSize:11,fontWeight:600,color:_.ac,background:_.acLight,padding:"1px 7px",borderRadius:_.rFull}}>{n}</span>}
+                    {n>0&&<span style={{fontSize:11,fontWeight:600,color:_.ac,marginLeft:4}}>{n}</span>}
                   </div>
-                  {catT>0&&<span style={{fontSize:14,fontWeight:600,fontVariantNumeric:"tabular-nums"}}>{fmt(catT)}</span>}
+                  {catT>0&&<span style={{fontSize:14,fontWeight:700,fontVariantNumeric:"tabular-nums",color:_.ink}}>{fmt(catT)}</span>}
                 </div>
-                {open&&<div style={{paddingBottom:_.s4,paddingLeft:_.s6}}>
+                {open&&<div style={{paddingBottom:_.s4,paddingLeft:24,borderLeft:`3px solid ${n>0?_.acFaint:_.line}`,marginLeft:0}}>
                   {items.map((item,idx)=>(
-                    <div key={item._id||idx} style={{display:"flex",gap:_.s2,alignItems:"center",padding:`5px 0`}}>
-                      <div onClick={()=>uI(cat,idx,"on",!item.on)} style={{width:18,height:18,borderRadius:5,border:`1.5px solid ${item.on?_.ac:_.line2}`,background:item.on?_.ac:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all 0.15s"}}>{item.on&&<Check size={11} strokeWidth={3} color="#fff" />}</div>
+                    <div key={item._id} style={{display:"flex",gap:_.s2,alignItems:"center",padding:"5px 0"}}>
+                      <div onClick={()=>uI(cat,idx,"on",!item.on)} style={{width:16,height:16,borderRadius:4,border:`1.5px solid ${item.on?_.ac:_.line2}`,background:item.on?_.ac:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"background 0.1s"}}>{item.on&&<Check size={10} strokeWidth={3} color="#fff" />}</div>
                       <span style={{flex:1,fontSize:13,color:item.on?_.ink:_.muted}}>{item.item}</span>
                       {item.on&&<>
-                        <input type="number" style={{width:48,padding:"2px 4px",background:_.well,border:`1px solid ${_.line}`,borderRadius:5,color:_.ink,fontSize:12,textAlign:"center",outline:"none",fontWeight:600}} value={item.qty} onChange={e=>uI(cat,idx,"qty",parseFloat(e.target.value)||0)} />
+                        <input type="number" style={{width:48,padding:"3px 5px",background:_.well,border:`1px solid ${_.line}`,borderRadius:_.rXs,color:_.ink,fontSize:12,textAlign:"center",outline:"none",fontWeight:600}} value={item.qty} onChange={e=>uI(cat,idx,"qty",parseFloat(e.target.value)||0)} />
                         <span style={{fontSize:11,color:_.muted,minWidth:22}}>{item.unit}</span>
-                        <input type="number" style={{width:60,padding:"2px 4px",background:_.well,border:`1px solid ${_.line}`,borderRadius:5,color:_.ink,fontSize:12,textAlign:"right",outline:"none",fontWeight:600}} value={item.rate} onChange={e=>uI(cat,idx,"rate",parseFloat(e.target.value)||0)} />
-                        <span style={{fontSize:12,fontWeight:600,minWidth:52,textAlign:"right",fontVariantNumeric:"tabular-nums"}}>{fmt(item.rate*item.qty)}</span>
+                        <input type="number" style={{width:60,padding:"3px 5px",background:_.well,border:`1px solid ${_.line}`,borderRadius:_.rXs,color:_.ink,fontSize:12,textAlign:"right",outline:"none",fontWeight:600}} value={item.rate} onChange={e=>uI(cat,idx,"rate",parseFloat(e.target.value)||0)} />
+                        <span style={{fontSize:13,fontWeight:600,minWidth:56,textAlign:"right",fontVariantNumeric:"tabular-nums"}}>{fmt(item.rate*item.qty)}</span>
                       </>}
                     </div>
                   ))}
-                  <div onClick={()=>addC(cat)} style={{padding:`6px 0`,cursor:"pointer",color:_.ac,fontSize:12,fontWeight:600,display:"flex",alignItems:"center",gap:4}}><Plus size={13} /> Add item</div>
+                  <div onClick={()=>addC(cat)} style={{padding:"6px 0",cursor:"pointer",color:_.ac,fontSize:12,fontWeight:600,display:"flex",alignItems:"center",gap:4}} onMouseEnter={e=>e.currentTarget.style.opacity="0.7"} onMouseLeave={e=>e.currentTarget.style.opacity="1"}><Plus size={13} /> Add item</div>
                 </div>}
               </div>)
             })}
           </div>
 
           {/* Summary */}
-          {T.curr>0&&<div style={{...card,borderLeft:`4px solid ${_.ac}`,marginBottom:_.s6,transition:"box-shadow 0.18s ease"}} onMouseEnter={e=>{e.currentTarget.style.boxShadow=_.sh2}} onMouseLeave={e=>{e.currentTarget.style.boxShadow=_.sh1}}>
-            <div style={{fontSize:12,color:_.muted,fontWeight:600,letterSpacing:"0.04em",textTransform:"uppercase",marginBottom:_.s3}}>Contract Total</div>
-            <div style={{fontSize:mobile?28:40,fontWeight:600,letterSpacing:"-0.04em",lineHeight:1,fontVariantNumeric:"tabular-nums",color:_.ink}}>{fmt(T.curr)}</div>
-            <div style={{fontSize:13,color:_.muted,marginTop:_.s3,lineHeight:1.5}}>
-              Sub {fmt(T.sub)} + {p.margin}% margin + {p.contingency}% contingency + GST
+          {T.curr>0&&<div style={{paddingTop:_.s7,borderTop:`1px solid ${_.line}`,marginBottom:_.s7}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:_.s4}}>
+              <div style={{fontSize:18,fontWeight:600,color:_.ink}}>Contract Total</div>
+              <div style={{fontSize:mobile?36:48,fontWeight:700,letterSpacing:"-0.04em",lineHeight:1,fontVariantNumeric:"tabular-nums",color:_.ink}}>{fmt(T.curr)}</div>
+            </div>
+            <div style={{display:"flex",justifyContent:"flex-end"}}>
+              <div style={{textAlign:"right"}}>
+                <div style={{fontSize:13,color:_.muted,lineHeight:1.8}}>
+                  Subtotal {fmt(T.sub)}<br/>
+                  Margin {p.margin}% {fmt(T.mar)}<br/>
+                  Contingency {p.contingency}% {fmt(T.con)}<br/>
+                  GST {fmt(T.gst)}
+                </div>
+              </div>
             </div>
             <div style={{display:"flex",gap:_.s2,marginTop:_.s6}}>
               <button onClick={()=>createProp()} style={btnPrimary}>Generate proposal <ArrowRight size={14} /></button>
@@ -651,26 +685,103 @@ export default function IBuild(){
 
         {/* ════ PLANS AI ════ */}
         {tab==="plans"&&<Section key={anim}>
-          <h1 style={{fontSize:28,fontWeight:600,letterSpacing:"-0.02em",marginBottom:_.s7}}>Plans AI</h1>
-          <div style={{textAlign:"center",padding:`${_.s10}px ${_.s7}px`,border:`2px dashed ${_.line2}`,borderRadius:_.r,marginBottom:_.s5}}>
-            <div style={{marginBottom:_.s3,display:"flex",justifyContent:"center"}}><Ruler size={36} strokeWidth={1} color={_.faint} /></div>
-            <div style={{fontSize:15,color:_.muted,marginBottom:_.s5}}>Upload a floor plan to analyse rooms and areas</div>
-            <label style={btnPrimary}><input type="file" accept="image/*,.pdf" style={{display:"none"}} onChange={e=>{if(e.target.files[0])analysePlan(e.target.files[0])}} />Choose file</label>
+          <h1 style={{fontSize:36,fontWeight:700,letterSpacing:"-0.03em",marginBottom:4}}>Plans AI</h1>
+          <div style={{fontSize:14,color:_.muted,marginBottom:_.s8}}>Upload floor plans for AI-powered analysis and scope extraction</div>
+
+          {/* Upload zone */}
+          <div style={{textAlign:"center",padding:`${_.s9}px ${_.s7}px`,border:`2px dashed ${_.line2}`,borderRadius:_.r,marginBottom:_.s7,transition:"border-color 0.15s"}} onMouseEnter={e=>e.currentTarget.style.borderColor=_.ac} onMouseLeave={e=>e.currentTarget.style.borderColor=_.line2}>
+            <Ruler size={32} strokeWidth={1.5} color={_.faint} style={{marginBottom:12}} />
+            <div style={{fontSize:15,color:_.body,marginBottom:4,fontWeight:500}}>Drop your floor plan here</div>
+            <div style={{fontSize:13,color:_.muted,marginBottom:_.s5}}>PNG, JPG, or PDF up to 20MB</div>
+            <label style={btnPrimary}><input ref={planFileRef} type="file" accept="image/*,.pdf" style={{display:"none"}} onChange={e=>{if(e.target.files[0])analysePlan(e.target.files[0])}} />Choose file</label>
           </div>
-          {planLoad&&<div style={{textAlign:"center",padding:_.s8,color:_.muted}}>Analysing...</div>}
-          {planImg&&<div style={{marginBottom:_.s4}}><img src={planImg} alt="" style={{width:"100%",borderRadius:_.rSm}} /></div>}
-          {planData&&!planData.error&&<div>
-            <div style={{display:"flex",justifyContent:"space-between",marginBottom:_.s4}}><span style={{fontSize:18,fontWeight:600}}>Analysis</span><span style={{fontSize:18,fontWeight:700,color:_.ac}}>{planData.total_m2}m²</span></div>
-            {planData.rooms?.map((rm,i)=>(<div key={i} style={{display:"flex",justifyContent:"space-between",padding:`6px 0`,borderBottom:`1px solid ${_.line}`,fontSize:14}}><span style={{color:_.body}}>{rm.name}</span><span style={{fontWeight:600}}>{rm.m2}m²</span></div>))}
-            {planData.notes&&<div style={{marginTop:_.s3,fontSize:14,color:_.muted,lineHeight:1.6}}>{planData.notes}</div>}
-            <button onClick={()=>{up(pr=>{pr.area=String(planData.total_m2);return pr});log("Plan analysed: "+planData.total_m2+"m²");go("quote");notify(planData.total_m2+"m² applied")}} style={{...btnPrimary,marginTop:_.s5}}>Apply {planData.total_m2}m² <ArrowRight size={14} /></button>
+
+          {/* Loading */}
+          {planLoad&&<div style={{textAlign:"center",padding:_.s9}}>
+            <div style={{width:32,height:32,border:`3px solid ${_.line}`,borderTopColor:_.ac,borderRadius:"50%",animation:"spin 0.8s linear infinite",margin:"0 auto 14px"}} />
+            <div style={{fontSize:14,color:_.body,fontWeight:500}}>Analysing floor plan...</div>
           </div>}
-          {planData?.error&&<div style={{color:_.red,fontSize:14}}>{planData.error}</div>}
+
+          {/* Results — two-column structural layout */}
+          {planData&&!planData.error&&<div>
+            <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"1fr 1fr",gap:32,marginBottom:32}}>
+
+              {/* LEFT: Floor plan image */}
+              {planImg&&<div>
+                <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.04em",textTransform:"uppercase",marginBottom:_.s3}}>Floor Plan</div>
+                <div style={{border:`1px solid ${_.line}`,borderRadius:_.r,overflow:"hidden",background:_.well}}>
+                  <img src={planImg} alt="Floor plan" style={{width:"100%",display:"block"}} />
+                </div>
+              </div>}
+
+              {/* RIGHT: Analysis summary */}
+              <div>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:_.s5}}>
+                  <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.04em",textTransform:"uppercase"}}>AI Analysis</div>
+                  <span style={badge(_.green,_.greenBg)}>AI Confidence: High</span>
+                </div>
+
+                {/* Key metrics */}
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:1,background:_.line,borderRadius:_.r,overflow:"hidden",marginBottom:_.s6}}>
+                  <div style={{background:_.surface,padding:"16px 20px"}}>
+                    <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.04em",textTransform:"uppercase",marginBottom:4}}>Total Area</div>
+                    <div style={{fontSize:28,fontWeight:700,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.03em"}}>{planData.total_m2}m²</div>
+                  </div>
+                  <div style={{background:_.surface,padding:"16px 20px"}}>
+                    <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.04em",textTransform:"uppercase",marginBottom:4}}>Estimated Cost</div>
+                    <div style={{fontSize:28,fontWeight:700,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.03em",color:_.ac}}>{planData.scope_items?.length?fmt(planData.scope_items.reduce((s,si)=>s+si.rate*si.qty,0)):"—"}</div>
+                  </div>
+                </div>
+
+                {/* Detected rooms */}
+                <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.04em",textTransform:"uppercase",marginBottom:_.s3}}>Detected Rooms ({planData.rooms?.length||0})</div>
+                {planData.rooms?.map((rm,i)=>(
+                  <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:`1px solid ${_.line}`,fontSize:13}}>
+                    <span style={{color:_.body}}>{rm.name}</span>
+                    <span style={{fontWeight:600,fontVariantNumeric:"tabular-nums"}}>{rm.m2}m²</span>
+                  </div>
+                ))}
+
+                {planData.notes&&<div style={{marginTop:_.s5,fontSize:13,color:_.muted,lineHeight:1.6}}>{planData.notes}</div>}
+              </div>
+            </div>
+
+            {/* Scope breakdown */}
+            {planData.scope_items?.length>0&&<div>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:_.s4,paddingTop:_.s5,borderTop:`1px solid ${_.line}`}}>
+                <div style={{fontSize:18,fontWeight:600,color:_.ink}}>Extracted Scope Items</div>
+                <span style={{fontSize:16,fontWeight:700,fontVariantNumeric:"tabular-nums"}}>{fmt(planData.scope_items.reduce((s,si)=>s+si.rate*si.qty,0))}</span>
+              </div>
+              {planData.scope_items.map((si,i)=>(
+                <div key={i} style={{display:"grid",gridTemplateColumns:"1fr 100px 80px 100px",gap:8,padding:"10px 0",borderBottom:`1px solid ${_.line}`,fontSize:13,alignItems:"center"}}>
+                  <div>
+                    <div style={{fontWeight:500,color:_.ink}}>{si.item}</div>
+                    <div style={{fontSize:11,color:_.muted,marginTop:1}}>{si.category}</div>
+                  </div>
+                  <div style={{color:_.muted,fontSize:12}}>{si.qty} {si.unit}</div>
+                  <div style={{color:_.muted,fontSize:12,textAlign:"right"}}>@ {fmt(si.rate)}</div>
+                  <div style={{fontWeight:600,textAlign:"right",fontVariantNumeric:"tabular-nums"}}>{fmt(si.rate*si.qty)}</div>
+                </div>
+              ))}
+              <div style={{marginTop:_.s6}}>
+                <button onClick={addPlanItems} style={btnPrimary}>Add {planData.scope_items.length} items to Quote <ArrowRight size={14} /></button>
+              </div>
+            </div>}
+
+            {!planData.scope_items?.length&&<div style={{marginTop:_.s5}}>
+              <button onClick={()=>{up(pr=>{pr.area=String(planData.total_m2);return pr});log("Plan analysed: "+planData.total_m2+"m²");go("quote");notify(planData.total_m2+"m² applied")}} style={btnPrimary}>Apply {planData.total_m2}m² to project <ArrowRight size={14} /></button>
+            </div>}
+          </div>}
+
+          {planData?.error&&<div style={{padding:_.s4,border:`1px solid ${_.red}30`,borderRadius:_.r,background:_.redBg,display:"flex",alignItems:"center",gap:_.s3}}>
+            <AlertTriangle size={16} color={_.red} />
+            <div style={{fontSize:14,color:_.red,fontWeight:500}}>{planData.error}</div>
+          </div>}
         </Section>}
 
         {/* ════ COSTS ════ */}
         {tab==="costs"&&<Section key={anim}>
-          <h1 style={{fontSize:28,fontWeight:600,letterSpacing:"-0.02em",marginBottom:_.s7}}>Cost Tracker</h1>
+          <h1 style={{fontSize:36,fontWeight:700,letterSpacing:"-0.03em",marginBottom:_.s7}}>Cost Tracker</h1>
           {T.cats.length===0&&<Empty icon={BarChart3} text="Add scope items in Quote to begin tracking" action={()=>go("quote")} actionText="Go to Quote" />}
           {T.cats.map(([cat,items])=>{const est=T.cT(p.scope,cat);const act=T.cA(p.scope,cat);const v2=act-est;
             return(<div key={cat} style={{marginBottom:_.s6,paddingBottom:_.s5,borderBottom:`1px solid ${_.line}`}}>
@@ -684,7 +795,7 @@ export default function IBuild(){
               </div>
               {act>0&&<div style={{height:3,background:_.line,borderRadius:2,marginBottom:_.s3}}><div style={{height:"100%",width:`${Math.min((act/est)*100,100)}%`,background:act>est?_.red:_.green,borderRadius:2,transition:"width 0.4s"}} /></div>}
               {items.filter(i=>i.on).map((item,idx)=>(
-                <div key={item._id||idx} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0",fontSize:13}}>
+                <div key={item._id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0",fontSize:13}}>
                   <span style={{color:_.body}}>{item.item}</span>
                   <div style={{display:"flex",alignItems:"center",gap:_.s2}}>
                     <span style={{color:_.muted,fontVariantNumeric:"tabular-nums"}}>{fmt(item.rate*item.qty)}</span>
@@ -698,15 +809,15 @@ export default function IBuild(){
 
         {/* ════ SCHEDULE ════ */}
         {tab==="schedule"&&<Section key={anim}>
-          <h1 style={{fontSize:28,fontWeight:600,letterSpacing:"-0.02em",marginBottom:4}}>Progress Schedule</h1>
+          <h1 style={{fontSize:36,fontWeight:700,letterSpacing:"-0.03em",marginBottom:4}}>Progress Schedule</h1>
           <div style={{fontSize:14,color:_.muted,marginBottom:_.s7}}>{p.milestones.filter(m=>m.done).length} of {p.milestones.length} milestones · {p.milestones.length>0?Math.round((p.milestones.filter(m=>m.done).length/p.milestones.length)*100):0}% complete</div>
 
           {/* Progress hero */}
-          <div style={{...card,borderLeft:`4px solid ${_.ac}`,marginBottom:_.s7,transition:"box-shadow 0.18s ease"}} onMouseEnter={e=>{e.currentTarget.style.boxShadow=_.sh2}} onMouseLeave={e=>{e.currentTarget.style.boxShadow=_.sh1}}>
+          <div style={{...card,borderLeft:`4px solid ${_.ac}`,marginBottom:_.s7}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:16}}>
               <div>
                 <div style={{fontSize:11,color:_.ac,letterSpacing:"0.06em",fontWeight:600,textTransform:"uppercase",marginBottom:4}}>Build Progress</div>
-                <div style={{fontSize:mobile?36:48,fontWeight:600,letterSpacing:"-0.04em",lineHeight:1,fontVariantNumeric:"tabular-nums",color:_.ink}}>{p.milestones.length>0?Math.round((p.milestones.filter(m=>m.done).length/p.milestones.length)*100):0}<span style={{fontSize:mobile?16:20,color:_.muted}}>%</span></div>
+                <div style={{fontSize:mobile?36:48,fontWeight:700,letterSpacing:"-0.04em",lineHeight:1,fontVariantNumeric:"tabular-nums",color:_.ink}}>{p.milestones.length>0?Math.round((p.milestones.filter(m=>m.done).length/p.milestones.length)*100):0}<span style={{fontSize:mobile?16:20,color:_.muted}}>%</span></div>
               </div>
               <div style={{textAlign:"right"}}>
                 <div style={{fontSize:13,color:_.body}}>{p.milestones.findIndex(m=>!m.done)>=0?p.milestones[p.milestones.findIndex(m=>!m.done)].name:"All complete"}</div>
@@ -793,7 +904,7 @@ export default function IBuild(){
 
         {/* ════ VARIATIONS LIST ════ */}
         {tab==="variations"&&voView===null&&<Section key={anim}>
-          <h1 style={{fontSize:28,fontWeight:600,letterSpacing:"-0.02em",marginBottom:4}}>Variation Orders</h1>
+          <h1 style={{fontSize:36,fontWeight:700,letterSpacing:"-0.03em",marginBottom:4}}>Variation Orders</h1>
           <div style={{fontSize:14,color:_.muted,marginBottom:_.s7}}>Changes to original contract scope</div>
 
           {/* VO equation strip */}
@@ -867,7 +978,7 @@ export default function IBuild(){
 
         {/* ════ INVOICES ════ */}
         {tab==="invoices"&&invView===null&&<Section key={anim}>
-          <h1 style={{fontSize:28,fontWeight:600,letterSpacing:"-0.02em",marginBottom:_.s7}}>Invoices</h1>
+          <h1 style={{fontSize:36,fontWeight:700,letterSpacing:"-0.03em",marginBottom:_.s7}}>Invoices</h1>
           <div style={{display:"flex",gap:mobile?_.s4:_.s9,marginBottom:_.s5,alignItems:"baseline",flexWrap:mobile?"wrap":"nowrap"}}>
             <div><div style={label}>Contract</div><div style={{fontSize:24,fontWeight:700}}>{fmt(T.curr)}</div></div>
             <div><div style={{...label,color:_.ac}}>Claimed</div><div style={{fontSize:24,fontWeight:700,color:_.ac}}>{fmt(T.inv)}</div></div>
@@ -915,7 +1026,7 @@ export default function IBuild(){
 
         {/* ════ DIARY ════ */}
         {tab==="diary"&&<Section key={anim}>
-          <h1 style={{fontSize:28,fontWeight:600,letterSpacing:"-0.02em",marginBottom:_.s7}}>Site Diary</h1>
+          <h1 style={{fontSize:36,fontWeight:700,letterSpacing:"-0.03em",marginBottom:_.s7}}>Site Diary</h1>
           <div style={{marginBottom:_.s7,paddingBottom:_.s6,borderBottom:`1px solid ${_.line}`}}>
             <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"1fr 1fr 1fr",gap:`${_.s3}px ${_.s4}px`,marginBottom:_.s3}}>
               <div><label style={label}>Date</label><input type="date" style={{...input,cursor:"pointer"}} value={diaryForm.date} onChange={e=>setDiaryForm({...diaryForm,date:e.target.value})} /></div>
@@ -940,7 +1051,7 @@ export default function IBuild(){
 
         {/* ════ DEFECTS ════ */}
         {tab==="defects"&&<Section key={anim}>
-          <h1 style={{fontSize:28,fontWeight:600,letterSpacing:"-0.02em",marginBottom:4}}>Defects</h1>
+          <h1 style={{fontSize:36,fontWeight:700,letterSpacing:"-0.03em",marginBottom:4}}>Defects</h1>
           <div style={{fontSize:14,color:_.muted,marginBottom:_.s7}}>{p.defects.filter(d=>d.done).length} of {p.defects.length} resolved</div>
           <div style={{marginBottom:_.s7,paddingBottom:_.s6,borderBottom:`1px solid ${_.line}`}}>
             <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"1fr 1fr 1fr",gap:_.s4,marginBottom:_.s3}}>
@@ -961,7 +1072,7 @@ export default function IBuild(){
 
         {/* ════ TRADES ════ */}
         {tab==="trades"&&<Section key={anim}>
-          <h1 style={{fontSize:28,fontWeight:600,letterSpacing:"-0.02em",marginBottom:_.s7}}>Trades</h1>
+          <h1 style={{fontSize:36,fontWeight:700,letterSpacing:"-0.03em",marginBottom:_.s7}}>Trades</h1>
           <div style={{marginBottom:_.s7,paddingBottom:_.s6,borderBottom:`1px solid ${_.line}`}}>
             <div style={{display:"grid",gridTemplateColumns:mobile?"1fr 1fr":"1fr 1fr 1fr 1fr",gap:_.s4}}>
               {[["Trade","trade","Electrician"],["Company","company","Spark Bros"],["Contact","contact","Dave"],["Phone","phone","0412..."]].map(([l2,k,ph])=>(<div key={k}><label style={label}>{l2}</label><input style={input} value={trForm[k]} onChange={e=>setTrForm({...trForm,[k]:e.target.value})} placeholder={ph} /></div>))}
@@ -980,7 +1091,7 @@ export default function IBuild(){
         {/* ════ PROPOSAL LIST ════ */}
         {tab==="proposal"&&propView===null&&<Section key={anim}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:_.s7}}>
-            <h1 style={{fontSize:28,fontWeight:600,letterSpacing:"-0.02em"}}>Proposals</h1>
+            <h1 style={{fontSize:36,fontWeight:700,letterSpacing:"-0.03em"}}>Proposals</h1>
             {quoteReady&&<button onClick={()=>createProp()} style={btnPrimary}><Plus size={14} /> New from current scope</button>}
           </div>
           {!quoteReady&&<Empty icon={FileText} text="Complete your quote first" action={()=>go("quote")} actionText="Go to Quote" />}
@@ -1011,17 +1122,96 @@ export default function IBuild(){
                 <div key={s} onClick={()=>{up(pr=>{pr.proposals[propView].status=s;return pr});log(`Proposal → ${s}`);notify(`Marked ${s}`)}} style={{padding:"6px 14px",borderRadius:_.rFull,fontSize:12,fontWeight:600,cursor:"pointer",background:propD.status===s?(s==="signed"?_.greenBg:s==="declined"?_.redBg:s==="sent"?_.blueBg:_.amberBg):_.well,color:propD.status===s?(s==="signed"?_.green:s==="declined"?_.red:s==="sent"?_.blue:_.amber):_.muted,transition:"all 0.15s"}}>{s}</div>
               ))}
             </div>
-            <div ref={propRef} style={{background:"#fff",fontFamily:"'Inter',sans-serif",borderRadius:_.r,overflow:"hidden",boxShadow:"0 1px 3px rgba(0,0,0,0.04)",border:`1px solid ${_.line}`}}>
-              <div style={{padding:"24px 32px",borderBottom:`1px solid ${_.line}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}><div style={{display:"flex",alignItems:"center",gap:8}}><div style={{width:28,height:28,background:_.ac,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:"#fff"}}>i</div><span style={{fontSize:15,fontWeight:700,color:_.ink}}>iBuild National</span></div><div style={{textAlign:"right"}}><div style={{fontSize:9,color:_.ac,letterSpacing:"0.1em",fontWeight:600}}>PROPOSAL</div><div style={{fontSize:14,fontWeight:600,color:_.ink}}>{propD.name}</div></div></div>
-              <div style={{padding:"32px",borderBottom:`1px solid ${_.line}`,borderLeft:`4px solid ${_.ac}`}}><div style={{fontSize:10,color:_.ac,marginBottom:8,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase"}}>Prepared for</div><div style={{fontSize:28,fontWeight:600,letterSpacing:"-0.02em",color:_.ink,lineHeight:1.15}}>{propD.client}</div><div style={{fontSize:14,color:_.body,marginTop:4}}>{propD.address}{propD.suburb?`, ${propD.suburb}`:""}</div></div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",borderBottom:`1px solid ${_.line}`}}>{[["Date",propD.date],["Project",propD.client+(propD.suburb?` — ${propD.suburb}`:"")],["Valid",`${propD.validDays||30}d`],["Value",fmt(propD.pricing.total)]].map(([l2,v2],i)=>(<div key={l2} style={{padding:"12px 16px",borderRight:i<3?`1px solid ${_.line}`:"none"}}><div style={{fontSize:9,color:_.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.06em"}}>{l2}</div><div style={{fontSize:12,fontWeight:500,color:i===3?_.ac:_.ink,marginTop:2}}>{v2}</div></div>))}</div>
-              {propD.notes&&<div style={{padding:"16px 32px",borderBottom:`1px solid ${_.line}`}}><div style={{fontSize:9,color:_.ac,letterSpacing:"0.06em",fontWeight:600,marginBottom:3}}>BRIEF</div><div style={{fontSize:12,lineHeight:1.7,color:_.body}}>{propD.type} · {propD.stories}{propD.area?` · ${propD.area}m²`:""}. {propD.notes}</div></div>}
-              <div style={{padding:"20px 32px"}}><div style={{fontSize:9,color:_.ac,letterSpacing:"0.06em",fontWeight:600,marginBottom:10,paddingBottom:4,borderBottom:`2px solid ${_.ink}`}}>SCOPE</div>
-                {propDCats.map(([cat,items],ci)=>(<div key={cat} style={{marginBottom:10}}><div style={{display:"flex",justifyContent:"space-between",padding:"5px 8px",background:_.ac,color:"#fff",fontSize:10,borderRadius:4,fontWeight:600}}><span>{String(ci+1).padStart(2,"0")}. {cat}</span><span>{fmt(propCT(propD.scope,cat))}</span></div>{items.filter(i2=>i2.on).map((item,idx)=>(<div key={idx} style={{display:"grid",gridTemplateColumns:"1fr 36px 48px 24px 48px",gap:2,padding:"3px 8px",fontSize:9,borderBottom:`1px solid ${_.line}`,color:_.body}}><span style={{color:_.ink}}>{item.item}</span><span>{item.unit}</span><span style={{textAlign:"right"}}>{fmt(item.rate)}</span><span style={{textAlign:"center"}}>x{item.qty}</span><span style={{textAlign:"right",fontWeight:600,color:_.ink}}>{fmt(item.rate*item.qty)}</span></div>))}</div>))}</div>
-              <div style={{padding:"0 32px 20px",display:"flex",justifyContent:"flex-end"}}><div style={{width:220}}>{[["Subtotal",propD.pricing.sub],[`Margin ${propD.pricing.margin}%`,propD.pricing.mar],[`Contingency ${propD.pricing.contingency}%`,propD.pricing.con],["GST",propD.pricing.gst]].map(([l2,v2])=>(<div key={l2} style={{display:"flex",justifyContent:"space-between",padding:"2px 0",fontSize:10,color:_.muted,borderBottom:`1px solid ${_.line}`}}><span>{l2}</span><span>{fmt(v2)}</span></div>))}<div style={{display:"flex",justifyContent:"space-between",padding:"6px 0",fontSize:15,fontWeight:700,borderTop:`2px solid ${_.ink}`,marginTop:2}}><span>Total</span><span>{fmt(propD.pricing.total)}</span></div></div></div>
-              <div style={{padding:"14px 32px",borderTop:`1px solid ${_.line}`,fontSize:9,color:_.muted,lineHeight:1.7}}><div style={{fontSize:9,color:_.ac,letterSpacing:"0.06em",fontWeight:600,marginBottom:3}}>TERMS</div>{`Valid ${propD.validDays||30} days · 5% deposit · Progress claims 7 days · Variations via VO · Full insurance · 13-week defects`}</div>
-              <div style={{padding:"14px 32px",borderTop:`1px solid ${_.line}`}}><div style={{fontSize:9,color:_.ac,letterSpacing:"0.06em",fontWeight:600,marginBottom:6}}>ACCEPTANCE</div><div style={{fontSize:10,color:_.muted,marginBottom:8}}>I/We accept and authorise iBuild National to proceed.</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>{["Client","Builder"].map(r=>(<div key={r}><div style={{fontSize:10,fontWeight:600,marginBottom:3}}>{r}</div>{propD.sigData&&r==="Client"?<div><img src={propD.sigData} alt="" style={{maxHeight:28}} /><div style={{fontSize:8,color:_.muted,marginTop:1}}>Signed</div></div>:<div style={{borderBottom:`1px solid ${_.line2}`,height:28}} />}</div>))}</div></div>
-              <div style={{padding:"10px 32px",background:_.ink,fontSize:9,color:"#999",display:"flex",justifyContent:"space-between"}}><span>iBuild National Pty Ltd · ABN 12 345 678 901</span><span>(03) 8510 5472</span></div>
+            <div ref={propRef} style={{background:"#fff",fontFamily:"'Inter',sans-serif",borderRadius:_.r,overflow:"hidden",border:`1px solid ${_.line}`}}>
+              {/* Header */}
+              <div style={{padding:"28px 40px",borderBottom:`1px solid ${_.line}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <div style={{width:24,height:24,background:_.ink,borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:"#fff"}}>i</div>
+                  <span style={{fontSize:14,fontWeight:700,color:_.ink}}>iBuild National</span>
+                </div>
+                <div style={{textAlign:"right"}}>
+                  <div style={{fontSize:10,color:_.muted,letterSpacing:"0.08em",fontWeight:600}}>PROPOSAL</div>
+                  <div style={{fontSize:13,fontWeight:600,color:_.ink}}>{propD.name}</div>
+                </div>
+              </div>
+              {/* Client */}
+              <div style={{padding:"36px 40px",borderBottom:`1px solid ${_.line}`}}>
+                <div style={{fontSize:10,color:_.muted,marginBottom:8,fontWeight:600,letterSpacing:"0.05em",textTransform:"uppercase"}}>Prepared for</div>
+                <div style={{fontSize:32,fontWeight:700,letterSpacing:"-0.03em",color:_.ink,lineHeight:1.15}}>{propD.client}</div>
+                <div style={{fontSize:14,color:_.body,marginTop:6}}>{propD.address}{propD.suburb?`, ${propD.suburb}`:""}</div>
+              </div>
+              {/* Meta grid */}
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",borderBottom:`1px solid ${_.line}`}}>
+                {[["Date",propD.date],["Type",propD.type+(propD.stories?` · ${propD.stories}`:"")],["Valid",`${propD.validDays||30} days`],["Value",fmt(propD.pricing.total)]].map(([l2,v2],i)=>(
+                  <div key={l2} style={{padding:"14px 20px",borderRight:i<3?`1px solid ${_.line}`:"none"}}>
+                    <div style={{fontSize:9,color:_.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.05em"}}>{l2}</div>
+                    <div style={{fontSize:13,fontWeight:i===3?700:500,color:_.ink,marginTop:3}}>{v2}</div>
+                  </div>
+                ))}
+              </div>
+              {/* Brief */}
+              {propD.notes&&<div style={{padding:"20px 40px",borderBottom:`1px solid ${_.line}`}}>
+                <div style={{fontSize:10,color:_.muted,fontWeight:600,letterSpacing:"0.05em",textTransform:"uppercase",marginBottom:6}}>Brief</div>
+                <div style={{fontSize:13,lineHeight:1.7,color:_.body}}>{propD.type}{propD.area?` · ${propD.area}m²`:""}. {propD.notes}</div>
+              </div>}
+              {/* Scope */}
+              <div style={{padding:"24px 40px"}}>
+                <div style={{fontSize:10,color:_.muted,fontWeight:600,letterSpacing:"0.05em",textTransform:"uppercase",marginBottom:16}}>Scope of Works</div>
+                {propDCats.map(([cat,items],ci)=>(
+                  <div key={cat} style={{marginBottom:16}}>
+                    <div style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:`2px solid ${_.ink}`,fontSize:12,fontWeight:600,color:_.ink,marginBottom:4}}>
+                      <span>{String(ci+1).padStart(2,"0")}. {cat}</span>
+                      <span style={{fontVariantNumeric:"tabular-nums"}}>{fmt(propCT(propD.scope,cat))}</span>
+                    </div>
+                    {items.filter(i2=>i2.on).map((item,idx)=>(
+                      <div key={idx} style={{display:"grid",gridTemplateColumns:"1fr 40px 56px 28px 64px",gap:4,padding:"4px 0",fontSize:10,borderBottom:`1px solid ${_.line}`,color:_.body}}>
+                        <span style={{color:_.ink}}>{item.item}</span>
+                        <span>{item.unit}</span>
+                        <span style={{textAlign:"right"}}>{fmt(item.rate)}</span>
+                        <span style={{textAlign:"center"}}>x{item.qty}</span>
+                        <span style={{textAlign:"right",fontWeight:600,color:_.ink,fontVariantNumeric:"tabular-nums"}}>{fmt(item.rate*item.qty)}</span>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+              {/* Pricing summary */}
+              <div style={{padding:"0 40px 28px",display:"flex",justifyContent:"flex-end"}}>
+                <div style={{width:260}}>
+                  {[["Subtotal",propD.pricing.sub],[`Margin (${propD.pricing.margin}%)`,propD.pricing.mar],[`Contingency (${propD.pricing.contingency}%)`,propD.pricing.con],["GST",propD.pricing.gst]].map(([l2,v2])=>(
+                    <div key={l2} style={{display:"flex",justifyContent:"space-between",padding:"4px 0",fontSize:11,color:_.muted}}>
+                      <span>{l2}</span><span style={{fontVariantNumeric:"tabular-nums"}}>{fmt(v2)}</span>
+                    </div>
+                  ))}
+                  <div style={{display:"flex",justifyContent:"space-between",padding:"10px 0 4px",fontSize:20,fontWeight:700,borderTop:`2px solid ${_.ink}`,marginTop:6,letterSpacing:"-0.02em"}}>
+                    <span>Total (inc GST)</span><span style={{fontVariantNumeric:"tabular-nums"}}>{fmt(propD.pricing.total)}</span>
+                  </div>
+                </div>
+              </div>
+              {/* Terms */}
+              <div style={{padding:"16px 40px",borderTop:`1px solid ${_.line}`,fontSize:10,color:_.muted,lineHeight:1.7}}>
+                <div style={{fontSize:10,color:_.muted,fontWeight:600,letterSpacing:"0.05em",textTransform:"uppercase",marginBottom:4}}>Terms</div>
+                {`Valid ${propD.validDays||30} days · 5% deposit · Progress claims 7 days · Variations via VO · Full insurance · 13-week defects`}
+              </div>
+              {/* Acceptance */}
+              <div style={{padding:"16px 40px",borderTop:`1px solid ${_.line}`}}>
+                <div style={{fontSize:10,color:_.muted,fontWeight:600,letterSpacing:"0.05em",textTransform:"uppercase",marginBottom:8}}>Acceptance</div>
+                <div style={{fontSize:10,color:_.muted,marginBottom:10}}>I/We accept and authorise iBuild National to proceed.</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:24}}>
+                  {["Client","Builder"].map(r=>(
+                    <div key={r}>
+                      <div style={{fontSize:10,fontWeight:600,marginBottom:4}}>{r}</div>
+                      {propD.sigData&&r==="Client"
+                        ?<div><img src={propD.sigData} alt="" style={{maxHeight:32}} /><div style={{fontSize:9,color:_.muted,marginTop:2}}>Signed</div></div>
+                        :<div style={{borderBottom:`1px solid ${_.line2}`,height:32}} />}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {/* Footer */}
+              <div style={{padding:"10px 40px",background:_.ink,fontSize:9,color:"#888",display:"flex",justifyContent:"space-between"}}>
+                <span>iBuild National Pty Ltd · ABN 12 345 678 901</span><span>(03) 8510 5472</span>
+              </div>
             </div>
             {!propD.sigData&&<div style={{marginTop:_.s5}}>
               <div style={{fontSize:14,fontWeight:600,marginBottom:_.s2}}>Client signature</div>
@@ -1033,7 +1223,7 @@ export default function IBuild(){
 
         {/* ════ TEMPLATES ════ */}
         {tab==="templates"&&<Section key={anim}>
-          <h1 style={{fontSize:28,fontWeight:600,letterSpacing:"-0.02em",marginBottom:_.s7}}>Templates</h1>
+          <h1 style={{fontSize:36,fontWeight:700,letterSpacing:"-0.03em",marginBottom:_.s7}}>Templates</h1>
           <div style={{display:"flex",gap:_.s2,alignItems:"end",marginBottom:_.s7,paddingBottom:_.s6,borderBottom:`1px solid ${_.line}`}}>
             <div style={{flex:1}}><label style={label}>Name</label><input style={input} value={tplName} onChange={e=>setTplName(e.target.value)} placeholder="Standard 4-bed new build" /></div>
             <button onClick={()=>{if(!tplName.trim()){notify("Enter name","error");return}saveTpl([...tpl,{name:tplName,scope:JSON.parse(JSON.stringify(p.scope)),margin:p.margin,contingency:p.contingency}]);log("Template saved: "+tplName);setTplName("");notify("Saved")}} style={btnPrimary}>Save current</button>
@@ -1084,11 +1274,12 @@ export default function IBuild(){
         ::-webkit-scrollbar-track{background:transparent}
         ::-webkit-scrollbar-thumb{background:${_.line};border-radius:99px}
         ::-webkit-scrollbar-thumb:hover{background:${_.line2}}
-        input:focus,textarea:focus,select:focus{border-color:${_.ac}!important;background:#fff!important;box-shadow:0 0 0 3px ${_.ac}18!important;outline:none!important}
-        button:active{transform:scale(0.97)!important}
+        input:focus,textarea:focus,select:focus{border-color:${_.ac}!important;background:#fff!important;box-shadow:0 0 0 2px ${_.ac}18!important;outline:none!important}
+        button:active{transform:scale(0.98)!important}
         @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
         @keyframes slideDown{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
         @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+        @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
         @media print{aside,nav{display:none!important}main{padding:0!important}}
       `}</style>
     </div>
