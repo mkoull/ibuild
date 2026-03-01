@@ -352,7 +352,7 @@ export default function IBuild(){
   const pipeV=allT.filter(x=>["Quote","Approved"].includes(x.status)).reduce((s,x)=>s+x.curr,0);
   const actV=allT.filter(x=>x.status==="Active").reduce((s,x)=>s+x.curr,0);
   const quoteReady=p.client&&T.items>0;
-  const quoteSent=["Approved","Active","Invoiced","Complete"].includes(p.status);
+
   const recentActivity=projects.flatMap((pr,idx)=>(pr.activity||[]).slice(0,4).map(a=>({...a,project:pName(pr),idx}))).slice(0,8);
 
   // ═══ Workflow stepper — "Next Best Action" engine ═══
@@ -546,7 +546,7 @@ export default function IBuild(){
 
                 {/* Single primary CTA — next best action */}
                 {wfNext&&<div style={{marginTop:20}}>
-                  <button onClick={wfNext.action} style={{...btnPrimary,padding:"11px 20px"}}>{wfNext.label} <ArrowRight size={14} /></button>
+                  <button onClick={wfNext.action} style={{...btnPrimary,padding:"11px 20px"}}>Continue setup <ArrowRight size={14} /></button>
                 </div>}
                 {!wfNext&&<div style={{marginTop:20,fontSize:13,color:_.green,fontWeight:500}}>All steps complete</div>}
               </div>
@@ -565,23 +565,6 @@ export default function IBuild(){
 
             {/* ── RIGHT: Context-aware next step + Activity ── */}
             <div style={{position:mobile?"static":"sticky",top:48}}>
-
-              {/* Next step — context-aware, single CTA */}
-              <div style={{marginBottom:40,paddingBottom:32,borderBottom:`1px solid ${_.line}`}}>
-                <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:14}}>Next step</div>
-                {wfNext ? (<>
-                  <div style={{fontSize:14,fontWeight:500,color:_.ink,marginBottom:4}}>{wfNext.label}</div>
-                  <div style={{fontSize:12,color:_.muted,marginBottom:12}}>{wfNext.detail}</div>
-                  <button onClick={wfNext.action} style={{...btnPrimary,width:"100%",justifyContent:"center",padding:"10px 18px"}}>{wfNext.label} <ArrowRight size={14} /></button>
-                </>) : (<>
-                  <div style={{fontSize:14,fontWeight:500,color:_.ink,marginBottom:4}}>Project ready</div>
-                  <div style={{fontSize:12,color:_.muted,marginBottom:12}}>All setup steps complete</div>
-                  {quoteSent
-                    ?<button onClick={()=>go("invoices")} style={{...btnPrimary,width:"100%",justifyContent:"center",padding:"10px 18px"}}>Manage invoices <ArrowRight size={14} /></button>
-                    :<button onClick={()=>go("quote")} style={{...btnPrimary,width:"100%",justifyContent:"center",padding:"10px 18px"}}>View quote <ArrowRight size={14} /></button>
-                  }
-                </>)}
-              </div>
 
               {/* Activity — structured list, dividers between items */}
               <div>
