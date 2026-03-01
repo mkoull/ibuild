@@ -110,10 +110,11 @@ const mkProject=()=>({id:uid(),status:"Lead",created:ds(),client:"",email:"",pho
 // ═══════════════════════════════════════════════
 const _ = {
   // Surfaces
-  bg:"#f6f7f9",
+  bg:"#f8f9fb",
   surface:"#ffffff",
   raised:"#ffffff",
   well:"#f1f3f5",
+  sidebar:"#eef0f4",
   // Borders
   line:"#e8eaed",
   line2:"#d0d4da",
@@ -355,9 +356,9 @@ export default function IBuild(){
       {toast&&<div style={{position:"fixed",top:20,left:"50%",transform:"translateX(-50%)",zIndex:999,padding:"10px 24px",borderRadius:_.rFull,fontSize:13,fontWeight:600,color:"#fff",background:toast.type==="error"?_.red:_.ink,boxShadow:_.sh3,animation:"fadeUp 0.2s ease"}}>{toast.msg}</div>}
 
       {/* ═══ SIDEBAR ═══ */}
-      <aside style={{width:248,flexShrink:0,background:_.surface,borderRight:`1px solid ${_.line}`,display:mobile?"none":"flex",flexDirection:"column"}}>
+      <aside style={{width:260,flexShrink:0,background:_.sidebar,borderRight:`1px solid ${_.line}`,display:mobile?"none":"flex",flexDirection:"column"}}>
         {/* Logo */}
-        <div style={{padding:"18px 20px",display:"flex",alignItems:"center",gap:10,borderBottom:`1px solid ${_.line}`}}>
+        <div style={{padding:"20px 20px 16px",display:"flex",alignItems:"center",gap:10}}>
           <div style={{width:30,height:30,background:`linear-gradient(135deg,${_.ac},${_.acDark})`,borderRadius:9,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:"#fff",boxShadow:`0 2px 8px ${_.ac}30`}}>i</div>
           <span style={{fontSize:16,fontWeight:700,color:_.ink,letterSpacing:"-0.02em"}}>iBuild</span>
           <div style={{flex:1}} />
@@ -366,7 +367,7 @@ export default function IBuild(){
 
         {/* Project switcher */}
         <div style={{padding:"12px 16px",borderBottom:`1px solid ${_.line}`,position:"relative",zIndex:30}}>
-          <div onClick={()=>setSw(!sw)} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 12px",background:_.well,borderRadius:_.rSm,cursor:"pointer",transition:"all 0.15s"}} onMouseEnter={e=>e.currentTarget.style.background=_.line} onMouseLeave={e=>e.currentTarget.style.background=_.well}>
+          <div onClick={()=>setSw(!sw)} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 12px",background:"rgba(255,255,255,0.5)",borderRadius:_.rSm,cursor:"pointer",transition:"all 0.15s"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,0.8)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,0.5)"}>
             <div style={{flex:1,minWidth:0}}>
               <div style={{fontSize:13,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{pName(p)}</div>
               <div style={{fontSize:11,color:_.muted,marginTop:1}}>{p.status} · {p.type}</div>
@@ -388,18 +389,18 @@ export default function IBuild(){
         </div>
 
         {/* Nav groups */}
-        <div style={{flex:1,overflowY:"auto",padding:"8px 10px"}}>
+        <div style={{flex:1,overflowY:"auto",padding:"12px 12px"}}>
           {NAV_ITEMS.map(g=>(
-            <div key={g.group} style={{marginBottom:8}}>
-              <div style={{padding:"10px 12px 4px",fontSize:10,fontWeight:700,color:_.muted,letterSpacing:"0.1em",textTransform:"uppercase"}}>{g.group}</div>
+            <div key={g.group} style={{marginBottom:16}}>
+              <div style={{padding:"14px 12px 6px",fontSize:10,fontWeight:700,color:_.muted,letterSpacing:"0.1em",textTransform:"uppercase",opacity:0.7}}>{g.group}</div>
               {g.items.map(item=>(
                 <div key={item.id} onClick={()=>go(item.id)} style={{
                   display:"flex",alignItems:"center",gap:10,padding:"8px 12px",fontSize:13,cursor:"pointer",
                   borderRadius:_.rSm,margin:"1px 0",
-                  background:tab===item.id?_.acLight:"transparent",color:tab===item.id?_.ac:_.body,
+                  background:tab===item.id?"rgba(0,0,0,0.06)":"transparent",color:tab===item.id?_.ink:_.body,
                   fontWeight:tab===item.id?600:400,
                   transition:"all 0.12s ease",
-                }} onMouseEnter={e=>{if(tab!==item.id)e.currentTarget.style.background=_.well}} onMouseLeave={e=>{if(tab!==item.id)e.currentTarget.style.background=tab===item.id?_.acLight:"transparent"}}>
+                }} onMouseEnter={e=>{if(tab!==item.id)e.currentTarget.style.background="rgba(0,0,0,0.03)"}} onMouseLeave={e=>{if(tab!==item.id)e.currentTarget.style.background=tab===item.id?"rgba(0,0,0,0.06)":"transparent"}}>
                   <item.Ic size={16} strokeWidth={tab===item.id?2:1.5} />
                   {item.l}
                 </div>
@@ -434,99 +435,131 @@ export default function IBuild(){
       <main style={{flex:1,overflowY:"auto",padding:mobile?"72px 16px 88px":"32px 40px 64px"}}>
 
         {/* ════════════════════════════════════
-            DASHBOARD
+            DASHBOARD — Builder OS
         ════════════════════════════════════ */}
-        {tab==="dash"&&<Section key={anim}>
-          {/* Header */}
-          <div style={{marginBottom:_.s7}}>
-            <div style={{fontSize:13,color:_.muted,marginBottom:_.s1}}>{ds()} · {projects.length} project{projects.length!==1?"s":""}</div>
-            <h1 style={{fontSize:28,fontWeight:700,letterSpacing:"-0.02em",margin:0}}>
-              Good {new Date().getHours()<12?"morning":new Date().getHours()<17?"afternoon":"evening"}.
-            </h1>
-          </div>
-
-          {/* Stat cards row */}
-          <div style={{display:"grid",gridTemplateColumns:mobile?"repeat(2,1fr)":"repeat(4,1fr)",gap:_.s4,marginBottom:_.s7}}>
-            {[["Pipeline",fmt(pipeV),`${allT.filter(x=>["Quote","Approved"].includes(x.status)).length} quotes`,_.amber],
-              ["Active",fmt(actV),`${allT.filter(x=>x.status==="Active").length} jobs`,_.green],
-              ["Outstanding",fmt(allT.reduce((s,x)=>s+x.inv-x.paid,0)),`${allT.reduce((s,x)=>s+x.invoices.filter(i2=>i2.status==="pending").length,0)} unpaid`,_.red],
-              ["Contract",fmt(T.curr),`${T.items} items`,_.ac],
-            ].map(([lb,val,sub,c])=>(
-              <div key={lb} style={{...card,padding:20,position:"relative",overflow:"hidden",transition:"box-shadow 0.18s ease, transform 0.18s ease"}} onMouseEnter={e=>{e.currentTarget.style.boxShadow=_.sh2;e.currentTarget.style.transform="translateY(-2px)"}} onMouseLeave={e=>{e.currentTarget.style.boxShadow=_.sh1;e.currentTarget.style.transform="translateY(0)"}}>
-                <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:c,opacity:0.7}} />
-                <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:_.s2}}>{lb}</div>
-                <div style={{fontSize:24,fontWeight:700,letterSpacing:"-0.02em",color:_.ink,lineHeight:1,fontVariantNumeric:"tabular-nums"}}>{val}</div>
-                <div style={{fontSize:12,color:c,fontWeight:500,marginTop:_.s1}}>{sub}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* Current project card */}
-          <div style={{...card,borderLeft:`4px solid ${_.ac}`,marginBottom:_.s7,transition:"box-shadow 0.18s ease"}} onMouseEnter={e=>{e.currentTarget.style.boxShadow=_.sh2}} onMouseLeave={e=>{e.currentTarget.style.boxShadow=_.sh1}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:_.s4}}>
-              <div>
-                <div style={{fontSize:11,color:_.ac,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:_.s1}}>Current project</div>
-                <div style={{fontSize:20,fontWeight:600,color:_.ink}}>{pName(p)}</div>
-                {(p.address||p.assignedTo)&&<div style={{fontSize:13,color:_.muted,marginTop:2}}>{p.type}{p.area?` · ${p.area}m²`:""}{p.assignedTo?` · ${p.assignedTo}`:""}</div>}
-              </div>
-              <span style={badge(stCol(p.status),stBg(p.status))}>{p.status}</span>
+        {tab==="dash"&&<div style={{animation:"fadeUp 0.25s ease",maxWidth:1120}} key={anim}>
+          {/* ═══ Command Header ═══ */}
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:mobile?"flex-start":"center",marginBottom:mobile?28:44,flexWrap:"wrap",gap:16}}>
+            <div>
+              <h1 style={{fontSize:mobile?24:28,fontWeight:700,letterSpacing:"-0.03em",margin:0,lineHeight:1.2,color:_.ink}}>
+                Good {new Date().getHours()<12?"morning":new Date().getHours()<17?"afternoon":"evening"}.
+              </h1>
+              <div style={{fontSize:13,color:_.muted,marginTop:6}}>{ds()} · {projects.length} project{projects.length!==1?"s":""}</div>
             </div>
-            <div style={{fontSize:mobile?28:40,fontWeight:700,letterSpacing:"-0.03em",lineHeight:1,fontVariantNumeric:"tabular-nums",marginBottom:_.s5,color:_.ink}}>{fmt(T.curr)}</div>
-            {/* Stage dots */}
-            <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:_.s2}}>
-              {STAGES.map((s,i)=>(<div key={s} style={{display:"flex",alignItems:"center",gap:4}}>
-                <div style={{width:10,height:10,borderRadius:"50%",background:i<=sIdx(p.status)?_.ac:_.line,transition:"background 0.3s"}} title={s} />
-                {i<STAGES.length-1&&<div style={{width:20,height:2,background:i<sIdx(p.status)?_.ac:_.line,transition:"background 0.3s"}} />}
-              </div>))}
-            </div>
-            <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:_.muted,marginBottom:_.s5}}>
-              {STAGES.map((s,i)=>(<span key={s} style={{color:i<=sIdx(p.status)?_.ac:_.faint,fontWeight:i===sIdx(p.status)?700:400}}>{s}</span>))}
-            </div>
-            <div style={{display:"flex",gap:_.s2}}>
-              {!quoteReady&&<button onClick={()=>go("quote")} style={btnPrimary}>Build quote <ArrowRight size={14} /></button>}
-              {quoteReady&&!quoteSent&&<button onClick={()=>createProp()} style={btnPrimary}>Generate proposal <ArrowRight size={14} /></button>}
-              {quoteSent&&<button onClick={()=>go("invoices")} style={btnPrimary}>Manage invoices <ArrowRight size={14} /></button>}
-              <button onClick={()=>go("quote")} style={btnGhost}>View quote</button>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <button onClick={()=>go("quote")} style={{...btnPrimary,padding:"10px 22px",fontSize:14,borderRadius:_.rSm}}>Build Quote</button>
+              <button onClick={()=>go("plans")} style={{padding:"10px 18px",background:"transparent",color:_.body,border:`1.5px solid ${_.line}`,borderRadius:_.rSm,fontSize:13,fontWeight:500,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:6,transition:"all 0.12s ease"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=_.line2;e.currentTarget.style.color=_.ink}} onMouseLeave={e=>{e.currentTarget.style.borderColor=_.line;e.currentTarget.style.color=_.body}}>
+                <Upload size={14} /> Upload Plans
+              </button>
+              {!mobile&&<div style={{fontSize:11,color:_.faint,fontWeight:500,padding:"6px 10px",background:_.well,borderRadius:_.rXs,letterSpacing:"0.02em"}}>⌘K</div>}
             </div>
           </div>
 
-          {/* Attention + Activity */}
-          <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"1fr 1fr",gap:_.s5,marginBottom:_.s7}}>
-            <div style={{...card,transition:"box-shadow 0.18s ease"}} onMouseEnter={e=>{e.currentTarget.style.boxShadow=_.sh2}} onMouseLeave={e=>{e.currentTarget.style.boxShadow=_.sh1}}>
-              <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:_.s3}}>Needs attention</div>
-              {alerts.length===0&&<div style={{fontSize:13,color:_.faint,padding:`${_.s3}px 0`}}>All clear</div>}
-              {alerts.slice(0,4).map((a,i)=>(
-                <div key={i} onClick={()=>{setAi(a.idx);go(a.tab)}} style={{padding:`${_.s2}px 0`,display:"flex",alignItems:"center",gap:_.s2,cursor:"pointer",borderBottom:i<Math.min(alerts.length,4)-1?`1px solid ${_.line}`:"none"}} onMouseEnter={e=>e.currentTarget.style.opacity="0.7"} onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
-                  <AlertTriangle size={14} color={a.c} />
-                  <span style={{fontSize:13,color:_.body,lineHeight:1.4}}>{a.text}</span>
+          {/* ═══ Main Grid — Asymmetric 2/3 + 1/3 ═══ */}
+          <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"1fr 340px",gap:mobile?20:28,alignItems:"start"}}>
+
+            {/* ── LEFT: Project Hero Module ── */}
+            <div style={{background:_.surface,borderRadius:14,padding:mobile?24:32,boxShadow:_.sh1}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20}}>
+                <div>
+                  <span style={{...badge(stCol(p.status),stBg(p.status)),fontSize:11}}>{p.status}</span>
+                  <div style={{fontSize:mobile?20:24,fontWeight:700,color:_.ink,marginTop:10,letterSpacing:"-0.025em",lineHeight:1.2}}>{pName(p)}</div>
+                  {(p.type||p.area||p.assignedTo)&&<div style={{fontSize:13,color:_.muted,marginTop:4}}>{p.type}{p.area?` · ${p.area}m²`:""}{p.assignedTo?` · ${p.assignedTo}`:""}</div>}
                 </div>
-              ))}
-            </div>
-            <div style={{...card,transition:"box-shadow 0.18s ease"}} onMouseEnter={e=>{e.currentTarget.style.boxShadow=_.sh2}} onMouseLeave={e=>{e.currentTarget.style.boxShadow=_.sh1}}>
-              <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:_.s3}}>Recent activity</div>
-              {recentActivity.length===0&&<div style={{fontSize:13,color:_.faint,padding:`${_.s3}px 0`}}>No activity yet</div>}
-              {recentActivity.slice(0,5).map((a,i)=>(
-                <div key={i} style={{padding:`${_.s2}px 0`,display:"flex",alignItems:"center",gap:_.s2,borderBottom:i<4?`1px solid ${_.line}`:"none"}}>
-                  <div style={{width:6,height:6,borderRadius:3,background:_.ac,flexShrink:0}} />
-                  <div style={{flex:1}}>
-                    <span style={{fontSize:13,color:_.body,lineHeight:1.4}}>{a.action}</span>
-                    <div style={{fontSize:11,color:_.faint,marginTop:1}}>{a.project} · {a.time}</div>
+              </div>
+
+              <div style={{fontSize:mobile?36:44,fontWeight:700,letterSpacing:"-0.03em",lineHeight:1,fontVariantNumeric:"tabular-nums",marginBottom:28,color:T.curr>0?_.ink:_.faint}}>{fmt(T.curr)}</div>
+
+              {/* Pipeline visual */}
+              <div style={{marginBottom:28}}>
+                <div style={{display:"flex",alignItems:"center",gap:0,marginBottom:8}}>
+                  {STAGES.map((s,i)=>(
+                    <div key={s} style={{flex:1,display:"flex",alignItems:"center"}}>
+                      <div style={{width:10,height:10,borderRadius:"50%",background:i<=sIdx(p.status)?_.ac:_.line,transition:"background 0.3s",flexShrink:0,zIndex:1}} />
+                      {i<STAGES.length-1&&<div style={{flex:1,height:2,background:i<sIdx(p.status)?_.ac:_.line,transition:"background 0.3s"}} />}
+                    </div>
+                  ))}
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between"}}>
+                  {STAGES.map((s,i)=>(<span key={s} style={{fontSize:10,color:i<=sIdx(p.status)?_.ac:_.faint,fontWeight:i===sIdx(p.status)?600:400,letterSpacing:"0.01em"}}>{s}</span>))}
+                </div>
+              </div>
+
+              {/* Next Steps (empty) or contextual actions */}
+              {T.items===0&&!p.client ? (
+                <div style={{background:_.well,borderRadius:10,padding:mobile?20:24}}>
+                  <div style={{fontSize:13,fontWeight:600,color:_.ink,marginBottom:14}}>Get started</div>
+                  <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                    {[["Build your first quote","Add client details and scope items",()=>go("quote"),PenLine],
+                      ["Upload plans","Use AI to extract scope from floor plans",()=>go("plans"),Upload],
+                      ["Add scope items","Select items from the rate library",()=>go("quote"),Plus]
+                    ].map(([title,desc,action,Ic])=>(
+                      <div key={title} onClick={action} style={{display:"flex",alignItems:"center",gap:14,padding:"12px 16px",background:_.surface,borderRadius:8,cursor:"pointer",transition:"all 0.15s ease"}} onMouseEnter={e=>{e.currentTarget.style.transform="translateX(4px)"}} onMouseLeave={e=>{e.currentTarget.style.transform="translateX(0)"}}>
+                        <div style={{width:36,height:36,borderRadius:8,background:_.acLight,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><Ic size={16} color={_.ac} strokeWidth={1.5} /></div>
+                        <div style={{flex:1}}>
+                          <div style={{fontSize:13,fontWeight:600,color:_.ink}}>{title}</div>
+                          <div style={{fontSize:12,color:_.muted,marginTop:1}}>{desc}</div>
+                        </div>
+                        <ArrowRight size={14} color={_.faint} />
+                      </div>
+                    ))}
                   </div>
                 </div>
+              ) : (
+                <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+                  {!quoteReady&&<button onClick={()=>go("quote")} style={{...btnPrimary,borderRadius:_.rSm}}>Build quote <ArrowRight size={14} /></button>}
+                  {quoteReady&&!quoteSent&&<button onClick={()=>createProp()} style={{...btnPrimary,borderRadius:_.rSm}}>Generate proposal <ArrowRight size={14} /></button>}
+                  {quoteSent&&<button onClick={()=>go("invoices")} style={{...btnPrimary,borderRadius:_.rSm}}>Manage invoices <ArrowRight size={14} /></button>}
+                  <button onClick={()=>go("quote")} style={{...btnGhost,color:_.muted}} onMouseEnter={e=>e.currentTarget.style.color=_.ink} onMouseLeave={e=>e.currentTarget.style.color=_.muted}>View quote</button>
+                </div>
+              )}
+            </div>
+
+            {/* ── RIGHT: KPI Stack + Attention + Activity ── */}
+            <div style={{display:"flex",flexDirection:"column",gap:12}}>
+              {/* KPI Stack — compact vertical */}
+              {[["Pipeline",pipeV,`${allT.filter(x=>["Quote","Approved"].includes(x.status)).length} quotes`,_.amber],
+                ["Active Jobs",actV,`${allT.filter(x=>x.status==="Active").length} active`,_.green],
+                ["Outstanding",allT.reduce((s,x)=>s+x.inv-x.paid,0),`${allT.reduce((s,x)=>s+x.invoices.filter(i2=>i2.status==="pending").length,0)} unpaid`,_.red],
+              ].map(([lb,val,sub,c])=>(
+                <div key={lb} style={{background:_.surface,borderRadius:10,padding:"14px 20px",boxShadow:_.sh1}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline"}}>
+                    <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.04em",textTransform:"uppercase"}}>{lb}</div>
+                    <div style={{fontSize:12,color:c,fontWeight:500}}>{sub}</div>
+                  </div>
+                  <div style={{fontSize:22,fontWeight:700,letterSpacing:"-0.02em",color:val===0?_.faint:_.ink,fontVariantNumeric:"tabular-nums",marginTop:4}}>{fmt(val)}</div>
+                </div>
               ))}
+
+              {/* Needs Attention — only if items exist */}
+              {alerts.length>0&&<div style={{background:_.surface,borderRadius:10,padding:20,boxShadow:_.sh1}}>
+                <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.04em",textTransform:"uppercase",marginBottom:12}}>Needs attention</div>
+                {alerts.slice(0,4).map((a,i)=>(
+                  <div key={i} onClick={()=>{setAi(a.idx);go(a.tab)}} style={{padding:"8px 0",display:"flex",alignItems:"center",gap:10,cursor:"pointer",borderBottom:i<Math.min(alerts.length,4)-1?`1px solid ${_.well}`:"none"}} onMouseEnter={e=>e.currentTarget.style.opacity="0.7"} onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
+                    <div style={{width:6,height:6,borderRadius:3,background:a.c,flexShrink:0}} />
+                    <span style={{fontSize:13,color:_.body,lineHeight:1.4}}>{a.text}</span>
+                  </div>
+                ))}
+              </div>}
+
+              {/* Recent Activity */}
+              <div style={{background:_.surface,borderRadius:10,padding:20,boxShadow:_.sh1}}>
+                <div style={{fontSize:11,color:_.muted,fontWeight:600,letterSpacing:"0.04em",textTransform:"uppercase",marginBottom:12}}>Activity</div>
+                {recentActivity.length===0 ? (
+                  <div style={{fontSize:13,color:_.faint,padding:"8px 0"}}>No activity yet</div>
+                ) : recentActivity.slice(0,5).map((a,i)=>(
+                  <div key={i} style={{padding:"6px 0",display:"flex",alignItems:"flex-start",gap:10}}>
+                    <div style={{width:6,height:6,borderRadius:3,background:_.ac,flexShrink:0,marginTop:6}} />
+                    <div>
+                      <div style={{fontSize:13,color:_.body,lineHeight:1.4}}>{a.action}</div>
+                      <div style={{fontSize:11,color:_.faint,marginTop:1}}>{a.project} · {a.time}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-
-          {/* Quick actions */}
-          <div style={{display:"grid",gridTemplateColumns:mobile?"repeat(2,1fr)":"repeat(4,1fr)",gap:_.s3}}>
-            {[[PenLine,"New quote","quote"],[Upload,"Upload plans","plans"],[Receipt,"Invoice","invoices"],[BookOpen,"Site diary","diary"]].map(([Ic,l2,t2])=>(
-              <div key={l2} onClick={()=>go(t2)} style={{...card,padding:18,cursor:"pointer",textAlign:"center",transition:"all 0.18s ease"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=_.ac;e.currentTarget.style.boxShadow=_.sh2;e.currentTarget.style.transform="translateY(-2px)"}} onMouseLeave={e=>{e.currentTarget.style.borderColor=_.line;e.currentTarget.style.boxShadow=_.sh1;e.currentTarget.style.transform="translateY(0)"}}>
-                <div style={{marginBottom:8,display:"flex",justifyContent:"center"}}><div style={{width:40,height:40,borderRadius:"50%",background:_.well,display:"flex",alignItems:"center",justifyContent:"center",transition:"background 0.15s"}}><Ic size={18} strokeWidth={1.5} color={_.muted} /></div></div>
-                <div style={{fontSize:12,fontWeight:600,color:_.body}}>{l2}</div>
-              </div>
-            ))}
-          </div>
-        </Section>}
+        </div>}
 
         {/* ════ QUOTE — Clean guided flow ════ */}
         {tab==="quote"&&<Section key={anim}>
