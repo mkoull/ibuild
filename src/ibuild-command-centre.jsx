@@ -261,6 +261,8 @@ export default function IBuild(){
   const [editMsIdx,setEditMsIdx]=useState(null);
   const [editMsName,setEditMsName]=useState("");
   const [shiftWeeks,setShiftWeeks]=useState("");
+  const [dragMs,setDragMs]=useState(null);
+  const [dragOverMs,setDragOverMs]=useState(null);
   const saveTimer=useRef(null);
 
   const sigRef=useRef(null),sigCtx=useRef(null),sigDr=useRef(false);
@@ -881,7 +883,7 @@ export default function IBuild(){
             const isNext=i===p.milestones.findIndex(m=>!m.done)&&!ms.done;
             const isEditing=editMsIdx===i;
             return(
-              <div key={i} style={{display:"grid",gridTemplateColumns:"32px 1fr 60px 120px 120px 80px",gap:8,padding:"10px 0",borderBottom:`1px solid ${_.line}`,alignItems:"center",fontSize:13,background:isNext?`${_.ac}06`:"transparent"}}>
+              <div key={i} draggable={!isEditing} onDragStart={e=>{setDragMs(i);e.dataTransfer.effectAllowed="move";e.currentTarget.style.opacity="0.4"}} onDragEnd={e=>{e.currentTarget.style.opacity="1";if(dragMs!==null&&dragOverMs!==null&&dragMs!==dragOverMs){up(pr=>{const item=pr.milestones.splice(dragMs,1)[0];pr.milestones.splice(dragOverMs,0,item);return pr})}setDragMs(null);setDragOverMs(null)}} onDragOver={e=>{e.preventDefault();e.dataTransfer.dropEffect="move";setDragOverMs(i)}} onDragEnter={e=>e.preventDefault()} style={{display:"grid",gridTemplateColumns:"32px 1fr 60px 120px 120px 80px",gap:8,padding:"10px 0",borderBottom:`1px solid ${_.line}`,alignItems:"center",fontSize:13,background:dragOverMs===i&&dragMs!==null&&dragMs!==i?`${_.ac}08`:isNext?`${_.ac}06`:"transparent",cursor:isEditing?"default":"grab",transition:"background 0.1s"}}>
                 {/* Done toggle */}
                 <div onClick={()=>{const wasDone=ms.done;up(pr=>{pr.milestones[i]={...ms,done:!ms.done,date:!ms.done?ds():ms.date};return pr});if(!wasDone)log("Milestone: "+ms.name)}} style={{width:18,height:18,borderRadius:9,border:ms.done?"none":`1.5px solid ${isNext?_.ac:_.line2}`,background:ms.done?_.ink:"transparent",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",transition:"all 0.15s"}}>{ms.done&&<Check size={10} strokeWidth={3} color="#fff" />}</div>
                 {/* Name — inline edit */}
