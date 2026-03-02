@@ -373,11 +373,11 @@ export default function QuotePage() {
               <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr 1fr" : "1fr 1fr 1fr", gap: `${_.s3}px ${_.s4}px`, marginTop: _.s4 }}>
                 <div>
                   <label style={label}>Margin %</label>
-                  <input type="number" style={{ ...input, textAlign: "center", fontWeight: _.fontWeight.semi, fontSize: _.fontSize.unit }} value={margin} onChange={e => up(pr => { pr.marginPct = parseFloat(e.target.value) || 0; pr.margin = pr.marginPct; return pr; })} />
+                  <input type="number" style={{ ...input, textAlign: "center", fontWeight: _.fontWeight.semi, fontSize: _.fontSize.unit }} value={margin} onChange={e => up(pr => { const v = parseFloat(e.target.value) || 0; pr.marginPct = v; pr.margin = v; if (pr.costAllowances) pr.costAllowances.margin.pct = v; return pr; })} />
                 </div>
                 <div>
                   <label style={label}>Contingency %</label>
-                  <input type="number" style={{ ...input, textAlign: "center", fontWeight: _.fontWeight.semi, fontSize: _.fontSize.unit }} value={contingency} onChange={e => up(pr => { pr.contingencyPct = parseFloat(e.target.value) || 0; pr.contingency = pr.contingencyPct; return pr; })} />
+                  <input type="number" style={{ ...input, textAlign: "center", fontWeight: _.fontWeight.semi, fontSize: _.fontSize.unit }} value={contingency} onChange={e => up(pr => { const v = parseFloat(e.target.value) || 0; pr.contingencyPct = v; pr.contingency = v; if (pr.costAllowances) pr.costAllowances.contingency.pct = v; return pr; })} />
                 </div>
                 <div>
                   <label style={label}>Deposit %</label>

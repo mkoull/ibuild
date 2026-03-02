@@ -42,12 +42,14 @@ export function calc(p) {
 
   const ca = p.costAllowances || {};
   const allowancesAmt = Object.values(ca).reduce((t, a) => t + (a.amount || 0), 0);
+  // Overhead costs (site + office) are added to forecast — margin/contingency are revenue markups, not costs
+  const overheadAmt = ((ca.siteOverhead || {}).amount || 0) + ((ca.officeOverhead || {}).amount || 0);
 
-  const forecastCost = committedTotal + Math.max(0, revisedBudget - committedTotal);
+  const forecastCost = committedTotal + Math.max(0, revisedBudget - committedTotal) + overheadAmt;
   const forecastMarginNew = curr - forecastCost;
   const marginPctNew = curr > 0 ? ((curr - forecastCost) / curr) * 100 : 0;
 
-  return { sub, mar, con, gst, orig, aV, aVCount, curr, inv, paid, outstanding, act, cT, cA, cats, items, margin, contingency, budgetTotal, committedTotal, actualsTotal, budgetActualsTotal, combinedActuals, forecastMargin, marginPctCalc, billsTotal, billsPaid, baselineBudget, variationBudget, revisedBudget, allowancesAmt, forecastCost, forecastMarginNew, marginPctNew };
+  return { sub, mar, con, gst, orig, aV, aVCount, curr, inv, paid, outstanding, act, cT, cA, cats, items, margin, contingency, budgetTotal, committedTotal, actualsTotal, budgetActualsTotal, combinedActuals, forecastMargin, marginPctCalc, billsTotal, billsPaid, baselineBudget, variationBudget, revisedBudget, allowancesAmt, overheadAmt, forecastCost, forecastMarginNew, marginPctNew };
 }
 
 export function commitmentRemaining(commitment, supplierBills) {

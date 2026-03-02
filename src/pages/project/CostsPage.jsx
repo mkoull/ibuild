@@ -559,6 +559,9 @@ export default function CostsPage() {
                               const baseline = baselineBudgetTotal(pr.budget || []);
                               pr.costAllowances[key].amount = Math.round(baseline * (pct / 100) * 100) / 100;
                             }
+                            // Sync margin/contingency back to quote-level fields
+                            if (key === "margin") pr.marginPct = pct;
+                            if (key === "contingency") pr.contingencyPct = pct;
                             return pr;
                           });
                         }}
@@ -575,7 +578,13 @@ export default function CostsPage() {
                             if (!pr.costAllowances) pr.costAllowances = { margin: { pct: 0, amount: 0, locked: false }, contingency: { pct: 0, amount: 0, locked: false }, siteOverhead: { pct: 0, amount: 0, locked: false }, officeOverhead: { pct: 0, amount: 0, locked: false } };
                             pr.costAllowances[key].amount = amt;
                             const baseline = baselineBudgetTotal(pr.budget || []);
-                            if (baseline > 0) pr.costAllowances[key].pct = Math.round((amt / baseline) * 100 * 100) / 100;
+                            if (baseline > 0) {
+                              const derivedPct = Math.round((amt / baseline) * 100 * 100) / 100;
+                              pr.costAllowances[key].pct = derivedPct;
+                              // Sync margin/contingency back to quote-level fields
+                              if (key === "margin") pr.marginPct = derivedPct;
+                              if (key === "contingency") pr.contingencyPct = derivedPct;
+                            }
                             return pr;
                           });
                         }}
