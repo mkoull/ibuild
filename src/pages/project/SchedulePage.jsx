@@ -15,7 +15,7 @@ import {
   hasCircularDep, getDependencyConflicts, regenerateSchedule,
 } from "../../lib/scheduleEngine.js";
 import {
-  Check, ChevronRight, X, Printer, Share2, RefreshCw, Copy,
+  Check, ChevronRight, ChevronDown, X, Printer, Share2, RefreshCw, Copy,
   Calendar, Link2, AlertTriangle, Pin,
 } from "lucide-react";
 
@@ -49,10 +49,15 @@ function ensurePrintCSS() {
   style.textContent = `
     @media print {
       body > *:not(#root) { display: none !important; }
-      nav, [data-sidebar], [data-toast] { display: none !important; }
+      nav, aside, [data-sidebar], [data-toast] { display: none !important; }
       .schedule-print-hide { display: none !important; }
       .gantt-print-container { break-inside: avoid; }
       .client-timeline-card { break-inside: avoid; }
+      .schedule-list-container { overflow: visible !important; }
+      .schedule-list-container > * { min-width: 0 !important; }
+      .schedule-scroll-wrap { overflow: visible !important; }
+      .schedule-scroll-wrap::after { display: none !important; }
+      main { padding: 10mm !important; margin-left: 0 !important; }
       @page { size: A4 landscape; margin: 10mm; }
       table { page-break-inside: auto; }
       tr { page-break-inside: avoid; page-break-after: auto; }
@@ -83,6 +88,7 @@ export default function SchedulePage() {
   const [tradePrompt, setTradePrompt] = useState(null); // { idx, name }
   const [colWidths, setColWidths] = useState(loadColWidths);
   const [resizing, setResizing] = useState(null); // { col, startX, startW }
+  const [expandedMobile, setExpandedMobile] = useState(null); // index of expanded mobile row
 
   const startDate = p.startDate || "";
   const autoCascade = p.autoCascade || false;
@@ -358,11 +364,8 @@ export default function SchedulePage() {
     } catch { notify("Copy failed", "error"); }
   };
   const printSchedule = () => {
-    const prev = tab;
-    if (prev !== "Client") setTab("Client");
     requestAnimationFrame(() => requestAnimationFrame(() => {
       window.print();
-      if (prev !== "Client") setTab(prev);
     }));
   };
 
@@ -478,7 +481,8 @@ export default function SchedulePage() {
 
       {/* ═══ LIST VIEW ═══ */}
       {tab === "List" && (
-        <div style={{ overflowX: "auto" }}>
+        <div className="schedule-scroll-wrap" style={{ position: "relative" }}>
+          <div className="schedule-list-container" style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
           {/* Column headers with resize handles */}
           {!mobile ? (
             <div style={{ display: "grid", gridTemplateColumns: gridCols, gap: 4, padding: "6px 0", borderBottom: `2px solid ${_.ink}`, fontSize: _.fontSize.xs, color: _.muted, fontWeight: _.fontWeight.semi, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", minWidth: 900 }}>
@@ -494,8 +498,9 @@ export default function SchedulePage() {
               <span></span>
             </div>
           ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "28px 1fr auto 60px", gap: 6, padding: "6px 0", borderBottom: `2px solid ${_.ink}`, fontSize: _.fontSize.xs, color: _.muted, fontWeight: _.fontWeight.semi, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase" }}>
-              <span></span><span>Milestone</span><span>Status</span><span></span>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 0", borderBottom: `2px solid ${_.ink}`, fontSize: _.fontSize.xs, color: _.muted, fontWeight: _.fontWeight.semi, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase" }}>
+              <span>Milestones</span>
+              <span>{computed.filter(m => m.status === "complete").length}/{computed.length} done</span>
             </div>
           )}
 
@@ -507,10 +512,165 @@ export default function SchedulePage() {
             const statusOpt = STATUS_OPTS.find(s => s.value === ms.status) || STATUS_OPTS[0];
             const hasConflict = conflicts.some(c => c.taskId === ms.id);
             const tradeDisplay = tradeName(ms);
+            const isExpanded = mobile && expandedMobile === i;
 
+            if (mobile) {
+              // ── Mobile: expandable card row ──
+              return (
+                <div key={ms.id || i} style={{
+                  borderBottom: `1px solid ${_.line}`,
+                  background: isNext ? `${_.ac}06` : "transparent",
+                }}>
+                  {/* Summary row — always visible */}
+                  <div onClick={() => setExpandedMobile(isExpanded ? null : i)} style={{
+                    display: "flex", alignItems: "center", gap: _.s2, padding: `${_.s3}px 0`,
+                    cursor: "pointer",
+                  }}>
+                    {/* Status circle */}
+                    <div onClick={e => {
+                      e.stopPropagation();
+                      const next = ms.status === "not_started" ? "in_progress" : ms.status === "in_progress" ? "complete" : "not_started";
+                      setMsStatus(i, next);
+                    }} style={{
+                      width: 20, height: 20, borderRadius: 10, flexShrink: 0,
+                      border: ms.status === "complete" ? "none" : `1.5px solid ${ms.status === "in_progress" ? _.ac : isNext ? _.ac : _.line2}`,
+                      background: ms.status === "complete" ? _.green : ms.status === "in_progress" ? `${_.ac}20` : "transparent",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>
+                      {ms.status === "complete" && <Check size={10} strokeWidth={3} color="#fff" />}
+                      {ms.status === "in_progress" && <div style={{ width: 8, height: 8, borderRadius: 4, background: _.ac }} />}
+                    </div>
+
+                    {/* Name + meta */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                        {ms.manuallyPinned && <Pin size={10} color={_.amber} style={{ flexShrink: 0 }} />}
+                        <span style={{
+                          fontSize: _.fontSize.base, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                          fontWeight: ms.status === "complete" ? _.fontWeight.medium : isNext ? _.fontWeight.semi : _.fontWeight.normal,
+                          color: ms.status === "complete" ? _.muted : overdue ? _.red : _.ink,
+                        }}>{ms.name}</span>
+                        {isNext && <span style={{ fontSize: 9, fontWeight: _.fontWeight.bold, color: _.ac, flexShrink: 0 }}>NEXT</span>}
+                        {hasConflict && <AlertTriangle size={10} color={_.amber} style={{ flexShrink: 0 }} />}
+                      </div>
+                      <div style={{ fontSize: _.fontSize.xs, color: _.muted, marginTop: 1, display: "flex", alignItems: "center", gap: _.s2 }}>
+                        {ms.plannedStart && <span>{ms.plannedStart}</span>}
+                        {ms.plannedStart && ms.plannedFinish && <span>→ {ms.plannedFinish}</span>}
+                        {tradeDisplay && <span style={{ color: _.body }}>· {tradeDisplay}</span>}
+                        {!ms.plannedStart && ms.durationDays && <span>{ms.durationDays}d</span>}
+                      </div>
+                    </div>
+
+                    {/* Right side: badge + expand chevron */}
+                    <div style={{ display: "flex", alignItems: "center", gap: _.s2, flexShrink: 0 }}>
+                      {ms.percentComplete > 0 && ms.percentComplete < 100 && (
+                        <div style={{ width: 32, height: 4, background: _.well, borderRadius: 2, overflow: "hidden" }}>
+                          <div style={{ height: "100%", width: `${ms.percentComplete}%`, background: _.ac, borderRadius: 2 }} />
+                        </div>
+                      )}
+                      <span style={badge(statusOpt.color)}>{statusOpt.label}</span>
+                      <ChevronDown size={14} color={_.muted} style={{ transform: isExpanded ? "rotate(180deg)" : "none", transition: `transform ${_.tr}` }} />
+                    </div>
+                  </div>
+
+                  {/* Expanded detail panel */}
+                  {isExpanded && (
+                    <div style={{ padding: `0 0 ${_.s4}px ${_.s2}px`, animation: "fadeUp 0.12s ease" }}>
+                      {/* Duration + dates */}
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: _.s2, marginBottom: _.s3 }}>
+                        <div>
+                          <div style={{ fontSize: _.fontSize.xs, color: _.muted, fontWeight: _.fontWeight.semi, marginBottom: 4, textTransform: "uppercase", letterSpacing: _.letterSpacing.wide }}>Duration</div>
+                          <input type="number" min="1" style={{ width: "100%", padding: "6px 8px", background: _.well, border: `1px solid ${_.line}`, borderRadius: _.rXs, color: _.ink, fontSize: _.fontSize.sm, textAlign: "center", outline: "none", fontWeight: _.fontWeight.semi, fontFamily: "inherit" }}
+                            value={ms.durationDays || ""} onChange={e => setMsDuration(i, Math.max(1, parseInt(e.target.value) || 1))} />
+                        </div>
+                        <div>
+                          <div style={{ fontSize: _.fontSize.xs, color: _.muted, fontWeight: _.fontWeight.semi, marginBottom: 4, textTransform: "uppercase", letterSpacing: _.letterSpacing.wide }}>Start</div>
+                          <input type="date" value={ms.plannedStart || ""} onChange={e => setMsStartDate(i, e.target.value)}
+                            style={{ width: "100%", padding: "6px 4px", background: _.well, border: `1px solid ${_.line}`, borderRadius: _.rXs, color: overdue ? _.red : _.ink, fontSize: _.fontSize.sm, outline: "none", fontFamily: "inherit" }} />
+                        </div>
+                        <div>
+                          <div style={{ fontSize: _.fontSize.xs, color: _.muted, fontWeight: _.fontWeight.semi, marginBottom: 4, textTransform: "uppercase", letterSpacing: _.letterSpacing.wide }}>Finish</div>
+                          <input type="date" value={ms.plannedFinish || ""} onChange={e => setMsFinishDate(i, e.target.value)}
+                            style={{ width: "100%", padding: "6px 4px", background: _.well, border: `1px solid ${_.line}`, borderRadius: _.rXs, color: overdue ? _.red : _.ink, fontSize: _.fontSize.sm, outline: "none", fontFamily: "inherit" }} />
+                        </div>
+                      </div>
+
+                      {/* Trade + Status + % */}
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 60px", gap: _.s2, marginBottom: _.s3 }}>
+                        <div>
+                          <div style={{ fontSize: _.fontSize.xs, color: _.muted, fontWeight: _.fontWeight.semi, marginBottom: 4, textTransform: "uppercase", letterSpacing: _.letterSpacing.wide }}>Trade</div>
+                          <input
+                            list={`trades-m-${ms.id}`}
+                            value={tradeDisplay}
+                            placeholder="Type or select…"
+                            onChange={e => {
+                              const val = e.target.value;
+                              const match = allTrades.find(t => t.businessName === val);
+                              if (match) handleTradeChange(i, match.id);
+                              else updateMs(i, { tradeId: null, freeTextTrade: val });
+                            }}
+                            onBlur={e => {
+                              const val = e.target.value.trim();
+                              if (!val) { updateMs(i, { tradeId: null, freeTextTrade: "" }); return; }
+                              const match = allTrades.find(t => t.businessName === val);
+                              if (!match && val) setTradePrompt({ idx: i, name: val });
+                            }}
+                            style={{ width: "100%", padding: "6px 8px", background: _.well, border: `1px solid ${_.line}`, borderRadius: _.rXs, color: _.ink, fontSize: _.fontSize.sm, outline: "none", fontFamily: "inherit" }}
+                          />
+                          <datalist id={`trades-m-${ms.id}`}>
+                            {allTrades.map(t => <option key={t.id} value={t.businessName} />)}
+                          </datalist>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: _.fontSize.xs, color: _.muted, fontWeight: _.fontWeight.semi, marginBottom: 4, textTransform: "uppercase", letterSpacing: _.letterSpacing.wide }}>Status</div>
+                          <select value={ms.status || "not_started"} onChange={e => setMsStatus(i, e.target.value)}
+                            style={{ width: "100%", padding: "6px 4px", background: `${statusOpt.color}14`, border: `1px solid ${statusOpt.color}30`, borderRadius: _.rXs, color: statusOpt.color, fontSize: _.fontSize.sm, fontWeight: _.fontWeight.semi, outline: "none", fontFamily: "inherit" }}>
+                            {STATUS_OPTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: _.fontSize.xs, color: _.muted, fontWeight: _.fontWeight.semi, marginBottom: 4, textTransform: "uppercase", letterSpacing: _.letterSpacing.wide }}>%</div>
+                          <input type="number" min="0" max="100"
+                            style={{ width: "100%", padding: "6px 4px", background: _.well, border: `1px solid ${_.line}`, borderRadius: _.rXs, color: _.ink, fontSize: _.fontSize.sm, textAlign: "center", outline: "none", fontWeight: _.fontWeight.semi, fontFamily: "inherit" }}
+                            value={ms.percentComplete || 0} onChange={e => setMsPercent(i, parseInt(e.target.value) || 0)} />
+                        </div>
+                      </div>
+
+                      {/* Deps + Actions row */}
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: _.s2 }}>
+                        <div onClick={() => setDepsModal(i)} style={{
+                          flex: 1, padding: "6px 8px", background: _.well, border: `1px solid ${_.line}`, borderRadius: _.rXs,
+                          fontSize: _.fontSize.sm, color: (ms.dependsOn || []).length > 0 ? _.ac : _.faint, cursor: "pointer",
+                          display: "flex", alignItems: "center", gap: 4,
+                        }}>
+                          <Link2 size={10} style={{ flexShrink: 0 }} />
+                          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {(ms.dependsOn || []).length > 0
+                              ? "Deps: " + (ms.dependsOn || []).map(dId => milestones.find(m => m.id === dId)?.name || "?").join(", ")
+                              : "No dependencies"
+                            }
+                          </span>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: _.s2 }}>
+                          <div onClick={() => togglePin(i)} style={{ padding: 4, color: ms.manuallyPinned ? _.amber : _.faint }}>
+                            <Pin size={14} />
+                          </div>
+                          <div onClick={() => { if (milestones.length <= 1) return; up(pr => { pr.schedule.splice(i, 1); pr.schedule.forEach((m, j) => m.order = j); return pr; }); notify("Removed"); setExpandedMobile(null); }}
+                            style={{ padding: 4, color: _.faint }}>
+                            <X size={14} />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            // ── Desktop: grid row (unchanged) ──
             return (
               <div key={ms.id || i}
-                draggable={!isEditing && !mobile}
+                draggable={!isEditing}
                 onDragStart={e => { setDragMs(i); e.dataTransfer.effectAllowed = "move"; e.currentTarget.style.opacity = "0.4"; }}
                 onDragEnd={e => {
                   e.currentTarget.style.opacity = "1";
@@ -521,15 +681,11 @@ export default function SchedulePage() {
                 }}
                 onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setDragOverMs(i); }}
                 onDragEnter={e => e.preventDefault()}
-                style={!mobile ? {
+                style={{
                   display: "grid", gridTemplateColumns: gridCols, gap: 4, padding: "7px 0",
                   borderBottom: `1px solid ${_.line}`, alignItems: "center", fontSize: _.fontSize.base,
                   background: hasConflict ? `${_.amber}08` : dragOverMs === i && dragMs !== null && dragMs !== i ? `${_.ac}08` : isNext ? `${_.ac}06` : "transparent",
                   cursor: isEditing ? "default" : "grab", transition: `background ${_.tr}`, minWidth: 900,
-                } : {
-                  display: "grid", gridTemplateColumns: "28px 1fr auto 60px", gap: 6, padding: "8px 0",
-                  borderBottom: `1px solid ${_.line}`, alignItems: "center", fontSize: _.fontSize.base,
-                  background: isNext ? `${_.ac}06` : "transparent",
                 }}
               >
                 {/* Status toggle */}
@@ -546,7 +702,7 @@ export default function SchedulePage() {
                   {ms.status === "in_progress" && <div style={{ width: 8, height: 8, borderRadius: 4, background: _.ac }} />}
                 </div>
 
-                {/* Name — full text, wraps if wide enough, tooltip always */}
+                {/* Name */}
                 {isEditing ? (
                   <input autoFocus style={{ fontSize: _.fontSize.base, fontWeight: _.fontWeight.medium, color: _.ink, border: "none", borderBottom: `1px solid ${_.ac}`, outline: "none", padding: "2px 0", background: "transparent", fontFamily: "inherit", width: "100%" }}
                     value={editMsName} onChange={e => setEditMsName(e.target.value)}
@@ -565,99 +721,81 @@ export default function SchedulePage() {
                   </div>
                 )}
 
-                {!mobile && (
-                  <>
-                    {/* Duration */}
-                    <input type="number" min="1" style={{ width: "100%", padding: "4px 6px", background: _.well, border: `1px solid ${_.line}`, borderRadius: _.rXs, color: _.ink, fontSize: _.fontSize.sm, textAlign: "center", outline: "none", fontWeight: _.fontWeight.semi, fontFamily: "inherit" }}
-                      value={ms.durationDays || ""} onChange={e => setMsDuration(i, Math.max(1, parseInt(e.target.value) || 1))} />
+                {/* Duration */}
+                <input type="number" min="1" style={{ width: "100%", padding: "4px 6px", background: _.well, border: `1px solid ${_.line}`, borderRadius: _.rXs, color: _.ink, fontSize: _.fontSize.sm, textAlign: "center", outline: "none", fontWeight: _.fontWeight.semi, fontFamily: "inherit" }}
+                  value={ms.durationDays || ""} onChange={e => setMsDuration(i, Math.max(1, parseInt(e.target.value) || 1))} />
 
-                    {/* Start date */}
-                    <input type="date" value={ms.plannedStart || ""} onChange={e => setMsStartDate(i, e.target.value)}
-                      style={{ width: "100%", padding: "4px 4px", background: _.well, border: `1px solid ${_.line}`, borderRadius: _.rXs, color: overdue ? _.red : _.ink, fontSize: _.fontSize.sm, outline: "none", cursor: "pointer", fontFamily: "inherit" }} />
+                {/* Start date */}
+                <input type="date" value={ms.plannedStart || ""} onChange={e => setMsStartDate(i, e.target.value)}
+                  style={{ width: "100%", padding: "4px 4px", background: _.well, border: `1px solid ${_.line}`, borderRadius: _.rXs, color: overdue ? _.red : _.ink, fontSize: _.fontSize.sm, outline: "none", cursor: "pointer", fontFamily: "inherit" }} />
 
-                    {/* Finish date */}
-                    <input type="date" value={ms.plannedFinish || ""} onChange={e => setMsFinishDate(i, e.target.value)}
-                      style={{ width: "100%", padding: "4px 4px", background: _.well, border: `1px solid ${_.line}`, borderRadius: _.rXs, color: overdue ? _.red : _.ink, fontSize: _.fontSize.sm, outline: "none", cursor: "pointer", fontFamily: "inherit" }} />
+                {/* Finish date */}
+                <input type="date" value={ms.plannedFinish || ""} onChange={e => setMsFinishDate(i, e.target.value)}
+                  style={{ width: "100%", padding: "4px 4px", background: _.well, border: `1px solid ${_.line}`, borderRadius: _.rXs, color: overdue ? _.red : _.ink, fontSize: _.fontSize.sm, outline: "none", cursor: "pointer", fontFamily: "inherit" }} />
 
-                    {/* Trade — combo: select + type */}
-                    <div style={{ position: "relative" }}>
-                      <input
-                        list={`trades-${ms.id}`}
-                        value={tradeDisplay}
-                        placeholder="Type or select…"
-                        onChange={e => {
-                          const val = e.target.value;
-                          const match = allTrades.find(t => t.businessName === val);
-                          if (match) {
-                            handleTradeChange(i, match.id);
-                          } else {
-                            updateMs(i, { tradeId: null, freeTextTrade: val });
-                          }
-                        }}
-                        onBlur={e => {
-                          const val = e.target.value.trim();
-                          if (!val) { updateMs(i, { tradeId: null, freeTextTrade: "" }); return; }
-                          const match = allTrades.find(t => t.businessName === val);
-                          if (!match && val) {
-                            setTradePrompt({ idx: i, name: val });
-                          }
-                        }}
-                        style={{ width: "100%", padding: "4px 6px", background: _.well, border: `1px solid ${_.line}`, borderRadius: _.rXs, color: _.ink, fontSize: _.fontSize.sm, outline: "none", fontFamily: "inherit" }}
-                      />
-                      <datalist id={`trades-${ms.id}`}>
-                        {allTrades.map(t => <option key={t.id} value={t.businessName} />)}
-                      </datalist>
-                    </div>
+                {/* Trade — combo: select + type */}
+                <div style={{ position: "relative" }}>
+                  <input
+                    list={`trades-${ms.id}`}
+                    value={tradeDisplay}
+                    placeholder="Type or select…"
+                    onChange={e => {
+                      const val = e.target.value;
+                      const match = allTrades.find(t => t.businessName === val);
+                      if (match) {
+                        handleTradeChange(i, match.id);
+                      } else {
+                        updateMs(i, { tradeId: null, freeTextTrade: val });
+                      }
+                    }}
+                    onBlur={e => {
+                      const val = e.target.value.trim();
+                      if (!val) { updateMs(i, { tradeId: null, freeTextTrade: "" }); return; }
+                      const match = allTrades.find(t => t.businessName === val);
+                      if (!match && val) {
+                        setTradePrompt({ idx: i, name: val });
+                      }
+                    }}
+                    style={{ width: "100%", padding: "4px 6px", background: _.well, border: `1px solid ${_.line}`, borderRadius: _.rXs, color: _.ink, fontSize: _.fontSize.sm, outline: "none", fontFamily: "inherit" }}
+                  />
+                  <datalist id={`trades-${ms.id}`}>
+                    {allTrades.map(t => <option key={t.id} value={t.businessName} />)}
+                  </datalist>
+                </div>
 
-                    {/* Status */}
-                    <select value={ms.status || "not_started"} onChange={e => setMsStatus(i, e.target.value)}
-                      style={{ width: "100%", padding: "4px 4px", background: `${statusOpt.color}14`, border: `1px solid ${statusOpt.color}30`, borderRadius: _.rXs, color: statusOpt.color, fontSize: _.fontSize.sm, fontWeight: _.fontWeight.semi, outline: "none", cursor: "pointer", fontFamily: "inherit" }}>
-                      {STATUS_OPTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-                    </select>
+                {/* Status */}
+                <select value={ms.status || "not_started"} onChange={e => setMsStatus(i, e.target.value)}
+                  style={{ width: "100%", padding: "4px 4px", background: `${statusOpt.color}14`, border: `1px solid ${statusOpt.color}30`, borderRadius: _.rXs, color: statusOpt.color, fontSize: _.fontSize.sm, fontWeight: _.fontWeight.semi, outline: "none", cursor: "pointer", fontFamily: "inherit" }}>
+                  {STATUS_OPTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                </select>
 
-                    {/* % */}
-                    <input type="number" min="0" max="100" style={{ width: "100%", padding: "4px 4px", background: _.well, border: `1px solid ${_.line}`, borderRadius: _.rXs, color: _.ink, fontSize: _.fontSize.sm, textAlign: "center", outline: "none", fontWeight: _.fontWeight.semi, fontFamily: "inherit" }}
-                      value={ms.percentComplete || 0} onChange={e => setMsPercent(i, parseInt(e.target.value) || 0)} />
+                {/* % */}
+                <input type="number" min="0" max="100" style={{ width: "100%", padding: "4px 4px", background: _.well, border: `1px solid ${_.line}`, borderRadius: _.rXs, color: _.ink, fontSize: _.fontSize.sm, textAlign: "center", outline: "none", fontWeight: _.fontWeight.semi, fontFamily: "inherit" }}
+                  value={ms.percentComplete || 0} onChange={e => setMsPercent(i, parseInt(e.target.value) || 0)} />
 
-                    {/* Depends On */}
-                    <div onClick={() => setDepsModal(i)} title={(ms.dependsOn || []).map(dId => milestones.find(m => m.id === dId)?.name || "?").join(", ") || "None"} style={{
-                      padding: "4px 6px", background: _.well, border: `1px solid ${_.line}`, borderRadius: _.rXs,
-                      fontSize: _.fontSize.sm, color: (ms.dependsOn || []).length > 0 ? _.ac : _.faint, cursor: "pointer",
-                      display: "flex", alignItems: "center", gap: 4, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis",
-                    }}>
-                      <Link2 size={10} style={{ flexShrink: 0 }} />
-                      <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
-                        {(ms.dependsOn || []).length > 0
-                          ? (ms.dependsOn || []).map(dId => milestones.find(m => m.id === dId)?.name || "?").join(", ")
-                          : "None"
-                        }
-                      </span>
-                    </div>
-                  </>
-                )}
-
-                {/* Mobile: status badge */}
-                {mobile && (
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 }}>
-                    <span style={badge(statusOpt.color)}>{statusOpt.label}</span>
-                    {ms.percentComplete > 0 && ms.percentComplete < 100 && (
-                      <div style={{ width: 48, height: 4, background: _.well, borderRadius: 2, overflow: "hidden" }}>
-                        <div style={{ height: "100%", width: `${ms.percentComplete}%`, background: _.ac, borderRadius: 2 }} />
-                      </div>
-                    )}
-                  </div>
-                )}
+                {/* Depends On */}
+                <div onClick={() => setDepsModal(i)} title={(ms.dependsOn || []).map(dId => milestones.find(m => m.id === dId)?.name || "?").join(", ") || "None"} style={{
+                  padding: "4px 6px", background: _.well, border: `1px solid ${_.line}`, borderRadius: _.rXs,
+                  fontSize: _.fontSize.sm, color: (ms.dependsOn || []).length > 0 ? _.ac : _.faint, cursor: "pointer",
+                  display: "flex", alignItems: "center", gap: 4, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis",
+                }}>
+                  <Link2 size={10} style={{ flexShrink: 0 }} />
+                  <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {(ms.dependsOn || []).length > 0
+                      ? (ms.dependsOn || []).map(dId => milestones.find(m => m.id === dId)?.name || "?").join(", ")
+                      : "None"
+                    }
+                  </span>
+                </div>
 
                 {/* Actions */}
                 <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
-                  {!mobile && (
-                    <div onClick={() => togglePin(i)} title={ms.manuallyPinned ? "Unpin (allow cascade)" : "Pin (prevent cascade)"} style={{ cursor: "pointer", color: ms.manuallyPinned ? _.amber : _.faint, padding: 2, display: "flex" }}
-                      onMouseEnter={e => { if (!ms.manuallyPinned) e.currentTarget.style.color = _.amber; }}
-                      onMouseLeave={e => { if (!ms.manuallyPinned) e.currentTarget.style.color = _.faint; }}
-                    ><Pin size={11} /></div>
-                  )}
-                  {!mobile && i > 0 && <div onClick={() => up(pr => { const arr = pr.schedule; const tmp = arr[i]; arr[i] = arr[i - 1]; arr[i - 1] = tmp; arr.forEach((m, j) => m.order = j); return pr; })} style={{ cursor: "pointer", color: _.faint, padding: 2, display: "flex" }} onMouseEnter={e => e.currentTarget.style.color = _.ink} onMouseLeave={e => e.currentTarget.style.color = _.faint}><ChevronRight size={11} style={{ transform: "rotate(-90deg)" }} /></div>}
-                  {!mobile && i < milestones.length - 1 && <div onClick={() => up(pr => { const arr = pr.schedule; const tmp = arr[i]; arr[i] = arr[i + 1]; arr[i + 1] = tmp; arr.forEach((m, j) => m.order = j); return pr; })} style={{ cursor: "pointer", color: _.faint, padding: 2, display: "flex" }} onMouseEnter={e => e.currentTarget.style.color = _.ink} onMouseLeave={e => e.currentTarget.style.color = _.faint}><ChevronRight size={11} style={{ transform: "rotate(90deg)" }} /></div>}
+                  <div onClick={() => togglePin(i)} title={ms.manuallyPinned ? "Unpin (allow cascade)" : "Pin (prevent cascade)"} style={{ cursor: "pointer", color: ms.manuallyPinned ? _.amber : _.faint, padding: 2, display: "flex" }}
+                    onMouseEnter={e => { if (!ms.manuallyPinned) e.currentTarget.style.color = _.amber; }}
+                    onMouseLeave={e => { if (!ms.manuallyPinned) e.currentTarget.style.color = _.faint; }}
+                  ><Pin size={11} /></div>
+                  {i > 0 && <div onClick={() => up(pr => { const arr = pr.schedule; const tmp = arr[i]; arr[i] = arr[i - 1]; arr[i - 1] = tmp; arr.forEach((m, j) => m.order = j); return pr; })} style={{ cursor: "pointer", color: _.faint, padding: 2, display: "flex" }} onMouseEnter={e => e.currentTarget.style.color = _.ink} onMouseLeave={e => e.currentTarget.style.color = _.faint}><ChevronRight size={11} style={{ transform: "rotate(-90deg)" }} /></div>}
+                  {i < milestones.length - 1 && <div onClick={() => up(pr => { const arr = pr.schedule; const tmp = arr[i]; arr[i] = arr[i + 1]; arr[i + 1] = tmp; arr.forEach((m, j) => m.order = j); return pr; })} style={{ cursor: "pointer", color: _.faint, padding: 2, display: "flex" }} onMouseEnter={e => e.currentTarget.style.color = _.ink} onMouseLeave={e => e.currentTarget.style.color = _.faint}><ChevronRight size={11} style={{ transform: "rotate(90deg)" }} /></div>}
                   <div onClick={() => { if (milestones.length <= 1) return; up(pr => { pr.schedule.splice(i, 1); pr.schedule.forEach((m, j) => m.order = j); return pr; }); notify("Removed"); }} style={{ cursor: "pointer", color: _.faint, padding: 2, display: "flex" }} onMouseEnter={e => e.currentTarget.style.color = _.red} onMouseLeave={e => e.currentTarget.style.color = _.faint}><X size={11} /></div>
                 </div>
               </div>
@@ -670,6 +808,16 @@ export default function SchedulePage() {
               onKeyDown={e => { if (e.key === "Enter") { addMilestone(newMs); setNewMs(""); } }} />
             <Button onClick={() => { addMilestone(newMs); setNewMs(""); }}>Add</Button>
           </div>
+          </div>
+
+          {/* Scroll fade indicator — desktop only */}
+          {!mobile && (
+            <div style={{
+              position: "absolute", right: 0, top: 0, bottom: 0, width: 24,
+              background: `linear-gradient(to right, transparent, ${_.bg})`,
+              pointerEvents: "none", opacity: 0.8,
+            }} className="schedule-scroll-fade" />
+          )}
         </div>
       )}
 
@@ -853,9 +1001,9 @@ export default function SchedulePage() {
         <div style={{ borderTop: `1px solid ${_.line}`, paddingTop: _.s4, marginBottom: _.s4 }}>
           <div style={{ fontSize: _.fontSize.sm, color: _.muted, fontWeight: _.fontWeight.semi, marginBottom: _.s2, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase" }}>Print / Download</div>
           <div style={{ fontSize: _.fontSize.base, color: _.body, marginBottom: _.s3 }}>
-            Print switches to the Client view and opens your browser's print dialog.
+            Opens your browser's print dialog for the current view.
           </div>
-          <Button variant="secondary" size="sm" icon={Printer} onClick={() => { setShareModal(false); printSchedule(); }}>Print client view</Button>
+          <Button variant="secondary" size="sm" icon={Printer} onClick={() => { setShareModal(false); printSchedule(); }}>Print schedule</Button>
         </div>
         <div style={{ display: "flex", justifyContent: "flex-end" }}>
           <Button variant="ghost" onClick={() => setShareModal(false)}>Close</Button>
