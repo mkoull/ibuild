@@ -4,7 +4,7 @@ import { mkProject } from "../data/models.js";
 import { loadVersioned, saveVersioned } from "../data/store.js";
 
 const STORAGE_KEY = "ib_projects";
-const STORE_VERSION = 3;
+const STORE_VERSION = 4;
 const SAVE_DEBOUNCE_MS = 300;
 
 function hydrateProject(pr) {
@@ -60,6 +60,18 @@ function migrateProjects(data, fromVersion) {
           }
         });
       }
+    });
+    data = norm;
+  }
+  if (fromVersion <= 3) {
+    const norm = data && data.byId ? data : { byId: {}, allIds: [] };
+    Object.values(norm.byId).forEach(p => {
+      if (p.autoCascade === undefined) p.autoCascade = false;
+      (p.schedule || []).forEach(m => {
+        if (m.freeTextTrade === undefined) m.freeTextTrade = "";
+        if (m.constraintMode === undefined) m.constraintMode = "finish-to-start";
+        if (m.manuallyPinned === undefined) m.manuallyPinned = false;
+      });
     });
     data = norm;
   }

@@ -1,30 +1,33 @@
 /**
  * scheduleEngine.js — Pure function library for construction schedule calculations.
- * Follows the calc.js pattern: stateless, no side effects, returns new objects.
+ *
+ * Design decisions:
+ * - finishDate = startDate + durationDays (primary rule)
+ * - If user edits finishDate directly, durationDays is recomputed
+ * - Tasks can overlap by default — no auto-cascade unless explicitly enabled
+ * - Auto-cascade only shifts tasks with DIRECT or TRANSITIVE dependencies
+ * - manuallyPinned tasks are never moved by cascade (unless user forces regenerate)
+ * - Circular dependencies are detected and blocked
  */
 
 // ── Date helpers ────────────────────────────────────────────────────────────
 
 export function addDays(dateStr, days) {
   if (!dateStr) return "";
-  const d = new Date(dateStr);
+  const d = new Date(dateStr + "T00:00:00");
   d.setDate(d.getDate() + days);
   return d.toISOString().split("T")[0];
 }
 
 export function daysBetween(a, b) {
   if (!a || !b) return 0;
-  const da = new Date(a);
-  const db = new Date(b);
+  const da = new Date(a + "T00:00:00");
+  const db = new Date(b + "T00:00:00");
   return Math.round((db - da) / (1000 * 60 * 60 * 24));
 }
 
-function toDateStr(d) {
-  return d.toISOString().split("T")[0];
-}
-
 function todayStr() {
-  return toDateStr(new Date());
+  return new Date().toISOString().split("T")[0];
 }
 
 // ── Legacy field sync ───────────────────────────────────────────────────────
@@ -61,7 +64,80 @@ export function updateMilestoneStatus(m, newStatus) {
   return syncLegacyFields(updated);
 }
 
+// ── Circular dependency detection ───────────────────────────────────────────
+
+export function hasCircularDep(milestones, taskId, proposedDeps) {
+  // BFS from each proposed dep's own deps to see if we reach taskId
+  const byId = {};
+  milestones.forEach(m => { byId[m.id] = m; });
+
+  const visited = new Set();
+  const queue = [...proposedDeps];
+
+  while (queue.length > 0) {
+    const id = queue.shift();
+    if (id === taskId) return true;
+    if (visited.has(id)) continue;
+    visited.add(id);
+    const m = byId[id];
+    if (m && m.dependsOn) {
+      queue.push(...m.dependsOn);
+    }
+  }
+  return false;
+}
+
+// ── Get all transitive dependents of a task ─────────────────────────────────
+
+function getTransitiveDependents(milestones, sourceId) {
+  // Returns Set of milestone IDs that depend on sourceId (directly or transitively)
+  const dependents = new Set();
+  const queue = [sourceId];
+
+  while (queue.length > 0) {
+    const id = queue.shift();
+    milestones.forEach(m => {
+      if (m.dependsOn && m.dependsOn.includes(id) && !dependents.has(m.id)) {
+        dependents.add(m.id);
+        queue.push(m.id);
+      }
+    });
+  }
+  return dependents;
+}
+
+// ── Dependency conflict detection ───────────────────────────────────────────
+
+export function getDependencyConflicts(milestones) {
+  // Returns array of { taskId, taskName, depId, depName } where task starts before dep finishes
+  const byId = {};
+  milestones.forEach(m => { byId[m.id] = m; });
+
+  const conflicts = [];
+  milestones.forEach(m => {
+    if (!m.dependsOn || !m.plannedStart) return;
+    m.dependsOn.forEach(depId => {
+      const dep = byId[depId];
+      if (dep && dep.plannedFinish && m.plannedStart < dep.plannedFinish) {
+        conflicts.push({ taskId: m.id, taskName: m.name, depId, depName: dep.name });
+      }
+    });
+  });
+  return conflicts;
+}
+
+// ── Core: compute dates for a single milestone ──────────────────────────────
+
+function computeDates(m, startDate) {
+  const copy = { ...m };
+  copy.plannedStart = addDays(startDate, copy.offsetDays || 0);
+  copy.plannedFinish = addDays(copy.plannedStart, copy.durationDays || 7);
+  return copy;
+}
+
 // ── Core schedule calculation ───────────────────────────────────────────────
+// ONLY applies dependency-driven dates. Does NOT cascade or shift anything.
+// This is used for display purposes — it computes dates from offsets + deps.
 
 export function calculateSchedule(milestones, startDate) {
   if (!startDate || !milestones.length) return milestones.map(m => syncLegacyFields(m));
@@ -69,12 +145,11 @@ export function calculateSchedule(milestones, startDate) {
   const sorted = [...milestones].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   const byId = {};
 
-  // First pass: compute dates
-  const computed = sorted.map(m => {
+  return sorted.map(m => {
     const copy = { ...m };
 
-    if (copy.dependsOn && copy.dependsOn.length > 0) {
-      // Dependency-driven start: max of all dep finish dates
+    // Only override start from dependencies if NOT manually pinned
+    if (!copy.manuallyPinned && copy.dependsOn && copy.dependsOn.length > 0) {
       let maxFinish = null;
       for (const depId of copy.dependsOn) {
         const dep = byId[depId];
@@ -85,7 +160,9 @@ export function calculateSchedule(milestones, startDate) {
         }
       }
       if (maxFinish) {
-        copy.plannedStart = maxFinish;
+        // Only push later, never earlier (finish-to-start constraint)
+        const offsetStart = addDays(startDate, copy.offsetDays || 0);
+        copy.plannedStart = maxFinish > offsetStart ? maxFinish : offsetStart;
       } else {
         copy.plannedStart = addDays(startDate, copy.offsetDays || 0);
       }
@@ -98,8 +175,30 @@ export function calculateSchedule(milestones, startDate) {
     byId[copy.id] = copy;
     return syncLegacyFields(copy);
   });
+}
 
-  return computed;
+// ── Auto-cascade: shift ONLY dependent tasks ────────────────────────────────
+// Called when autoCascade is ON and a task changes.
+// Only shifts tasks that have a dependency (direct or transitive) on changedId.
+// Respects manuallyPinned — pinned tasks are skipped.
+
+export function cascadeDependents(milestones, changedId, deltaDays, startDate) {
+  if (deltaDays === 0) return milestones;
+
+  const dependents = getTransitiveDependents(milestones, changedId);
+  if (dependents.size === 0) return milestones;
+
+  const updated = milestones.map(m => {
+    if (!dependents.has(m.id)) return m;
+    if (m.manuallyPinned) return m; // Never move pinned tasks
+    return syncLegacyFields({
+      ...m,
+      offsetDays: Math.max(0, (m.offsetDays || 0) + deltaDays),
+    });
+  });
+
+  // Recalculate with new offsets
+  return startDate ? calculateSchedule(updated, startDate) : updated;
 }
 
 // ── Shift operations ────────────────────────────────────────────────────────
@@ -114,49 +213,32 @@ export function shiftProject(milestones, shiftDays, { onlyIncomplete = false } =
   });
 }
 
-export function shiftDownstream(milestones, changedId, deltaDays) {
-  const idx = milestones.findIndex(m => m.id === changedId);
-  if (idx < 0 || deltaDays === 0) return milestones;
+// ── Regenerate from project start date ──────────────────────────────────────
+// Rebuilds dates from offsetDays + dependency rules.
+// pinnedOverride: if true, also recalculates pinned tasks (clears pinned flag).
 
-  return milestones.map((m, i) => {
-    if (i <= idx) return m;
-    // Shift milestones that come after the changed one
-    const hasDep = m.dependsOn && m.dependsOn.includes(changedId);
-    const isDownstream = i > idx;
-    if (hasDep || isDownstream) {
-      return syncLegacyFields({
-        ...m,
-        offsetDays: Math.max(0, (m.offsetDays || 0) + deltaDays),
-      });
-    }
-    return m;
+export function regenerateSchedule(milestones, startDate, { pinnedOverride = false } = {}) {
+  if (!startDate) return milestones;
+
+  const prepared = milestones.map(m => {
+    if (m.status === "complete") return m; // Never touch completed tasks
+    const copy = { ...m };
+    if (pinnedOverride) copy.manuallyPinned = false;
+    return copy;
   });
-}
 
-// ── Regenerate from template ────────────────────────────────────────────────
-
-export function regenerateFromTemplate(template, startDate) {
-  return template.map((t, i) => ({
-    ...t,
-    offsetDays: (t.wk || 0) * 7,
-    durationDays: t.durationDays || 28,
-    order: i,
-    plannedStart: startDate ? addDays(startDate, (t.wk || 0) * 7) : "",
-    plannedFinish: startDate ? addDays(startDate, (t.wk || 0) * 7 + (t.durationDays || 28)) : "",
-    planned: startDate ? addDays(startDate, (t.wk || 0) * 7) : "",
-  }));
+  return calculateSchedule(prepared, startDate);
 }
 
 // ── Metrics ─────────────────────────────────────────────────────────────────
 
 export function getScheduleMetrics(milestones) {
-  if (!milestones.length) return { totalDuration: 0, percentComplete: 0, estimatedFinish: "" };
+  if (!milestones.length) return { totalDuration: 0, percentComplete: 0, estimatedFinish: "", firstStart: "", completedCount: 0, totalCount: 0 };
 
   const total = milestones.length;
   const complete = milestones.filter(m => m.status === "complete" || m.done).length;
   const percentComplete = total > 0 ? Math.round((complete / total) * 100) : 0;
 
-  // Total duration from first start to last finish
   const starts = milestones.map(m => m.plannedStart).filter(Boolean).sort();
   const finishes = milestones.map(m => m.plannedFinish).filter(Boolean).sort();
   const firstStart = starts[0] || "";
