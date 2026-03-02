@@ -44,10 +44,10 @@ export default function ProposalsPage() {
   return (
     <Section>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: _.s7 }}>
-        <h1 style={{ fontSize: mobile ? 28 : 40, fontWeight: 700, letterSpacing: "-0.03em" }}>Proposals</h1>
+        <h1 style={{ fontSize: mobile ? _.fontSize["3xl"] : _.fontSize["4xl"], fontWeight: _.fontWeight.bold, letterSpacing: _.letterSpacing.tight }}>Proposals</h1>
         {quoteReady && <Button icon={Plus} onClick={createProp}>New from current scope</Button>}
       </div>
-      {!quoteReady && <Empty icon={FileText} text="Complete your quote first" action={() => navigate("../scope")} actionText="Go to Quote" />}
+      {!quoteReady && <Empty icon={FileText} text="Complete your quote first" action={() => navigate("../quote?step=scope")} actionText="Go to Quote" />}
       {quoteReady && p.proposals.length === 0 && <Empty icon={FileText} text="No proposals yet — save one from your current scope" />}
       {p.proposals.map((prop, i) => (
         <div key={i} onClick={() => navigate(`${i}`)} style={{
@@ -57,9 +57,9 @@ export default function ProposalsPage() {
         onMouseEnter={e => e.currentTarget.style.paddingLeft = "4px"}
         onMouseLeave={e => e.currentTarget.style.paddingLeft = "0"}
         >
-          <div><div style={{ fontSize: 14, fontWeight: 500 }}>{prop.name}</div><div style={{ fontSize: 12, color: _.muted, marginTop: 1 }}>{prop.id} · {prop.date}</div></div>
+          <div><div style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.medium }}>{prop.name}</div><div style={{ fontSize: _.fontSize.sm, color: _.muted, marginTop: 1 }}>{prop.id} · {prop.date}</div></div>
           <div style={{ display: "flex", alignItems: "center", gap: _.s3 }}>
-            <span style={{ fontSize: 16, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{fmt(prop.pricing.total)}</span>
+            <span style={{ fontSize: _.fontSize.lg, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums" }}>{fmt(prop.pricing.total)}</span>
             <span style={badge(prop.status === "signed" ? _.green : prop.status === "declined" ? _.red : prop.status === "sent" ? _.blue : _.amber)}>{prop.status}</span>
             <div onClick={e => { e.stopPropagation(); setDeleteIdx(i); }}
               style={{ cursor: "pointer", color: _.faint, transition: `color ${_.tr}` }}
@@ -72,7 +72,7 @@ export default function ProposalsPage() {
       ))}
 
       <Modal open={deleteIdx !== null} onClose={() => setDeleteIdx(null)} title="Delete Proposal" width={400}>
-        <div style={{ fontSize: 14, color: _.body, marginBottom: 24 }}>
+        <div style={{ fontSize: _.fontSize.md, color: _.body, marginBottom: 24 }}>
           Delete <strong>{deleteIdx !== null && p.proposals[deleteIdx] ? p.proposals[deleteIdx].name : ""}</strong>?
         </div>
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>

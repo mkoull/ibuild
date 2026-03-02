@@ -12,10 +12,13 @@ import TradesListPage from "./pages/global/TradesListPage.jsx";
 import TradeDetailPage from "./pages/global/TradeDetailPage.jsx";
 import RateLibraryPage from "./pages/global/RateLibraryPage.jsx";
 import SettingsPage from "./pages/global/SettingsPage.jsx";
+import QuotesListPage from "./pages/global/QuotesListPage.jsx";
+import JobsListPage from "./pages/global/JobsListPage.jsx";
 
 // Project pages
 import OverviewPage from "./pages/project/OverviewPage.jsx";
 import ScopePage from "./pages/project/ScopePage.jsx";
+import QuotePage from "./pages/project/QuotePage.jsx";
 import PlansAIPage from "./pages/project/PlansAIPage.jsx";
 import CostsPage from "./pages/project/CostsPage.jsx";
 import SchedulePage from "./pages/project/SchedulePage.jsx";
@@ -29,6 +32,7 @@ import DocumentsPage from "./pages/project/DocumentsPage.jsx";
 import SiteDiaryPage from "./pages/project/SiteDiaryPage.jsx";
 import DefectsPage from "./pages/project/DefectsPage.jsx";
 import ProjectTradesPage from "./pages/project/ProjectTradesPage.jsx";
+import JobModuleGate from "./components/guards/JobModuleGate.jsx";
 
 export default function App() {
   return (
@@ -40,6 +44,8 @@ export default function App() {
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="projects" element={<ProjectsListPage />} />
+            <Route path="quotes" element={<QuotesListPage />} />
+            <Route path="jobs" element={<JobsListPage />} />
             <Route path="clients" element={<ClientsListPage />} />
             <Route path="clients/:clientId" element={<ClientDetailPage />} />
             <Route path="trades" element={<TradesListPage />} />
@@ -51,20 +57,21 @@ export default function App() {
             <Route path="projects/:id" element={<ProjectShell />}>
               <Route index element={<Navigate to="overview" replace />} />
               <Route path="overview" element={<OverviewPage />} />
+              <Route path="quote" element={<QuotePage />} />
               <Route path="scope" element={<ScopePage />} />
               <Route path="plans" element={<PlansAIPage />} />
-              <Route path="costs" element={<CostsPage />} />
-              <Route path="schedule" element={<SchedulePage />} />
-              <Route path="variations" element={<VariationsPage />} />
-              <Route path="variations/:voIndex" element={<VariationDetail />} />
-              <Route path="invoices" element={<InvoicesPage />} />
-              <Route path="invoices/:invIndex" element={<InvoiceDetail />} />
+              <Route path="costs" element={<JobModuleGate moduleName="Costs"><CostsPage /></JobModuleGate>} />
+              <Route path="schedule" element={<JobModuleGate moduleName="Schedule"><SchedulePage /></JobModuleGate>} />
+              <Route path="variations" element={<JobModuleGate moduleName="Variations"><VariationsPage /></JobModuleGate>} />
+              <Route path="variations/:voIndex" element={<JobModuleGate moduleName="Variations"><VariationDetail /></JobModuleGate>} />
+              <Route path="invoices" element={<JobModuleGate moduleName="Invoices"><InvoicesPage /></JobModuleGate>} />
+              <Route path="invoices/:invIndex" element={<JobModuleGate moduleName="Invoices"><InvoiceDetail /></JobModuleGate>} />
               <Route path="proposals" element={<ProposalsPage />} />
               <Route path="proposals/:propIndex" element={<ProposalDetail />} />
               <Route path="documents" element={<DocumentsPage />} />
-              <Route path="site-diary" element={<SiteDiaryPage />} />
-              <Route path="defects" element={<DefectsPage />} />
-              <Route path="trades" element={<ProjectTradesPage />} />
+              <Route path="site-diary" element={<JobModuleGate moduleName="Site Diary"><SiteDiaryPage /></JobModuleGate>} />
+              <Route path="defects" element={<JobModuleGate moduleName="Defects"><DefectsPage /></JobModuleGate>} />
+              <Route path="trades" element={<JobModuleGate moduleName="Trades"><ProjectTradesPage /></JobModuleGate>} />
             </Route>
           </Route>
         </Routes>

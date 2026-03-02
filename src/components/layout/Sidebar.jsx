@@ -1,5 +1,5 @@
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { BarChart3, PenLine, Ruler, DollarSign, ClipboardList, FileText, ArrowUpRight, Receipt, BookOpen, AlertTriangle, Wrench, FolderOpen, Users, Building2, Library, Settings, LayoutDashboard, ArrowLeft, Calendar, PieChart } from "lucide-react";
+import { BarChart3, PenLine, Ruler, DollarSign, ClipboardList, FileText, ArrowUpRight, Receipt, BookOpen, AlertTriangle, Wrench, FolderOpen, Users, Building2, Library, Settings, LayoutDashboard, ArrowLeft, Calendar, PieChart, Hammer } from "lucide-react";
 import _ from "../../theme/tokens.js";
 import { useApp } from "../../context/AppContext.jsx";
 import { pName } from "../../theme/styles.js";
@@ -7,9 +7,9 @@ import { pName } from "../../theme/styles.js";
 const GLOBAL_NAV = [
   { group: "MAIN", items: [
     { path: "/dashboard", label: "Dashboard", Ic: LayoutDashboard },
-    { path: "/projects", label: "Projects", Ic: FolderOpen },
-    { path: null, label: "Calendar", Ic: Calendar, disabled: true },
-    { path: null, label: "Reports", Ic: PieChart, disabled: true },
+    { path: "/quotes", label: "Quotes", Ic: FileText },
+    { path: "/jobs", label: "Jobs", Ic: Hammer },
+    { path: "/projects", label: "All Projects", Ic: FolderOpen },
   ]},
   { group: "MASTER DATA", items: [
     { path: "/clients", label: "Clients", Ic: Users },
@@ -24,7 +24,7 @@ const GLOBAL_NAV = [
 const PROJECT_NAV = [
   { group: "PROJECT", items: [
     { path: "overview", label: "Overview", Ic: BarChart3 },
-    { path: "scope", label: "Scope/Quote", Ic: PenLine },
+    { path: "quote", label: "Quote", Ic: PenLine },
     { path: "plans", label: "Plans AI", Ic: Ruler },
     { path: "costs", label: "Costs", Ic: DollarSign },
     { path: "schedule", label: "Schedule", Ic: ClipboardList },
@@ -64,30 +64,30 @@ export default function Sidebar() {
 
   return (
     <aside style={{
-      width: 240, flexShrink: 0, background: "#ECEDF0",
+      width: 240, flexShrink: 0, background: _.sidebar,
       borderRight: `1px solid ${_.line}`, display: "flex", flexDirection: "column",
     }}>
       {/* Logo */}
-      <div style={{ padding: "20px 16px 16px", display: "flex", alignItems: "center", gap: 8, borderBottom: `1px solid ${_.line}` }}>
+      <div style={{ padding: `${_.s5}px ${_.s4}px ${_.s4}px`, display: "flex", alignItems: "center", gap: _.s2, borderBottom: `1px solid ${_.line}` }}>
         <div onClick={() => navigate("/dashboard")} style={{
-          width: 24, height: 24, background: _.ink, borderRadius: 6,
+          width: 26, height: 26, background: _.ink, borderRadius: _.rMd,
           display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 11, fontWeight: 800, color: "#fff", cursor: "pointer",
+          fontSize: _.fontSize.sm, fontWeight: 800, color: "#fff", cursor: "pointer",
         }}>i</div>
-        <span onClick={() => navigate("/dashboard")} style={{ fontSize: 14, fontWeight: 700, color: _.ink, letterSpacing: "-0.03em", cursor: "pointer" }}>iBuild</span>
+        <span onClick={() => navigate("/dashboard")} style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.bold, color: _.ink, letterSpacing: _.letterSpacing.tight, cursor: "pointer" }}>iBuild</span>
         <div style={{ flex: 1 }} />
-        {saveStatus && <span style={{ fontSize: 10, color: _.faint, fontWeight: 500, whiteSpace: "nowrap" }}>
+        {saveStatus && <span style={{ fontSize: _.fontSize.xs, color: _.faint, fontWeight: _.fontWeight.medium, whiteSpace: "nowrap" }}>
           {saveStatus === "saving" ? "Saving\u2026" : `Saved ${saveStatus}`}
         </span>}
       </div>
 
       {/* Project header in project mode */}
       {isProjectMode && project && (
-        <div style={{ padding: "10px 12px", borderBottom: `1px solid ${_.line}` }}>
+        <div style={{ padding: `${_.s3}px ${_.s3}px`, borderBottom: `1px solid ${_.line}` }}>
           <div onClick={() => navigate("/projects")} style={{
-            display: "flex", alignItems: "center", gap: 6, padding: "4px 0",
-            cursor: "pointer", fontSize: 12, color: _.muted, fontWeight: 500,
-            transition: "color 0.15s",
+            display: "flex", alignItems: "center", gap: 6, padding: `${_.s1}px 0`,
+            cursor: "pointer", fontSize: _.fontSize.sm, color: _.muted, fontWeight: _.fontWeight.medium,
+            transition: `color ${_.tr}`,
           }}
           onMouseEnter={e => e.currentTarget.style.color = _.ink}
           onMouseLeave={e => e.currentTarget.style.color = _.muted}
@@ -95,10 +95,10 @@ export default function Sidebar() {
             <ArrowLeft size={13} /> Back to Projects
           </div>
           <div style={{ marginTop: 6 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: _.ink }}>
+            <div style={{ fontSize: _.fontSize.base, fontWeight: _.fontWeight.semi, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: _.ink }}>
               {pName(project, clients)}
             </div>
-            <div style={{ fontSize: 11, color: _.muted, marginTop: 1 }}>
+            <div style={{ fontSize: _.fontSize.xs, color: _.muted, marginTop: 1 }}>
               {project.stage || project.status} · {project.buildType || project.type}
             </div>
           </div>
@@ -106,10 +106,10 @@ export default function Sidebar() {
       )}
 
       {/* Nav groups */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "8px 0" }}>
+      <div style={{ flex: 1, overflowY: "auto", padding: `${_.s2}px 0` }}>
         {nav.map(g => (
-          <div key={g.group} style={{ marginBottom: 8 }}>
-            <div style={{ padding: "12px 16px 4px", fontSize: 10, fontWeight: 700, color: _.muted, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+          <div key={g.group} style={{ marginBottom: _.s2 }}>
+            <div style={{ padding: `${_.s3}px ${_.s4}px ${_.s1}px`, fontSize: _.fontSize.xs, fontWeight: _.fontWeight.bold, color: _.muted, letterSpacing: _.letterSpacing.wider, textTransform: "uppercase" }}>
               {g.group}
             </div>
             {g.items.map(item => {
@@ -117,12 +117,12 @@ export default function Sidebar() {
               if (item.disabled) {
                 return (
                   <div key={item.label} style={{
-                    display: "flex", alignItems: "center", gap: 8, padding: "7px 16px", fontSize: 13,
+                    display: "flex", alignItems: "center", gap: _.s2, padding: `7px ${_.s4}px`, fontSize: _.fontSize.base,
                     borderLeft: "2px solid transparent", color: _.faint, cursor: "default",
                   }}>
                     <item.Ic size={15} strokeWidth={1.5} />
                     {item.label}
-                    <span style={{ fontSize: 9, fontWeight: 600, color: _.faint, marginLeft: "auto" }}>SOON</span>
+                    <span style={{ fontSize: 9, fontWeight: _.fontWeight.semi, color: _.faint, marginLeft: "auto" }}>SOON</span>
                   </div>
                 );
               }
@@ -131,12 +131,12 @@ export default function Sidebar() {
                   if (isProjectMode) navigate(`/projects/${params.id}/${item.path}`);
                   else navigate(item.path);
                 }} style={{
-                  display: "flex", alignItems: "center", gap: 8, padding: "7px 16px", fontSize: 13, cursor: "pointer",
+                  display: "flex", alignItems: "center", gap: _.s2, padding: `7px ${_.s4}px`, fontSize: _.fontSize.base, cursor: "pointer",
                   borderLeft: active ? `2px solid ${_.ink}` : "2px solid transparent",
                   background: active ? "rgba(0,0,0,0.05)" : "transparent",
                   color: active ? _.ink : _.body,
-                  fontWeight: active ? 600 : 400,
-                  transition: "all 0.1s ease",
+                  fontWeight: active ? _.fontWeight.semi : _.fontWeight.normal,
+                  transition: `all 0.1s ease`,
                 }}
                 onMouseEnter={e => { if (!active) e.currentTarget.style.background = "rgba(0,0,0,0.03)"; }}
                 onMouseLeave={e => { if (!active) e.currentTarget.style.background = "transparent"; }}

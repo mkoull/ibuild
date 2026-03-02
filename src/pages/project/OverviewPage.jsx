@@ -27,12 +27,15 @@ export default function OverviewPage() {
 
   const handlePrimary = () => {
     if (!step) return;
-    if (step.action === "convert_job") {
+    if (step.actionId === "convert_to_job") {
       convertToJob();
-    } else if (step.action === "start_build" && canTransition(stage, "Active")) {
+    } else if (step.actionId === "start_job" && canTransition(stage, "Active")) {
       transitionStage("Active");
-    } else if (step.action === "complete_build" && canTransition(stage, "Complete")) {
+    } else if (step.actionId === "complete_build" && canTransition(stage, "Complete")) {
       transitionStage("Complete");
+    } else if (step.actionId === "send_quote" && canTransition(stage, "Quoted")) {
+      transitionStage("Quoted");
+      log("Quote sent to client");
     } else if (step.route) {
       navigate(`../${step.route}`);
     }
@@ -62,7 +65,7 @@ export default function OverviewPage() {
             <h1 style={{ fontSize: mobile ? _.fontSize["3xl"] : _.fontSize["4xl"], fontWeight: _.fontWeight.bold, letterSpacing: _.letterSpacing.tight, margin: 0, lineHeight: _.lineHeight.tight, color: _.ink }}>
               {pName(p, clients) === "New Project" ? "Overview" : pName(p, clients)}
             </h1>
-            <div onClick={() => navigate("../scope")}
+            <div onClick={() => navigate("../quote?step=details")}
               style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: _.fontSize.sm, color: _.muted, cursor: "pointer", fontWeight: _.fontWeight.medium, transition: `color ${_.tr}`, flexShrink: 0 }}
               onMouseEnter={e => e.currentTarget.style.color = _.ac}
               onMouseLeave={e => e.currentTarget.style.color = _.muted}

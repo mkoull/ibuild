@@ -21,22 +21,22 @@ export function getNextActions({ project: p, totals: T, primaryRoute, primaryRea
   const unsignedVars = (p.variations || []).filter(v => v.status === "draft" || v.status === "pending" || v.status === "sent");
   const hasScope = T.items > 0;
   const hasClient = !!(p.client || p.clientId);
-  const hasProposal = (p.proposals || []).length > 0;
+  const hasProposal = p.proposal && p.proposal.status === "Generated";
   const hasSchedule = milestones.some(m => m.planned);
 
   const actions = [];
 
   if (stage === "Lead" || stage === "Quoted" || stage === "Quote") {
     if (!hasScope && primaryReason !== "missing_scope")
-      actions.push({ label: "Build scope", detail: "Select items from rate library", path: "scope" });
+      actions.push({ label: "Build scope", detail: "Select items from rate library", path: "quote?step=scope" });
     else if (hasScope && primaryReason !== "missing_scope")
-      actions.push({ label: "Review scope", detail: `${T.items} items · ${fmt(T.sub)}`, path: "scope" });
+      actions.push({ label: "Review scope", detail: `${T.items} items · ${fmt(T.sub)}`, path: "quote?step=scope" });
 
     if (!hasClient && primaryReason !== "missing_client")
-      actions.push({ label: "Add client details", detail: "Name, contact, address", path: "scope" });
+      actions.push({ label: "Add client details", detail: "Name, contact, address", path: "quote?step=details" });
 
     if (!hasProposal && hasScope && hasClient && primaryReason !== "missing_proposal")
-      actions.push({ label: "Generate proposal", detail: "Create client-ready proposal", path: "proposals" });
+      actions.push({ label: "Generate proposal", detail: "Create client-ready proposal", path: "quote?step=review" });
     else if (hasProposal && primaryReason !== "ready_to_send")
       actions.push({ label: "Review proposal", detail: `${p.proposals.length} saved`, path: "proposals" });
 
