@@ -25,6 +25,9 @@ export default function OverviewPage() {
   const [showConvertModal, setShowConvertModal] = useState(false);
   const [importMode, setImportMode] = useState("section");
   const [mergeMode, setMergeMode] = useState("replace");
+  const [importSchedule, setImportSchedule] = useState(true);
+  const [lockQuoteOnConvert, setLockQuoteOnConvert] = useState(true);
+  const [allowQuoteEditsAfterConvert, setAllowQuoteEditsAfterConvert] = useState(false);
   const [pendingReturnPath, setPendingReturnPath] = useState("");
 
   // Open modal from URL param (e.g. from JobModuleGate redirect)
@@ -59,6 +62,13 @@ export default function OverviewPage() {
       return;
     }
     convertToJob();
+    up(pr => {
+      pr.lockedQuote = lockQuoteOnConvert && !allowQuoteEditsAfterConvert;
+      pr.allowQuoteEditsAfterConversion = !!allowQuoteEditsAfterConvert;
+      if (!pr.jobMeta) pr.jobMeta = {};
+      pr.jobMeta.convertedFromQuoteAt = Date.now();
+      return pr;
+    });
     if (importMode !== "skip") {
       up(pr => {
         pr.quoteSnapshotBudget = snapshotFromQuote(pr);
@@ -90,6 +100,39 @@ export default function OverviewPage() {
         return pr;
       });
       log(`Budget imported from quote (${importMode}-level)`);
+    }
+    if (importSchedule) {
+      up(pr => {
+        if (!Array.isArray(pr.schedule)) pr.schedule = [];
+        const hasTasks = pr.schedule.length > 0;
+        if (hasTasks) return pr;
+        const categories = Object.entries(pr.scope || {})
+          .filter(([, items]) => Array.isArray(items) && items.some(i => i.on))
+          .map(([cat]) => cat);
+        let offset = 0;
+        categories.forEach((cat, i) => {
+          offset += 14;
+          pr.schedule.push({
+            id: `MS-${Date.now()}-${i}`,
+            name: cat,
+            durationDays: 14,
+            offsetDays: offset,
+            dependsOn: [],
+            tradeId: null,
+            freeTextTrade: "",
+            status: "not_started",
+            percentComplete: 0,
+            manuallyPinned: false,
+            pinnedStart: "",
+            pinnedFinish: "",
+            plannedStart: "",
+            plannedFinish: "",
+            order: i,
+          });
+        });
+        return pr;
+      });
+      log("Schedule imported from quote scope");
     }
     setShowConvertModal(false);
     notify("Converted to Job");
@@ -332,7 +375,7 @@ export default function OverviewPage() {
       {/* Convert to Job Modal */}
       <Modal open={showConvertModal} onClose={() => setShowConvertModal(false)} title="Convert to Job" width={480}>
         <div style={{ fontSize: _.fontSize.md, color: _.body, marginBottom: _.s5, lineHeight: _.lineHeight.body }}>
-          Lock the quote and unlock job modules (Costs, Schedule, Invoices, Variations, and more).
+          Create a job instance from this quote and choose what to import.
         </div>
 
         <div style={{ marginBottom: _.s5 }}>
@@ -358,6 +401,20 @@ export default function OverviewPage() {
                 <div style={{ fontSize: _.fontSize.base, fontWeight: _.fontWeight.medium, color: _.ink }}>{opt.label}</div>
                 <div style={{ fontSize: _.fontSize.sm, color: _.muted }}>{opt.desc}</div>
               </div>
+            </div>
+          ))}
+        </div>
+        <div style={{ marginBottom: _.s5 }}>
+          <div style={{ fontSize: _.fontSize.caption, color: _.muted, fontWeight: _.fontWeight.semi, letterSpacing: _.letterSpacing.wider, textTransform: "uppercase", marginBottom: _.s3 }}>Conversion options</div>
+          {[
+            { checked: importMode !== "skip", onChange: () => setImportMode(v => (v === "skip" ? "section" : "skip")), label: "Import scope items to cost tracker" },
+            { checked: importSchedule, onChange: () => setImportSchedule(v => !v), label: "Import tasks to schedule" },
+            { checked: lockQuoteOnConvert, onChange: () => { setLockQuoteOnConvert(v => !v); setAllowQuoteEditsAfterConvert(false); }, label: "Lock original quote" },
+            { checked: allowQuoteEditsAfterConvert, onChange: () => { setAllowQuoteEditsAfterConvert(v => !v); setLockQuoteOnConvert(false); }, label: "Allow quote edits after conversion" },
+          ].map(opt => (
+            <div key={opt.label} onClick={opt.onChange} style={{ display: "flex", alignItems: "center", gap: _.s2, padding: `${_.s2}px 0`, cursor: "pointer" }}>
+              <div style={{ width: 14, height: 14, borderRadius: 3, border: `1px solid ${opt.checked ? _.ac : _.line2}`, background: opt.checked ? _.ac : "transparent", boxShadow: opt.checked ? `inset 0 0 0 2px #fff` : "none" }} />
+              <span style={{ fontSize: _.fontSize.base, color: _.ink }}>{opt.label}</span>
             </div>
           ))}
         </div>

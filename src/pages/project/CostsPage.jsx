@@ -49,6 +49,7 @@ export default function CostsPage() {
   const [editValues, setEditValues] = useState({});
   const [quickAdd, setQuickAdd] = useState({ description: "", amount: "" });
   const [allocExpanded, setAllocExpanded] = useState(null);
+  const [dismissQuoteLinkHint, setDismissQuoteLinkHint] = useState(false);
 
   const budgetLines = p.workingBudget || p.budget || [];
   const commitments = p.commitments || [];
@@ -374,6 +375,15 @@ export default function CostsPage() {
     <Section>
       <h1 style={{ fontSize: mobile ? _.fontSize["3xl"] : _.fontSize["4xl"], fontWeight: _.fontWeight.bold, letterSpacing: _.letterSpacing.tight, marginBottom: _.s2 }}>Costs</h1>
       <div style={{ fontSize: _.fontSize.md, color: _.muted, marginBottom: _.s6 }}>Budget, commitments, and actual costs</div>
+      {!dismissQuoteLinkHint && !linkedQuoteModule && !hasBaseline && hasScope && (
+        <div style={{ marginBottom: _.s4, padding: `${_.s3}px ${_.s4}px`, borderRadius: _.rSm, border: `1px solid ${_.amber}40`, background: `${_.amber}10`, display: "flex", justifyContent: "space-between", gap: _.s3, alignItems: "center", flexWrap: "wrap" }}>
+          <div style={{ fontSize: _.fontSize.sm, color: _.body }}>No approved quote linked. Import cost codes?</div>
+          <div style={{ display: "flex", gap: _.s2 }}>
+            <Button size="sm" variant="secondary" onClick={() => initFromQuote("section")}>Import</Button>
+            <Button size="sm" variant="ghost" onClick={() => setDismissQuoteLinkHint(true)}>Dismiss</Button>
+          </div>
+        </div>
+      )}
 
       {/* Summary cards */}
       <div style={{ display: "grid", gridTemplateColumns: mobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: mobile ? _.s2 : _.s3, marginBottom: _.s7 }}>
@@ -420,7 +430,7 @@ export default function CostsPage() {
       {linkedQuoteModule && (
         <div style={{ display: "flex", gap: _.s2, flexWrap: "wrap", marginBottom: _.s4 }}>
           <span style={{ fontSize: _.fontSize.sm, color: _.muted, marginRight: _.s2, alignSelf: "center" }}>
-            Linked to quote module
+            Linked to quote source
           </span>
           <Button size="sm" variant="secondary" onClick={importMissing}>Sync</Button>
           <Button size="sm" variant="secondary" onClick={replaceFromQuote}>Re-import</Button>
@@ -578,24 +588,27 @@ export default function CostsPage() {
             <Empty icon={BarChart3} text="Add budget lines to see trade breakdown" />
           ) : (
             <>
-              <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr auto" : "1fr 100px 100px 100px 100px", gap: _.s2, padding: `${_.s2}px 0`, borderBottom: `2px solid ${_.ink}`, fontSize: _.fontSize.xs, color: _.muted, fontWeight: _.fontWeight.semi, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase" }}>
+              <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr auto" : "90px 1fr 100px 100px 100px 100px 90px", gap: _.s2, padding: `${_.s2}px 0`, borderBottom: `2px solid ${_.ink}`, fontSize: _.fontSize.xs, color: _.muted, fontWeight: _.fontWeight.semi, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase" }}>
+                {!mobile && <span>Code</span>}
                 <span>Trade</span>
-                {!mobile && <><span style={{ textAlign: "right" }}>Budget</span><span style={{ textAlign: "right" }}>Committed</span><span style={{ textAlign: "right" }}>Actual</span></>}
-                <span style={{ textAlign: "right" }}>Variance</span>
+                {!mobile && <><span style={{ textAlign: "right" }}>Budget</span><span style={{ textAlign: "right" }}>Committed</span><span style={{ textAlign: "right" }}>Actual</span><span style={{ textAlign: "right" }}>Variance</span></>}
+                <span style={{ textAlign: "right" }}>% Complete</span>
               </div>
               {tradeBreakdown.map(row => {
                 const v = row.budget - row.actual;
+                const pctComplete = row.budget > 0 ? Math.min(100, Math.max(0, (row.actual / row.budget) * 100)) : 0;
                 const isExpanded = expandedTrade === row.tradeId;
                 return (
                   <div key={row.tradeId}>
                     <div onClick={() => setExpandedTrade(isExpanded ? null : row.tradeId)} style={{
-                      display: "grid", gridTemplateColumns: mobile ? "1fr auto" : "1fr 100px 100px 100px 100px", gap: _.s2,
+                      display: "grid", gridTemplateColumns: mobile ? "1fr auto" : "90px 1fr 100px 100px 100px 100px 90px", gap: _.s2,
                       padding: `${_.s3}px 0`, borderBottom: `1px solid ${_.line}`, alignItems: "center",
                       fontSize: _.fontSize.base, cursor: "pointer", transition: `background ${_.tr}`,
                     }}
                       onMouseEnter={e => e.currentTarget.style.background = _.well}
                       onMouseLeave={e => e.currentTarget.style.background = "transparent"}
                     >
+                      {!mobile && <span style={{ color: _.muted }}>{row.budgetItems.find(b => b.costCode)?.costCode || "—"}</span>}
                       <div style={{ display: "flex", alignItems: "center", gap: _.s2 }}>
                         <span style={{ transform: isExpanded ? "rotate(90deg)" : "none", display: "inline-flex", transition: "transform 0.15s" }}><ChevronRight size={12} color={_.muted} /></span>
                         <span style={{ fontWeight: _.fontWeight.semi, color: _.ink }}>{tradeName(row.tradeId === "_none" ? null : row.tradeId)}</span>
@@ -605,10 +618,11 @@ export default function CostsPage() {
                           <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{row.budget > 0 ? fmt(row.budget) : "—"}</span>
                           <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", color: _.amber }}>{row.committed > 0 ? fmt(row.committed) : "—"}</span>
                           <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{row.actual > 0 ? fmt(row.actual) : "—"}</span>
+                          <span style={{ textAlign: "right", fontWeight: _.fontWeight.semi, fontVariantNumeric: "tabular-nums", color: v >= 0 ? _.green : _.red }}>{v >= 0 ? "+" : ""}{fmt(v)}</span>
                         </>
                       )}
                       <span style={{ textAlign: "right", fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: row.budget > 0 ? (v >= 0 ? _.green : _.red) : _.faint }}>
-                        {row.budget > 0 ? `${v >= 0 ? "+" : ""}${fmt(v)}` : "—"}
+                        {row.budget > 0 ? `${pctComplete.toFixed(0)}%` : "—"}
                       </span>
                     </div>
                     {isExpanded && (

@@ -37,8 +37,9 @@ import SiteDiaryPage from "./pages/project/SiteDiaryPage.jsx";
 import DefectsPage from "./pages/project/DefectsPage.jsx";
 import ProjectTradesPage from "./pages/project/ProjectTradesPage.jsx";
 import BillsPage from "./pages/project/BillsPage.jsx";
-import ProjectModulesPage from "./pages/project/ProjectModulesPage.jsx";
-import ModuleShell from "./pages/modules/ModuleShell.jsx";
+import PaymentsPage from "./pages/project/PaymentsPage.jsx";
+import WorkOrdersPage from "./pages/project/WorkOrdersPage.jsx";
+import PurchaseOrdersPage from "./pages/project/PurchaseOrdersPage.jsx";
 
 export default function App() {
   return (
@@ -51,6 +52,7 @@ export default function App() {
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="projects" element={<ProjectsListPage />} />
             <Route path="quotes" element={<QuotesListPage />} />
+            <Route path="leads" element={<QuotesListPage />} />
             <Route path="jobs" element={<JobsListPage />} />
             <Route path="clients" element={<ClientsListPage />} />
             <Route path="clients/:clientId" element={<ClientDetailPage />} />
@@ -58,7 +60,6 @@ export default function App() {
             <Route path="trades/:tradeId" element={<TradeDetailPage />} />
             <Route path="rate-library" element={<RateLibraryPage />} />
             <Route path="settings" element={<SettingsPage />} />
-            <Route path="modules/:moduleId" element={<ModuleShell />} />
 
             {/* Project routes */}
             <Route path="projects/:id" element={<ProjectShell />}>
@@ -67,7 +68,7 @@ export default function App() {
               <Route path="quote" element={<QuotePage />} />
               <Route path="scope" element={<ScopePage />} />
               <Route path="plans" element={<PlansAIPage />} />
-              <Route path="modules" element={<ProjectModulesPage />} />
+              <Route path="plans-ai" element={<PlansAIPage />} />
               <Route path="costs" element={<CostsPage />} />
               <Route path="schedule" element={<SchedulePage />} />
               <Route path="variations" element={<VariationsPage />} />
@@ -75,13 +76,18 @@ export default function App() {
               <Route path="invoices" element={<InvoicesPage />} />
               <Route path="invoices/:invIndex" element={<InvoiceDetail />} />
               <Route path="bills" element={<BillsPage />} />
+              <Route path="payments" element={<PaymentsPage />} />
               <Route path="proposals" element={<ProposalsPage />} />
               <Route path="proposals/:propIndex" element={<ProposalDetail />} />
               <Route path="documents" element={<DocumentsPage />} />
               <Route path="site-diary" element={<SiteDiaryPage />} />
               <Route path="defects" element={<DefectsPage />} />
               <Route path="trades" element={<ProjectTradesPage />} />
+              <Route path="work-orders" element={<WorkOrdersPage />} />
+              <Route path="purchase-orders" element={<PurchaseOrdersPage />} />
+              <Route path="modules" element={<Navigate to="overview" replace />} />
             </Route>
+            <Route path="modules/:moduleId" element={<Navigate to="/projects" replace />} />
           </Route>
         </Routes>
       </AppProvider>

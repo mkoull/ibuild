@@ -34,7 +34,7 @@ export function getNextStepForProject(project, totals) {
   if (stage === "Quoted") {
     if (!hasProposal)
       return { label: "Generate proposal", description: "Create a proposal before converting", route: "quote?step=review", reason: "missing_proposal", actionId: null };
-    return { label: "Mark accepted / Convert to Job", description: "Accept quote and unlock job modules", route: "overview", reason: "ready_to_convert", actionId: "convert_to_job" };
+    return { label: "Mark accepted / Convert to Job", description: "Accept quote and open job workspace", route: "overview", reason: "ready_to_convert", actionId: "convert_to_job" };
   }
 
   if (stage === "Approved") {

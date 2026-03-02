@@ -89,6 +89,7 @@ export default function SchedulePage() {
   const [colWidths, setColWidths] = useState(loadColWidths);
   const [resizing, setResizing] = useState(null); // { col, startX, startW }
   const [expandedMobile, setExpandedMobile] = useState(null); // index of expanded mobile row
+  const [dismissQuoteHint, setDismissQuoteHint] = useState(false);
 
   const startDate = p.startDate || "";
   const autoCascade = p.autoCascade || false;
@@ -103,6 +104,10 @@ export default function SchedulePage() {
 
   const metrics = useMemo(() => getScheduleMetrics(computed), [computed]);
   const conflicts = useMemo(() => getDependencyConflicts(computed), [computed]);
+  const hasQuoteScope = useMemo(
+    () => Object.entries(p.scope || {}).some(([, items]) => Array.isArray(items) && items.some(i => i.on)),
+    [p.scope],
+  );
 
   // All trades (global directory)
   const allTrades = globalTrades || [];
@@ -353,6 +358,54 @@ export default function SchedulePage() {
     notify("Milestone added");
   };
 
+  const importTasksFromQuote = () => {
+    const categories = Object.entries(p.scope || {})
+      .filter(([, items]) => Array.isArray(items) && items.some(i => i.on))
+      .map(([cat]) => cat);
+    if (categories.length === 0) {
+      notify("No quote scope items to import", "error");
+      return;
+    }
+    up(pr => {
+      if (!Array.isArray(pr.schedule)) pr.schedule = [];
+      const existing = new Set((pr.schedule || []).map(m => (m.name || "").toLowerCase().trim()));
+      let nextOffset = Math.max(...(pr.schedule || []).map(m => m.offsetDays || 0), 0);
+      categories.forEach(cat => {
+        if (existing.has(cat.toLowerCase())) return;
+        nextOffset += 14;
+        pr.schedule.push(syncLegacyFields({
+          id: uid(),
+          name: cat,
+          durationDays: 14,
+          offsetDays: nextOffset,
+          dependsOn: [],
+          tradeId: null,
+          freeTextTrade: "",
+          constraintMode: "finish-to-start",
+          manuallyPinned: false,
+          pinnedStart: "",
+          pinnedFinish: "",
+          status: "not_started",
+          percentComplete: 0,
+          plannedStart: "",
+          plannedFinish: "",
+          actualStart: "",
+          actualFinish: "",
+          order: pr.schedule.length,
+          wk: Math.round(nextOffset / 7),
+          done: false,
+          date: "",
+          planned: "",
+        }));
+      });
+      if (pr.startDate) pr.schedule = calculateSchedule(pr.schedule, pr.startDate);
+      return pr;
+    });
+    notify("Imported tasks from quote");
+    log("Schedule tasks imported from quote scope");
+    setDismissQuoteHint(true);
+  };
+
   // Gantt handlers — update single task only
   const handleGanttShift = (idx, newOffset) => {
     up(pr => {
@@ -440,6 +493,15 @@ export default function SchedulePage() {
           <Button variant="secondary" size="sm" icon={Share2} onClick={() => setShareModal(true)}>Share</Button>
         </div>
       </div>
+      {!dismissQuoteHint && hasQuoteScope && milestones.length === 0 && (
+        <div className="schedule-print-hide" style={{ marginBottom: _.s4, padding: `${_.s3}px ${_.s4}px`, borderRadius: _.rSm, border: `1px solid ${_.amber}40`, background: `${_.amber}10`, display: "flex", justifyContent: "space-between", gap: _.s3, alignItems: "center", flexWrap: "wrap" }}>
+          <div style={{ fontSize: _.fontSize.sm, color: _.body }}>No quote linked. Import tasks from Quote?</div>
+          <div style={{ display: "flex", gap: _.s2 }}>
+            <Button size="sm" variant="secondary" onClick={importTasksFromQuote}>Import</Button>
+            <Button size="sm" variant="ghost" onClick={() => setDismissQuoteHint(true)}>Dismiss</Button>
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="schedule-print-hide">

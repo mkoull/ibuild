@@ -22,7 +22,7 @@ export default function GlobalShell() {
       <Toast toast={toast} />
       {!mobile && <Sidebar />}
       {mobile && <MobileHeader />}
-      <div style={{ marginLeft: mobile ? 0 : 240, display: "flex", flexDirection: "column", height: "100%", minHeight: "100svh", overflow: "hidden" }}>
+      <div style={{ marginLeft: mobile ? 0 : "var(--sidebar-w, 250px)", display: "flex", flexDirection: "column", height: "100%", minHeight: "100svh", overflow: "hidden" }}>
         {!mobile && <TopBar />}
         <main style={{
           flex: 1,

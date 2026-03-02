@@ -6,7 +6,7 @@ import _ from "../../theme/tokens.js";
 import {
   LayoutDashboard, FolderOpen, Users, MoreHorizontal, BarChart3, PenLine,
   DollarSign, Calendar, Plus, X, FileText, Building2, ClipboardList,
-  Wrench, Library, Settings, Puzzle,
+  Wrench, Library, Settings, ReceiptText, NotebookText, Bug,
 } from "lucide-react";
 
 const GLOBAL_TABS = [
@@ -18,10 +18,10 @@ const GLOBAL_TABS = [
 ];
 
 const PROJECT_TABS = [
-  { path: "overview", label: "Overview", Ic: BarChart3 },
+  { path: "overview", label: "Details", Ic: BarChart3 },
   { path: "quote", label: "Quote", Ic: PenLine },
   null, // FAB slot
-  { path: "modules", label: "Modules", Ic: Puzzle },
+  { path: "costs", label: "Costs", Ic: DollarSign },
   { id: "more", label: "More", Ic: MoreHorizontal },
 ];
 
@@ -34,9 +34,17 @@ const GLOBAL_MORE = [
 ];
 
 const PROJECT_MORE = [
+  { path: "scope", label: "Scope", Ic: ClipboardList },
+  { path: "schedule", label: "Schedule", Ic: Calendar },
+  { path: "variations", label: "Variations", Ic: ClipboardList },
+  { path: "invoices", label: "Invoices", Ic: ReceiptText },
+  { path: "bills", label: "Bills", Ic: DollarSign },
+  { path: "payments", label: "Payments", Ic: ReceiptText },
   { path: "proposals", label: "Proposals", Ic: FileText },
   { path: "documents", label: "Documents", Ic: FolderOpen },
-  { path: "modules", label: "Modules", Ic: Puzzle },
+  { path: "site-diary", label: "Site Diary", Ic: NotebookText },
+  { path: "defects", label: "Defects", Ic: Bug },
+  { path: "trades", label: "Trades", Ic: Wrench },
 ];
 
 export default function MobileBottomTabs() {
