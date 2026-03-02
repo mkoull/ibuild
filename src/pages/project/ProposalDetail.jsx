@@ -318,6 +318,56 @@ export default function ProposalDetail() {
           );
         })}
 
+        {/* ── Exclusions ── */}
+        {propD.exclusions?.filter(e => e.on).length > 0 && (
+          <div className="printSection">
+            <div className="scopeHeading printSectionTitle">Exclusions</div>
+            <ul className="termsList">
+              {propD.exclusions.filter(e => e.on).map((e, i) => <li key={i}>{e.text}</li>)}
+            </ul>
+          </div>
+        )}
+
+        {/* ── Allowances ── */}
+        {propD.allowances?.filter(a => a.on).length > 0 && (
+          <div className="printSection">
+            <div className="scopeHeading printSectionTitle">Allowances &amp; Provisional Sums</div>
+            <table className="scopeTable">
+              <thead><tr><th>Description</th><th style={{ textAlign: "right", width: 90 }}>Amount</th></tr></thead>
+              <tbody>
+                {propD.allowances.filter(a => a.on).map((a, i) => (
+                  <tr key={i}><td>{a.description}</td><td style={{ textAlign: "right", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{fmt(a.amount)}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* ── Prime Cost Items ── */}
+        {propD.pcItems?.filter(pc => pc.on).length > 0 && (
+          <div className="printSection">
+            <div className="scopeHeading printSectionTitle">Prime Cost Items</div>
+            <table className="scopeTable">
+              <thead><tr><th>Description</th><th style={{ textAlign: "right", width: 90 }}>Amount</th></tr></thead>
+              <tbody>
+                {propD.pcItems.filter(pc => pc.on).map((pc, i) => (
+                  <tr key={i}><td>{pc.description}</td><td style={{ textAlign: "right", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{fmt(pc.amount)}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* ── Qualifications ── */}
+        {propD.qualifications?.filter(q => q.on).length > 0 && (
+          <div className="printSection">
+            <div className="scopeHeading printSectionTitle">Qualifications &amp; Assumptions</div>
+            <ul className="termsList">
+              {propD.qualifications.filter(q => q.on).map((q, i) => <li key={i}>{q.text}</li>)}
+            </ul>
+          </div>
+        )}
+
         {/* ── Totals + Terms + Acceptance (grouped to avoid page splits) ── */}
         <div className="printEndBlock">
         <div className="printTotals avoidBreak">

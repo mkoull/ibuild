@@ -4,7 +4,7 @@ import { useProject } from "../../context/ProjectContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
 import _ from "../../theme/tokens.js";
 import { fmt, input, label, btnGhost, uid, ds, ts } from "../../theme/styles.js";
-import { STAGES } from "../../data/defaults.js";
+import { STAGES, DEFAULT_EXCLUSIONS, DEFAULT_ALLOWANCES, DEFAULT_PC_ITEMS, DEFAULT_QUALIFICATIONS } from "../../data/defaults.js";
 import { calc } from "../../lib/calc.js";
 import { canTransition } from "../../lib/lifecycle.js";
 import Card from "../../components/ui/Card.jsx";
@@ -12,8 +12,8 @@ import Modal from "../../components/ui/Modal.jsx";
 import Button from "../../components/ui/Button.jsx";
 import { Check, ChevronRight, ChevronDown, Plus, ArrowRight, ArrowLeft, X, Library, Send, Search, UserPlus, FileCheck } from "lucide-react";
 
-const STEPS = ["details", "scope", "review"];
-const STEP_LABELS = { details: "Details", scope: "Scope", review: "Review" };
+const STEPS = ["details", "scope", "extras", "review"];
+const STEP_LABELS = { details: "Details", scope: "Scope", extras: "Extras", review: "Review" };
 
 export default function QuotePage() {
   const { project: p, update: up, T, client, log, transitionStage } = useProject();
@@ -37,6 +37,13 @@ export default function QuotePage() {
   const [newClientForm, setNewClientForm] = useState({ displayName: "", companyName: "" });
   const clientDropRef = useRef(null);
 
+  // Extras step state
+  const [extrasExp, setExtrasExp] = useState({ exclusions: true, allowances: true, pcItems: true, qualifications: true });
+  const [exclInput, setExclInput] = useState("");
+  const [allowInput, setAllowInput] = useState({ description: "", amount: "" });
+  const [pcInput, setPcInput] = useState({ description: "", amount: "" });
+  const [qualInput, setQualInput] = useState("");
+
   const stage = p.stage || p.status;
   const margin = p.marginPct ?? p.margin ?? 0;
   const contingency = p.contingencyPct ?? p.contingency ?? 0;
@@ -51,6 +58,7 @@ export default function QuotePage() {
   const stepDone = {
     details: hasClient,
     scope: hasScope,
+    extras: true,
     review: proposalGenerated,
   };
 
@@ -110,6 +118,39 @@ export default function QuotePage() {
     log(`Client created: ${name}`);
   };
 
+  // ─── Extras mutation helpers ───
+  const addExclusion = (text) => { if (!text.trim()) return; up(pr => { pr.exclusions.push({ _id: uid(), text: text.trim(), on: true }); return pr; }); setExclInput(""); };
+  const delExclusion = (idx) => up(pr => { pr.exclusions.splice(idx, 1); return pr; });
+  const loadDefaultExclusions = () => up(pr => {
+    const existing = new Set(pr.exclusions.map(e => e.text.toLowerCase()));
+    DEFAULT_EXCLUSIONS.forEach(t => { if (!existing.has(t.toLowerCase())) pr.exclusions.push({ _id: uid(), text: t, on: true }); });
+    return pr;
+  });
+
+  const addAllowance = (desc, amt) => { if (!desc.trim()) return; up(pr => { pr.allowances.push({ _id: uid(), description: desc.trim(), amount: parseFloat(amt) || 0, on: true }); return pr; }); setAllowInput({ description: "", amount: "" }); };
+  const delAllowance = (idx) => up(pr => { pr.allowances.splice(idx, 1); return pr; });
+  const loadDefaultAllowances = () => up(pr => {
+    const existing = new Set(pr.allowances.map(e => e.description.toLowerCase()));
+    DEFAULT_ALLOWANCES.forEach(a => { if (!existing.has(a.description.toLowerCase())) pr.allowances.push({ _id: uid(), description: a.description, amount: a.amount, on: true }); });
+    return pr;
+  });
+
+  const addPcItem = (desc, amt) => { if (!desc.trim()) return; up(pr => { pr.pcItems.push({ _id: uid(), description: desc.trim(), amount: parseFloat(amt) || 0, on: true }); return pr; }); setPcInput({ description: "", amount: "" }); };
+  const delPcItem = (idx) => up(pr => { pr.pcItems.splice(idx, 1); return pr; });
+  const loadDefaultPcItems = () => up(pr => {
+    const existing = new Set(pr.pcItems.map(e => e.description.toLowerCase()));
+    DEFAULT_PC_ITEMS.forEach(a => { if (!existing.has(a.description.toLowerCase())) pr.pcItems.push({ _id: uid(), description: a.description, amount: a.amount, on: true }); });
+    return pr;
+  });
+
+  const addQualification = (text) => { if (!text.trim()) return; up(pr => { pr.qualifications.push({ _id: uid(), text: text.trim(), on: true }); return pr; }); setQualInput(""); };
+  const delQualification = (idx) => up(pr => { pr.qualifications.splice(idx, 1); return pr; });
+  const loadDefaultQualifications = () => up(pr => {
+    const existing = new Set(pr.qualifications.map(e => e.text.toLowerCase()));
+    DEFAULT_QUALIFICATIONS.forEach(t => { if (!existing.has(t.toLowerCase())) pr.qualifications.push({ _id: uid(), text: t, on: true }); });
+    return pr;
+  });
+
   // ─── Generate Proposal ───
   const generateProposal = () => {
     const version = (p.proposal?.version || 0) + 1;
@@ -136,6 +177,10 @@ export default function QuotePage() {
         area: pr.floorArea || pr.area,
         notes: pr.notes,
         validDays: pr.validDays,
+        exclusions: JSON.parse(JSON.stringify(pr.exclusions || [])),
+        allowances: JSON.parse(JSON.stringify(pr.allowances || [])),
+        pcItems: JSON.parse(JSON.stringify(pr.pcItems || [])),
+        qualifications: JSON.parse(JSON.stringify(pr.qualifications || [])),
         pricing: { sub: t.sub, mar: t.mar, con: t.con, gst: t.gst, total: t.curr, margin: t.margin, contingency: t.contingency },
         sigData: null,
         status: "draft",
@@ -470,6 +515,135 @@ export default function QuotePage() {
               {/* Nav */}
               <div style={{ marginTop: _.s7, display: "flex", gap: _.s3 }}>
                 <Button variant="ghost" onClick={() => setStep("details")} icon={ArrowLeft}>Details</Button>
+                <Button onClick={() => setStep("extras")} icon={ArrowRight}>Continue to Extras</Button>
+              </div>
+            </div>
+          )}
+
+          {/* ═══════════════ EXTRAS STEP ═══════════════ */}
+          {currentStep === "extras" && (
+            <div>
+              <div style={{ fontSize: _.fontSize.unit, fontWeight: _.fontWeight.semi, color: _.ink, marginBottom: _.s5 }}>Exclusions, Allowances & Qualifications</div>
+
+              {/* ── Exclusions ── */}
+              <div style={{ marginBottom: _.s5, border: `1px solid ${_.line}`, borderRadius: _.rSm, overflow: "hidden" }}>
+                <div onClick={() => setExtrasExp(e => ({ ...e, exclusions: !e.exclusions }))} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", cursor: "pointer", background: _.well }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: _.s2 }}>
+                    <span style={{ transform: extrasExp.exclusions ? "rotate(90deg)" : "none", display: "inline-flex", transition: "transform 0.15s" }}><ChevronRight size={13} color={_.muted} /></span>
+                    <span style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.semi, color: _.ink }}>Exclusions</span>
+                    {p.exclusions.length > 0 && <span style={{ fontSize: _.fontSize.caption, fontWeight: _.fontWeight.semi, color: _.ac }}>{p.exclusions.length}</span>}
+                  </div>
+                  <span onClick={e => { e.stopPropagation(); loadDefaultExclusions(); }} style={{ fontSize: _.fontSize.sm, color: _.ac, fontWeight: _.fontWeight.semi, cursor: "pointer" }}>Load defaults</span>
+                </div>
+                {extrasExp.exclusions && (
+                  <div style={{ padding: "8px 14px 12px" }}>
+                    {p.exclusions.map((item, idx) => (
+                      <div key={item._id} style={{ display: "flex", alignItems: "center", gap: _.s2, padding: "5px 0", borderBottom: `1px solid ${_.line}08` }}>
+                        <span style={{ flex: 1, fontSize: _.fontSize.base, color: _.ink }}>• {item.text}</span>
+                        <div onClick={() => delExclusion(idx)} style={{ cursor: "pointer", color: _.faint, flexShrink: 0, padding: 2 }}
+                          onMouseEnter={e => e.currentTarget.style.color = _.red} onMouseLeave={e => e.currentTarget.style.color = _.faint}><X size={13} /></div>
+                      </div>
+                    ))}
+                    <div style={{ display: "flex", gap: _.s2, marginTop: 6 }}>
+                      <input style={{ ...input, flex: 1 }} value={exclInput} onChange={e => setExclInput(e.target.value)} placeholder="Add exclusion…"
+                        onKeyDown={e => { if (e.key === "Enter") addExclusion(exclInput); }} />
+                      <Button size="sm" onClick={() => addExclusion(exclInput)} icon={Plus}>Add</Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* ── Allowances ── */}
+              <div style={{ marginBottom: _.s5, border: `1px solid ${_.line}`, borderRadius: _.rSm, overflow: "hidden" }}>
+                <div onClick={() => setExtrasExp(e => ({ ...e, allowances: !e.allowances }))} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", cursor: "pointer", background: _.well }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: _.s2 }}>
+                    <span style={{ transform: extrasExp.allowances ? "rotate(90deg)" : "none", display: "inline-flex", transition: "transform 0.15s" }}><ChevronRight size={13} color={_.muted} /></span>
+                    <span style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.semi, color: _.ink }}>Allowances / Provisional Sums</span>
+                    {p.allowances.length > 0 && <span style={{ fontSize: _.fontSize.caption, fontWeight: _.fontWeight.semi, color: _.ac }}>{p.allowances.length}</span>}
+                  </div>
+                  <span onClick={e => { e.stopPropagation(); loadDefaultAllowances(); }} style={{ fontSize: _.fontSize.sm, color: _.ac, fontWeight: _.fontWeight.semi, cursor: "pointer" }}>Load defaults</span>
+                </div>
+                {extrasExp.allowances && (
+                  <div style={{ padding: "8px 14px 12px" }}>
+                    {p.allowances.map((item, idx) => (
+                      <div key={item._id} style={{ display: "flex", alignItems: "center", gap: _.s2, padding: "5px 0", borderBottom: `1px solid ${_.line}08` }}>
+                        <span style={{ flex: 1, fontSize: _.fontSize.base, color: _.ink }}>{item.description}</span>
+                        <span style={{ fontSize: _.fontSize.base, fontWeight: _.fontWeight.semi, color: _.ink, fontVariantNumeric: "tabular-nums", minWidth: 72, textAlign: "right" }}>{fmt(item.amount)}</span>
+                        <div onClick={() => delAllowance(idx)} style={{ cursor: "pointer", color: _.faint, flexShrink: 0, padding: 2 }}
+                          onMouseEnter={e => e.currentTarget.style.color = _.red} onMouseLeave={e => e.currentTarget.style.color = _.faint}><X size={13} /></div>
+                      </div>
+                    ))}
+                    <div style={{ display: "flex", gap: _.s2, marginTop: 6 }}>
+                      <input style={{ ...input, flex: 1 }} value={allowInput.description} onChange={e => setAllowInput(f => ({ ...f, description: e.target.value }))} placeholder="Description…" />
+                      <input type="number" style={{ ...input, width: 100, textAlign: "right" }} value={allowInput.amount} onChange={e => setAllowInput(f => ({ ...f, amount: e.target.value }))} placeholder="Amount"
+                        onKeyDown={e => { if (e.key === "Enter") addAllowance(allowInput.description, allowInput.amount); }} />
+                      <Button size="sm" onClick={() => addAllowance(allowInput.description, allowInput.amount)} icon={Plus}>Add</Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* ── PC Items ── */}
+              <div style={{ marginBottom: _.s5, border: `1px solid ${_.line}`, borderRadius: _.rSm, overflow: "hidden" }}>
+                <div onClick={() => setExtrasExp(e => ({ ...e, pcItems: !e.pcItems }))} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", cursor: "pointer", background: _.well }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: _.s2 }}>
+                    <span style={{ transform: extrasExp.pcItems ? "rotate(90deg)" : "none", display: "inline-flex", transition: "transform 0.15s" }}><ChevronRight size={13} color={_.muted} /></span>
+                    <span style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.semi, color: _.ink }}>Prime Cost Items</span>
+                    {p.pcItems.length > 0 && <span style={{ fontSize: _.fontSize.caption, fontWeight: _.fontWeight.semi, color: _.ac }}>{p.pcItems.length}</span>}
+                  </div>
+                  <span onClick={e => { e.stopPropagation(); loadDefaultPcItems(); }} style={{ fontSize: _.fontSize.sm, color: _.ac, fontWeight: _.fontWeight.semi, cursor: "pointer" }}>Load defaults</span>
+                </div>
+                {extrasExp.pcItems && (
+                  <div style={{ padding: "8px 14px 12px" }}>
+                    {p.pcItems.map((item, idx) => (
+                      <div key={item._id} style={{ display: "flex", alignItems: "center", gap: _.s2, padding: "5px 0", borderBottom: `1px solid ${_.line}08` }}>
+                        <span style={{ flex: 1, fontSize: _.fontSize.base, color: _.ink }}>{item.description}</span>
+                        <span style={{ fontSize: _.fontSize.base, fontWeight: _.fontWeight.semi, color: _.ink, fontVariantNumeric: "tabular-nums", minWidth: 72, textAlign: "right" }}>{fmt(item.amount)}</span>
+                        <div onClick={() => delPcItem(idx)} style={{ cursor: "pointer", color: _.faint, flexShrink: 0, padding: 2 }}
+                          onMouseEnter={e => e.currentTarget.style.color = _.red} onMouseLeave={e => e.currentTarget.style.color = _.faint}><X size={13} /></div>
+                      </div>
+                    ))}
+                    <div style={{ display: "flex", gap: _.s2, marginTop: 6 }}>
+                      <input style={{ ...input, flex: 1 }} value={pcInput.description} onChange={e => setPcInput(f => ({ ...f, description: e.target.value }))} placeholder="Description…" />
+                      <input type="number" style={{ ...input, width: 100, textAlign: "right" }} value={pcInput.amount} onChange={e => setPcInput(f => ({ ...f, amount: e.target.value }))} placeholder="Amount"
+                        onKeyDown={e => { if (e.key === "Enter") addPcItem(pcInput.description, pcInput.amount); }} />
+                      <Button size="sm" onClick={() => addPcItem(pcInput.description, pcInput.amount)} icon={Plus}>Add</Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* ── Qualifications ── */}
+              <div style={{ marginBottom: _.s5, border: `1px solid ${_.line}`, borderRadius: _.rSm, overflow: "hidden" }}>
+                <div onClick={() => setExtrasExp(e => ({ ...e, qualifications: !e.qualifications }))} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", cursor: "pointer", background: _.well }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: _.s2 }}>
+                    <span style={{ transform: extrasExp.qualifications ? "rotate(90deg)" : "none", display: "inline-flex", transition: "transform 0.15s" }}><ChevronRight size={13} color={_.muted} /></span>
+                    <span style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.semi, color: _.ink }}>Qualifications & Assumptions</span>
+                    {p.qualifications.length > 0 && <span style={{ fontSize: _.fontSize.caption, fontWeight: _.fontWeight.semi, color: _.ac }}>{p.qualifications.length}</span>}
+                  </div>
+                  <span onClick={e => { e.stopPropagation(); loadDefaultQualifications(); }} style={{ fontSize: _.fontSize.sm, color: _.ac, fontWeight: _.fontWeight.semi, cursor: "pointer" }}>Load defaults</span>
+                </div>
+                {extrasExp.qualifications && (
+                  <div style={{ padding: "8px 14px 12px" }}>
+                    {p.qualifications.map((item, idx) => (
+                      <div key={item._id} style={{ display: "flex", alignItems: "center", gap: _.s2, padding: "5px 0", borderBottom: `1px solid ${_.line}08` }}>
+                        <span style={{ flex: 1, fontSize: _.fontSize.base, color: _.ink }}>• {item.text}</span>
+                        <div onClick={() => delQualification(idx)} style={{ cursor: "pointer", color: _.faint, flexShrink: 0, padding: 2 }}
+                          onMouseEnter={e => e.currentTarget.style.color = _.red} onMouseLeave={e => e.currentTarget.style.color = _.faint}><X size={13} /></div>
+                      </div>
+                    ))}
+                    <div style={{ display: "flex", gap: _.s2, marginTop: 6 }}>
+                      <input style={{ ...input, flex: 1 }} value={qualInput} onChange={e => setQualInput(e.target.value)} placeholder="Add qualification…"
+                        onKeyDown={e => { if (e.key === "Enter") addQualification(qualInput); }} />
+                      <Button size="sm" onClick={() => addQualification(qualInput)} icon={Plus}>Add</Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Nav */}
+              <div style={{ marginTop: _.s7, display: "flex", gap: _.s3 }}>
+                <Button variant="ghost" onClick={() => setStep("scope")} icon={ArrowLeft}>Back to Scope</Button>
                 <Button onClick={() => setStep("review")} icon={ArrowRight}>Continue to Review</Button>
               </div>
             </div>
@@ -516,6 +690,40 @@ export default function QuotePage() {
                 </div>
               )}
 
+              {/* Extras summaries */}
+              {p.exclusions.filter(e => e.on).length > 0 && (
+                <div style={{ marginBottom: 16, padding: "10px 14px", background: _.well, borderRadius: _.rSm }}>
+                  <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: 4 }}>Exclusions</div>
+                  {p.exclusions.filter(e => e.on).map((e, i) => <div key={i} style={{ fontSize: _.fontSize.sm, color: _.body, lineHeight: _.lineHeight.body }}>• {e.text}</div>)}
+                </div>
+              )}
+              {p.allowances.filter(e => e.on).length > 0 && (
+                <div style={{ marginBottom: 16, padding: "10px 14px", background: _.well, borderRadius: _.rSm }}>
+                  <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: 4 }}>Allowances / Provisional Sums</div>
+                  {p.allowances.filter(e => e.on).map((a, i) => (
+                    <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: _.fontSize.sm, color: _.body, padding: "2px 0" }}>
+                      <span>{a.description}</span><span style={{ fontVariantNumeric: "tabular-nums", fontWeight: _.fontWeight.semi }}>{fmt(a.amount)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {p.pcItems.filter(e => e.on).length > 0 && (
+                <div style={{ marginBottom: 16, padding: "10px 14px", background: _.well, borderRadius: _.rSm }}>
+                  <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: 4 }}>Prime Cost Items</div>
+                  {p.pcItems.filter(e => e.on).map((pc, i) => (
+                    <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: _.fontSize.sm, color: _.body, padding: "2px 0" }}>
+                      <span>{pc.description}</span><span style={{ fontVariantNumeric: "tabular-nums", fontWeight: _.fontWeight.semi }}>{fmt(pc.amount)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {p.qualifications.filter(e => e.on).length > 0 && (
+                <div style={{ marginBottom: 16, padding: "10px 14px", background: _.well, borderRadius: _.rSm }}>
+                  <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: 4 }}>Qualifications & Assumptions</div>
+                  {p.qualifications.filter(e => e.on).map((q, i) => <div key={i} style={{ fontSize: _.fontSize.sm, color: _.body, lineHeight: _.lineHeight.body }}>• {q.text}</div>)}
+                </div>
+              )}
+
               {/* Totals */}
               <div style={{ borderTop: `2px solid ${_.ink}`, paddingTop: 12, marginTop: 8 }}>
                 {[["Subtotal", fmt(T.sub)], [`Margin ${margin}%`, fmt(T.mar)], [`Contingency ${contingency}%`, fmt(T.con)], ["GST 10%", fmt(T.gst)]].map(([l, v]) => (
@@ -540,7 +748,7 @@ export default function QuotePage() {
 
               {/* Primary CTA */}
               <div style={{ marginTop: _.s5, display: "flex", gap: _.s3, flexWrap: "wrap" }}>
-                <Button variant="ghost" onClick={() => setStep("scope")} icon={ArrowLeft}>Back to Scope</Button>
+                <Button variant="ghost" onClick={() => setStep("extras")} icon={ArrowLeft}>Back to Extras</Button>
                 {!quoteReady && <Button disabled>Complete details & scope first</Button>}
                 {quoteReady && !proposalGenerated && (
                   <Button onClick={generateProposal} icon={ArrowRight}>Generate Proposal</Button>

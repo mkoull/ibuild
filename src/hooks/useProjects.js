@@ -4,7 +4,7 @@ import { mkProject } from "../data/models.js";
 import { loadVersioned, saveVersioned } from "../data/store.js";
 
 const STORAGE_KEY = "ib_projects";
-const STORE_VERSION = 5;
+const STORE_VERSION = 6;
 const SAVE_DEBOUNCE_MS = 300;
 
 function hydrateProject(pr) {
@@ -80,6 +80,16 @@ function migrateProjects(data, fromVersion) {
     Object.values(norm.byId).forEach(p => {
       if (p.quoteSnapshotBudget === undefined) p.quoteSnapshotBudget = null;
       if (!Array.isArray(p.variationLedger)) p.variationLedger = [];
+    });
+    data = norm;
+  }
+  if (fromVersion <= 5) {
+    const norm = data && data.byId ? data : { byId: {}, allIds: [] };
+    Object.values(norm.byId).forEach(p => {
+      if (!Array.isArray(p.exclusions)) p.exclusions = [];
+      if (!Array.isArray(p.allowances)) p.allowances = [];
+      if (!Array.isArray(p.pcItems)) p.pcItems = [];
+      if (!Array.isArray(p.qualifications)) p.qualifications = [];
     });
     data = norm;
   }

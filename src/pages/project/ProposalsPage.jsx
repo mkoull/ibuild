@@ -31,6 +31,10 @@ export default function ProposalsPage() {
         client: clientName, address: pr.address, suburb: pr.suburb,
         type: pr.buildType || pr.type, stories: pr.storeys || pr.stories,
         area: pr.floorArea || pr.area, notes: pr.notes, validDays: pr.validDays,
+        exclusions: JSON.parse(JSON.stringify(pr.exclusions || [])),
+        allowances: JSON.parse(JSON.stringify(pr.allowances || [])),
+        pcItems: JSON.parse(JSON.stringify(pr.pcItems || [])),
+        qualifications: JSON.parse(JSON.stringify(pr.qualifications || [])),
         pricing: { sub: t.sub, mar: t.mar, con: t.con, gst: t.gst, total: t.curr, margin: t.margin, contingency: t.contingency },
         sigData: null, status: "draft",
       });

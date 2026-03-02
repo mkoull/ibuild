@@ -104,3 +104,42 @@ export const STAGES = ["Lead", "Quoted", "Approved", "Active", "Invoiced", "Comp
 export const LEGACY_STAGES = ["Lead", "Quote", "Approved", "Active", "Invoiced", "Complete"];
 
 export const WEATHER = ["Clear", "Partly Cloudy", "Overcast", "Rain", "Storm"];
+
+export const DEFAULT_EXCLUSIONS = [
+  "Demolition of existing structures",
+  "Removal of hazardous materials (asbestos, lead paint)",
+  "Council & authority fees and charges",
+  "Architectural and engineering design fees",
+  "Geotechnical and soil testing",
+  "Temporary accommodation or relocation costs",
+  "Furniture, window furnishings and loose fittings",
+  "Swimming pool and spa",
+  "Air conditioning (unless specified in scope)",
+  "Security and alarm systems",
+  "Solar panels and battery storage",
+  "Landscaping (unless specified in scope)",
+];
+
+export const DEFAULT_ALLOWANCES = [
+  { description: "Kitchen appliances", amount: 8500 },
+  { description: "Bathroom fixtures and fittings", amount: 5000 },
+  { description: "Light fittings", amount: 3500 },
+  { description: "Floor coverings", amount: 8000 },
+  { description: "Landscaping", amount: 15000 },
+];
+
+export const DEFAULT_PC_ITEMS = [
+  { description: "Bathroom tiles", amount: 5000 },
+  { description: "Kitchen benchtop (stone)", amount: 4500 },
+  { description: "Tapware", amount: 3000 },
+  { description: "Front door hardware", amount: 1200 },
+];
+
+export const DEFAULT_QUALIFICATIONS = [
+  "Assumes good ground conditions with no rock or contaminated soil",
+  "Assumes existing services (sewer, water, power, gas) are adequate and available at site",
+  "Quotation based on plans and specifications provided — any amendments may result in variations",
+  "Work to be carried out during normal business hours (Mon–Fri 7am–4pm)",
+  "Builder access to site for duration of works",
+  "No heritage overlay or special planning conditions apply",
+];
