@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useProject } from "../../context/ProjectContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
+import { createVariationBudgetLine, createVariationLedgerEntry } from "../../lib/budgetEngine.js";
 import _ from "../../theme/tokens.js";
 import { fmt, input, label, badge, uid, ds } from "../../theme/styles.js";
 import Section from "../../components/ui/Section.jsx";
@@ -43,7 +44,18 @@ export default function VariationsPage() {
     up(pr => {
       const v = pr.variations[i];
       v.status = newStatus;
-      if (newStatus === "approved") v.approvedAt = ds();
+      if (newStatus === "approved") {
+        v.approvedAt = ds();
+        // Feed-through: create budget line + ledger entry
+        if (!pr.budget) pr.budget = [];
+        if (!pr.variationLedger) pr.variationLedger = [];
+        const alreadyLinked = pr.budget.some(b => b.linkedVariationId === v.id);
+        if (!alreadyLinked) {
+          const budgetLine = createVariationBudgetLine(v);
+          pr.budget.push(budgetLine);
+          pr.variationLedger.push(createVariationLedgerEntry(v, budgetLine.id));
+        }
+      }
       return pr;
     });
     const v = p.variations[i];

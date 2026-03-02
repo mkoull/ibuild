@@ -1,4 +1,5 @@
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useProject } from "../../context/ProjectContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
 import _ from "../../theme/tokens.js";
@@ -6,15 +7,31 @@ import { fmt, pName, ds } from "../../theme/styles.js";
 import { getNextActions } from "../../lib/nextActions.js";
 import { getNextStepForProject } from "../../lib/nextStep.js";
 import { canTransition, isJob } from "../../lib/lifecycle.js";
+import { snapshotFromQuote, importSectionLevel, importItemLevel } from "../../lib/budgetEngine.js";
 import StagePipeline from "../../components/ui/StagePipeline.jsx";
 import Card from "../../components/ui/Card.jsx";
 import Button from "../../components/ui/Button.jsx";
+import Modal from "../../components/ui/Modal.jsx";
 import { ArrowRight, Pencil, TrendingUp, Calendar, DollarSign, ChevronRight, Receipt } from "lucide-react";
 
 export default function OverviewPage() {
   const { project: p, update: up, T, client, log, transitionStage, convertToJob } = useProject();
   const { projects, clients, mobile, notify } = useApp();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Convert modal state
+  const [showConvertModal, setShowConvertModal] = useState(false);
+  const [importMode, setImportMode] = useState("section");
+  const [mergeMode, setMergeMode] = useState("replace");
+
+  // Open modal from URL param (e.g. from JobModuleGate redirect)
+  useEffect(() => {
+    if (searchParams.get("action") === "convert") {
+      setShowConvertModal(true);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const stage = p.stage || p.status;
   const stageIsJob = isJob(stage);
@@ -25,10 +42,29 @@ export default function OverviewPage() {
   // ─── Deterministic primary CTA ───
   const step = getNextStepForProject(p, T);
 
+  const handleConvertConfirm = () => {
+    convertToJob();
+    if (importMode !== "skip") {
+      up(pr => {
+        pr.quoteSnapshotBudget = snapshotFromQuote(pr);
+        const lines = importMode === "item" ? importItemLevel(pr) : importSectionLevel(pr);
+        if (mergeMode === "replace" || !pr.budget || pr.budget.length === 0) {
+          pr.budget = lines;
+        } else {
+          pr.budget = [...pr.budget, ...lines];
+        }
+        return pr;
+      });
+      log(`Budget imported from quote (${importMode}-level)`);
+    }
+    setShowConvertModal(false);
+    notify("Converted to Job");
+  };
+
   const handlePrimary = () => {
     if (!step) return;
     if (step.actionId === "convert_to_job") {
-      convertToJob();
+      setShowConvertModal(true);
     } else if (step.actionId === "start_job" && canTransition(stage, "Active")) {
       transitionStage("Active");
     } else if (step.actionId === "complete_build" && canTransition(stage, "Complete")) {
@@ -258,6 +294,73 @@ export default function OverviewPage() {
           ))}
         </div>
       </div>
+
+      {/* Convert to Job Modal */}
+      <Modal open={showConvertModal} onClose={() => setShowConvertModal(false)} title="Convert to Job" width={480}>
+        <div style={{ fontSize: _.fontSize.md, color: _.body, marginBottom: _.s5, lineHeight: _.lineHeight.body }}>
+          Lock the quote and unlock job modules (Costs, Schedule, Invoices, Variations, and more).
+        </div>
+
+        <div style={{ marginBottom: _.s5 }}>
+          <div style={{ fontSize: _.fontSize.caption, color: _.muted, fontWeight: _.fontWeight.semi, letterSpacing: _.letterSpacing.wider, textTransform: "uppercase", marginBottom: _.s3 }}>Import budget from quote?</div>
+          {[
+            { value: "section", label: "Section-level", desc: "One line per scope category" },
+            { value: "item", label: "Item-level", desc: "One line per scope item" },
+            { value: "skip", label: "Skip", desc: "Start with an empty budget" },
+          ].map(opt => (
+            <div key={opt.value} onClick={() => setImportMode(opt.value)} style={{
+              display: "flex", alignItems: "center", gap: _.s3, padding: `${_.s2}px ${_.s3}px`,
+              borderRadius: _.rSm, cursor: "pointer", marginBottom: 2,
+              background: importMode === opt.value ? `${_.ac}0a` : "transparent",
+              transition: `background ${_.tr}`,
+            }}>
+              <div style={{
+                width: 16, height: 16, borderRadius: "50%", border: `2px solid ${importMode === opt.value ? _.ac : _.line2}`,
+                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+              }}>
+                {importMode === opt.value && <div style={{ width: 8, height: 8, borderRadius: "50%", background: _.ac }} />}
+              </div>
+              <div>
+                <div style={{ fontSize: _.fontSize.base, fontWeight: _.fontWeight.medium, color: _.ink }}>{opt.label}</div>
+                <div style={{ fontSize: _.fontSize.sm, color: _.muted }}>{opt.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {(p.budget || []).length > 0 && importMode !== "skip" && (
+          <div style={{ marginBottom: _.s5 }}>
+            <div style={{ fontSize: _.fontSize.caption, color: _.muted, fontWeight: _.fontWeight.semi, letterSpacing: _.letterSpacing.wider, textTransform: "uppercase", marginBottom: _.s3 }}>Existing budget lines</div>
+            {[
+              { value: "replace", label: "Replace", desc: "Remove existing lines" },
+              { value: "merge", label: "Merge", desc: "Add alongside existing lines" },
+            ].map(opt => (
+              <div key={opt.value} onClick={() => setMergeMode(opt.value)} style={{
+                display: "flex", alignItems: "center", gap: _.s3, padding: `${_.s2}px ${_.s3}px`,
+                borderRadius: _.rSm, cursor: "pointer", marginBottom: 2,
+                background: mergeMode === opt.value ? `${_.ac}0a` : "transparent",
+                transition: `background ${_.tr}`,
+              }}>
+                <div style={{
+                  width: 16, height: 16, borderRadius: "50%", border: `2px solid ${mergeMode === opt.value ? _.ac : _.line2}`,
+                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                }}>
+                  {mergeMode === opt.value && <div style={{ width: 8, height: 8, borderRadius: "50%", background: _.ac }} />}
+                </div>
+                <div>
+                  <div style={{ fontSize: _.fontSize.base, fontWeight: _.fontWeight.medium, color: _.ink }}>{opt.label}</div>
+                  <div style={{ fontSize: _.fontSize.sm, color: _.muted }}>{opt.desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: _.s2, justifyContent: "flex-end" }}>
+          <Button variant="ghost" onClick={() => setShowConvertModal(false)}>Cancel</Button>
+          <Button onClick={handleConvertConfirm}>{importMode === "skip" ? "Convert" : "Convert & Import"}</Button>
+        </div>
+      </Modal>
     </div>
   );
 }

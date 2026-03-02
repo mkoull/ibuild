@@ -157,6 +157,9 @@ export function applyJobConversion(pr, { targetStage = "Approved" } = {}) {
   if (!Array.isArray(pr.billUploads)) pr.billUploads = [];
   if (!Array.isArray(pr.paymentSchedule)) pr.paymentSchedule = [];
 
+  if (!pr.quoteSnapshotBudget) pr.quoteSnapshotBudget = null;
+  if (!Array.isArray(pr.variationLedger)) pr.variationLedger = [];
+
   if (!Array.isArray(pr.activity)) pr.activity = [];
   pr.activity.unshift({
     type: "job_converted",

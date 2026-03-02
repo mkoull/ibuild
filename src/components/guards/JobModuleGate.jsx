@@ -1,16 +1,13 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useProject } from "../../context/ProjectContext.jsx";
 import { isQuote, normaliseStage } from "../../lib/lifecycle.js";
 import _ from "../../theme/tokens.js";
 import Button from "../ui/Button.jsx";
-import { Lock, ArrowRight, AlertTriangle } from "lucide-react";
+import { Lock, ArrowRight } from "lucide-react";
 
 export default function JobModuleGate({ moduleName, children }) {
-  const { project, convertToJob } = useProject();
+  const { project } = useProject();
   const navigate = useNavigate();
-  const [converting, setConverting] = useState(false);
-  const [error, setError] = useState(null);
 
   const stage = normaliseStage(project.stage || project.status);
 
@@ -18,16 +15,7 @@ export default function JobModuleGate({ moduleName, children }) {
 
   const isLead = stage === "Lead";
 
-  const handleConvert = () => {
-    setConverting(true);
-    setError(null);
-    try {
-      convertToJob();
-    } catch (e) {
-      setError(e.message || "Conversion failed");
-      setConverting(false);
-    }
-  };
+  const handleConvert = () => navigate("../overview?action=convert");
 
   return (
     <div style={{ animation: "fadeUp 0.2s ease", maxWidth: 1200 }}>
@@ -49,18 +37,11 @@ export default function JobModuleGate({ moduleName, children }) {
             : "This is a Quote. Convert to a Job to unlock Invoices, Costs, Variations, Schedule, Site Diary, Defects and Trades."
           }
         </div>
-        {error && (
-          <div style={{ display: "flex", alignItems: "center", gap: _.s2, marginTop: _.s4, fontSize: _.fontSize.base, color: _.red }}>
-            <AlertTriangle size={14} /> {error}
-          </div>
-        )}
         <div style={{ marginTop: _.s6, display: "flex", gap: _.s3 }}>
           {isLead ? (
             <Button onClick={() => navigate("../quote?step=scope")} icon={ArrowRight}>Go to Quote</Button>
           ) : (
-            <Button onClick={handleConvert} disabled={converting} icon={ArrowRight}>
-              {converting ? "Converting…" : "Convert to Job"}
-            </Button>
+            <Button onClick={handleConvert} icon={ArrowRight}>Convert to Job</Button>
           )}
           <Button variant="ghost" onClick={() => navigate("../overview")}>Overview</Button>
         </div>

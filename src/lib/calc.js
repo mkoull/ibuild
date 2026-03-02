@@ -24,14 +24,17 @@ export function calc(p) {
   const committedTotal = (p.commitments || []).filter(c => c.status === "Committed" || c.status === "approved").reduce((t, c) => t + (c.amount || 0), 0);
   const actualsTotal = (p.actuals || []).reduce((t, a) => t + (a.amount || 0), 0);
 
+  const budgetActualsTotal = (p.budget || []).reduce((t, b) => t + (b.actualAmount || 0), 0);
+  const combinedActuals = actualsTotal + budgetActualsTotal;
+
   const bills = p.supplierBills || [];
   const billsTotal = bills.filter(b => b.status !== "Void").reduce((t, b) => t + (b.total || 0), 0);
   const billsPaid = bills.filter(b => b.status === "Paid").reduce((t, b) => t + (b.total || 0), 0);
 
-  const forecastMargin = curr > 0 ? curr - actualsTotal : 0;
-  const marginPctCalc = curr > 0 ? ((curr - actualsTotal) / curr) * 100 : 0;
+  const forecastMargin = curr > 0 ? curr - combinedActuals : 0;
+  const marginPctCalc = curr > 0 ? ((curr - combinedActuals) / curr) * 100 : 0;
 
-  return { sub, mar, con, gst, orig, aV, aVCount, curr, inv, paid, outstanding, act, cT, cA, cats, items, margin, contingency, budgetTotal, committedTotal, actualsTotal, forecastMargin, marginPctCalc, billsTotal, billsPaid };
+  return { sub, mar, con, gst, orig, aV, aVCount, curr, inv, paid, outstanding, act, cT, cA, cats, items, margin, contingency, budgetTotal, committedTotal, actualsTotal, budgetActualsTotal, combinedActuals, forecastMargin, marginPctCalc, billsTotal, billsPaid };
 }
 
 export function commitmentRemaining(commitment, supplierBills) {

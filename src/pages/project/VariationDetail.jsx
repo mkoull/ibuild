@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useProject } from "../../context/ProjectContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
+import { createVariationBudgetLine, createVariationLedgerEntry } from "../../lib/budgetEngine.js";
 import _ from "../../theme/tokens.js";
 import { fmt, input, label, btnPrimary, btnSecondary, btnGhost, badge, pName, ds } from "../../theme/styles.js";
 import Section from "../../components/ui/Section.jsx";
@@ -116,11 +117,22 @@ export default function VariationDetail() {
                 <button onClick={() => {
                   const data = sig.getData(); if (!data) return;
                   up(pr => {
-                    if (voSignAs === "builder") pr.variations[idx].builderSig = data;
-                    else pr.variations[idx].clientSig = data;
-                    if (pr.variations[idx].builderSig && pr.variations[idx].clientSig) {
-                      pr.variations[idx].status = "approved"; pr.variations[idx].approvedDate = ds(); notify("VO approved");
-                    } else { pr.variations[idx].status = "pending"; notify((voSignAs === "builder" ? "Builder" : "Client") + " signed"); }
+                    const v = pr.variations[idx];
+                    if (voSignAs === "builder") v.builderSig = data;
+                    else v.clientSig = data;
+                    if (v.builderSig && v.clientSig) {
+                      v.status = "approved"; v.approvedDate = ds(); v.approvedAt = ds();
+                      // Feed-through: create budget line + ledger entry
+                      if (!pr.budget) pr.budget = [];
+                      if (!pr.variationLedger) pr.variationLedger = [];
+                      const alreadyLinked = pr.budget.some(b => b.linkedVariationId === v.id);
+                      if (!alreadyLinked) {
+                        const budgetLine = createVariationBudgetLine(v);
+                        pr.budget.push(budgetLine);
+                        pr.variationLedger.push(createVariationLedgerEntry(v, budgetLine.id));
+                      }
+                      notify("VO approved");
+                    } else { v.status = "pending"; notify((voSignAs === "builder" ? "Builder" : "Client") + " signed"); }
                     return pr;
                   });
                   log(voD.id + " signed by " + voSignAs); sig.clear();

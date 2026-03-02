@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useProject } from "../../context/ProjectContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
 import { commitmentRemaining } from "../../lib/calc.js";
+import { importSectionLevel, actualFromPercent } from "../../lib/budgetEngine.js";
 import _ from "../../theme/tokens.js";
 import { fmt, input, label, badge, uid, ds } from "../../theme/styles.js";
 import Section from "../../components/ui/Section.jsx";
@@ -10,7 +11,7 @@ import Card from "../../components/ui/Card.jsx";
 import Empty from "../../components/ui/Empty.jsx";
 import Button from "../../components/ui/Button.jsx";
 import Modal from "../../components/ui/Modal.jsx";
-import { BarChart3, Plus, X, ChevronRight, Download } from "lucide-react";
+import { BarChart3, Plus, X, ChevronRight, Download, Upload } from "lucide-react";
 
 function TradeSelect({ value, onChange, trades }) {
   return (
@@ -34,7 +35,7 @@ export default function CostsPage() {
   const navigate = useNavigate();
 
   const [tab, setTab] = useState("Trade Breakdown");
-  const [budgetForm, setBudgetForm] = useState({ costCode: "", labelText: "", budgetAmount: "", tradeId: "" });
+  const [budgetForm, setBudgetForm] = useState({ costCode: "", labelText: "", budgetAmount: "", tradeId: "", sectionName: "" });
   const [commitForm, setCommitForm] = useState({ vendor: "", description: "", amount: "", tradeId: "", status: "Draft" });
   const [actualForm, setActualForm] = useState({ costCode: "", description: "", amount: "", tradeId: "", date: "" });
   const [deleteModal, setDeleteModal] = useState(null);
@@ -90,12 +91,42 @@ export default function CostsPage() {
     if (!budgetForm.labelText || !amt) { notify("Label and amount required", "error"); return; }
     up(pr => {
       if (!pr.budget) pr.budget = [];
-      pr.budget.push({ id: uid(), costCode: budgetForm.costCode, label: budgetForm.labelText, budgetAmount: amt, tradeId: budgetForm.tradeId });
+      pr.budget.push({ id: uid(), costCode: budgetForm.costCode, label: budgetForm.labelText, description: budgetForm.labelText, sectionName: budgetForm.sectionName, budgetAmount: amt, tradeId: budgetForm.tradeId, source: "manual", actualAmount: 0, actualPct: null });
       return pr;
     });
     log(`Budget line: ${budgetForm.labelText} (${fmt(amt)})`);
     notify("Budget line added");
-    setBudgetForm({ costCode: "", labelText: "", budgetAmount: "", tradeId: "" });
+    setBudgetForm({ costCode: "", labelText: "", budgetAmount: "", tradeId: "", sectionName: "" });
+  };
+
+  const importFromQuote = () => {
+    up(pr => {
+      const lines = importSectionLevel(pr);
+      pr.budget = lines;
+      return pr;
+    });
+    log("Budget imported from quote (section-level)");
+    notify("Budget imported from quote");
+  };
+
+  const updateBudgetActual = (idx, rawValue) => {
+    const str = String(rawValue).trim();
+    up(pr => {
+      const line = pr.budget[idx];
+      if (!line) return pr;
+      if (str.endsWith("%")) {
+        const pct = parseFloat(str.slice(0, -1));
+        if (!isNaN(pct)) {
+          line.actualPct = pct;
+          line.actualAmount = actualFromPercent(line.budgetAmount, pct);
+        }
+      } else {
+        const amt = parseFloat(str);
+        line.actualAmount = isNaN(amt) ? 0 : amt;
+        line.actualPct = null;
+      }
+      return pr;
+    });
   };
 
   const addCommitment = () => {
@@ -395,34 +426,63 @@ export default function CostsPage() {
         <div>
           <div style={{ marginBottom: _.s6, paddingBottom: _.s6, borderBottom: `1px solid ${_.line}` }}>
             <div style={{ fontSize: _.fontSize.caption, color: _.muted, fontWeight: _.fontWeight.semi, letterSpacing: _.letterSpacing.wider, textTransform: "uppercase", marginBottom: _.s4 }}>Add Budget Line</div>
-            <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "1fr 80px 1fr 140px", gap: `${_.s3}px ${_.s4}px`, alignItems: mobile ? "stretch" : "end", marginBottom: _.s3 }}>
+            <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "1fr 80px 1fr 1fr 140px", gap: `${_.s3}px ${_.s4}px`, alignItems: mobile ? "stretch" : "end", marginBottom: _.s3 }}>
               <TradeSelect value={budgetForm.tradeId} onChange={v => setBudgetForm({ ...budgetForm, tradeId: v })} trades={trades} />
               <div><label style={label}>Code</label><input style={input} value={budgetForm.costCode} onChange={e => setBudgetForm({ ...budgetForm, costCode: e.target.value })} placeholder="01" /></div>
+              <div><label style={label}>Section</label><input style={input} value={budgetForm.sectionName} onChange={e => setBudgetForm({ ...budgetForm, sectionName: e.target.value })} placeholder="Concrete & Slab" /></div>
               <div><label style={label}>Label *</label><input style={input} value={budgetForm.labelText} onChange={e => setBudgetForm({ ...budgetForm, labelText: e.target.value })} placeholder="Concrete works" /></div>
               <div><label style={label}>Amount *</label><input type="number" style={input} value={budgetForm.budgetAmount} onChange={e => setBudgetForm({ ...budgetForm, budgetAmount: e.target.value })} placeholder="50000" /></div>
             </div>
             <Button onClick={addBudgetLine} icon={Plus}>Add budget line</Button>
           </div>
           {budgetLines.length === 0 ? (
-            <Empty icon={BarChart3} text="No budget lines yet" />
+            <div>
+              <Empty icon={BarChart3} text="No budget lines yet" />
+              {p.quoteSnapshotBudget && (
+                <div style={{ textAlign: "center", marginTop: _.s4 }}>
+                  <Button icon={Upload} variant="secondary" onClick={importFromQuote}>Import from Quote</Button>
+                </div>
+              )}
+            </div>
           ) : (
             <>
-              <div style={{ display: "grid", gridTemplateColumns: mobile ? "60px 1fr 90px 30px" : "80px 60px 1fr 120px 120px 30px", gap: _.s2, padding: `${_.s2}px 0`, borderBottom: `2px solid ${_.ink}`, fontSize: _.fontSize.xs, color: _.muted, fontWeight: _.fontWeight.semi, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase" }}>
+              <div style={{ display: "grid", gridTemplateColumns: mobile ? "60px 1fr 90px 30px" : "80px 60px 1fr 120px 100px 80px 30px", gap: _.s2, padding: `${_.s2}px 0`, borderBottom: `2px solid ${_.ink}`, fontSize: _.fontSize.xs, color: _.muted, fontWeight: _.fontWeight.semi, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase" }}>
                 {!mobile && <span>Trade</span>}
                 <span>Code</span><span>Label</span>
-                {!mobile && <span style={{ textAlign: "right" }}>Amount</span>}
-                <span style={{ textAlign: "right" }}>{mobile ? "Amt" : ""}</span><span></span>
+                {!mobile && <span style={{ textAlign: "right" }}>Budget</span>}
+                {!mobile && <span style={{ textAlign: "right" }}>Actual</span>}
+                <span style={{ textAlign: "right" }}>{mobile ? "Amt" : "Var."}</span><span></span>
               </div>
-              {budgetLines.map((b, i) => (
-                <div key={b.id || i} style={{ display: "grid", gridTemplateColumns: mobile ? "60px 1fr 90px 30px" : "80px 60px 1fr 120px 120px 30px", gap: _.s2, padding: `${_.s3}px 0`, borderBottom: `1px solid ${_.line}`, alignItems: "center", fontSize: _.fontSize.base }}>
-                  {!mobile && <span style={{ fontSize: _.fontSize.sm, color: _.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tradeName(b.tradeId)}</span>}
-                  <span style={{ color: _.muted, fontVariantNumeric: "tabular-nums", fontWeight: _.fontWeight.semi }}>{b.costCode || "—"}</span>
-                  <span style={{ fontWeight: _.fontWeight.medium, color: _.ink }}>{b.label}</span>
-                  {!mobile && <span></span>}
-                  <span style={{ textAlign: "right", fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums" }}>{fmt(b.budgetAmount)}</span>
-                  <div onClick={() => setDeleteModal({ type: "budget", idx: i })} style={{ cursor: "pointer", color: _.faint, display: "flex", justifyContent: "center", transition: `color ${_.tr}` }} onMouseEnter={e => e.currentTarget.style.color = _.red} onMouseLeave={e => e.currentTarget.style.color = _.faint}><X size={13} /></div>
-                </div>
-              ))}
+              {budgetLines.map((b, i) => {
+                const lineVar = (b.budgetAmount || 0) - (b.actualAmount || 0);
+                const srcTag = b.source === "quote_import" ? { text: "Quote", color: _.muted }
+                  : b.source === "variation" ? { text: "VO", color: _.amber }
+                  : null;
+                return (
+                  <div key={b.id || i} style={{ display: "grid", gridTemplateColumns: mobile ? "60px 1fr 90px 30px" : "80px 60px 1fr 120px 100px 80px 30px", gap: _.s2, padding: `${_.s3}px 0`, borderBottom: `1px solid ${_.line}`, alignItems: "center", fontSize: _.fontSize.base }}>
+                    {!mobile && <span style={{ fontSize: _.fontSize.sm, color: _.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tradeName(b.tradeId)}</span>}
+                    <span style={{ color: _.muted, fontVariantNumeric: "tabular-nums", fontWeight: _.fontWeight.semi }}>{b.costCode || "—"}</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: _.s2, minWidth: 0 }}>
+                      <span style={{ fontWeight: _.fontWeight.medium, color: _.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.label || b.description}</span>
+                      {srcTag && <span style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, padding: "1px 6px", borderRadius: _.rFull, background: `${srcTag.color}14`, color: srcTag.color, flexShrink: 0 }}>{srcTag.text}</span>}
+                    </div>
+                    {!mobile && <span style={{ textAlign: "right", fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums" }}>{fmt(b.budgetAmount)}</span>}
+                    {!mobile && (
+                      <input
+                        style={{ width: "100%", padding: "3px 6px", background: _.well, border: `1px solid ${_.line}`, borderRadius: 5, color: _.ink, fontSize: _.fontSize.sm, textAlign: "right", outline: "none" }}
+                        placeholder="0"
+                        defaultValue={b.actualPct != null ? `${b.actualPct}%` : (b.actualAmount || "")}
+                        onBlur={e => updateBudgetActual(i, e.target.value)}
+                        onKeyDown={e => { if (e.key === "Enter") e.target.blur(); }}
+                      />
+                    )}
+                    <span style={{ textAlign: "right", fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", fontSize: _.fontSize.sm, color: b.actualAmount > 0 ? (lineVar >= 0 ? _.green : _.red) : _.faint }}>
+                      {b.actualAmount > 0 ? `${lineVar >= 0 ? "+" : ""}${fmt(lineVar)}` : (mobile ? fmt(b.budgetAmount) : "—")}
+                    </span>
+                    <div onClick={() => setDeleteModal({ type: "budget", idx: i })} style={{ cursor: "pointer", color: _.faint, display: "flex", justifyContent: "center", transition: `color ${_.tr}` }} onMouseEnter={e => e.currentTarget.style.color = _.red} onMouseLeave={e => e.currentTarget.style.color = _.faint}><X size={13} /></div>
+                  </div>
+                );
+              })}
               <div style={{ display: "flex", justifyContent: "flex-end", padding: `${_.s3}px 0`, fontSize: _.fontSize.md, fontWeight: _.fontWeight.bold }}>Total: {fmt(T.budgetTotal)}</div>
             </>
           )}
@@ -533,22 +593,28 @@ export default function CostsPage() {
         <div>
           <div style={{ fontSize: _.fontSize.caption, color: _.muted, fontWeight: _.fontWeight.semi, letterSpacing: _.letterSpacing.wider, textTransform: "uppercase", marginBottom: _.s4 }}>Job Cost Summary</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: `${_.s2}px ${_.s6}px`, maxWidth: 400, marginBottom: _.s6 }}>
-            {[
-              ["Contract Value", T.curr],
-              ["Budget", T.budgetTotal],
-              ["Committed", T.committedTotal],
-              ["Actual", T.actualsTotal],
-              ["Variance (Budget − Actual)", T.budgetTotal - T.actualsTotal],
-              ["Forecast Margin", T.forecastMargin],
-              ["Margin %", null],
-            ].map(([lbl, val], i) => (
-              <div key={lbl} style={{ display: "contents" }}>
-                <span style={{ fontSize: _.fontSize.base, color: _.body, padding: `${_.s2}px 0`, borderBottom: `1px solid ${_.line}` }}>{lbl}</span>
-                <span style={{ fontSize: _.fontSize.base, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", textAlign: "right", padding: `${_.s2}px 0`, borderBottom: `1px solid ${_.line}`, color: lbl.includes("Variance") ? (val >= 0 ? _.green : _.red) : lbl.includes("Margin") && val !== null ? (val >= 0 ? _.green : _.red) : _.ink }}>
-                  {val !== null ? (lbl.includes("%") ? `${T.marginPctCalc.toFixed(1)}%` : fmt(val)) : `${T.marginPctCalc.toFixed(1)}%`}
-                </span>
-              </div>
-            ))}
+            {(() => {
+              const combined = T.combinedActuals != null ? T.combinedActuals : T.actualsTotal;
+              const reportVariance = T.budgetTotal - combined;
+              const reportForecast = T.curr > 0 ? T.curr - combined : 0;
+              const reportMarginPct = T.curr > 0 ? ((T.curr - combined) / T.curr) * 100 : 0;
+              return [
+                ["Contract Value", T.curr],
+                ["Budget", T.budgetTotal],
+                ["Committed", T.committedTotal],
+                ["Actual (combined)", combined],
+                ["Variance (Budget − Actual)", reportVariance],
+                ["Forecast Margin", reportForecast],
+                ["Margin %", null, reportMarginPct],
+              ].map(([lbl, val, extra], i) => (
+                <div key={lbl} style={{ display: "contents" }}>
+                  <span style={{ fontSize: _.fontSize.base, color: _.body, padding: `${_.s2}px 0`, borderBottom: `1px solid ${_.line}` }}>{lbl}</span>
+                  <span style={{ fontSize: _.fontSize.base, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", textAlign: "right", padding: `${_.s2}px 0`, borderBottom: `1px solid ${_.line}`, color: lbl.includes("Variance") ? (val >= 0 ? _.green : _.red) : lbl.includes("Margin") && val !== null ? (val >= 0 ? _.green : _.red) : lbl.includes("Margin") ? ((extra || 0) >= 0 ? _.green : _.red) : _.ink }}>
+                    {val !== null ? fmt(val) : `${(extra || 0).toFixed(1)}%`}
+                  </span>
+                </div>
+              ));
+            })()}
           </div>
 
           <Button icon={Download} variant="secondary" onClick={downloadCSV}>Download CSV</Button>
