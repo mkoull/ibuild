@@ -6,7 +6,7 @@ import _ from "../../theme/tokens.js";
 import {
   LayoutDashboard, FolderOpen, Users, MoreHorizontal, BarChart3, PenLine,
   DollarSign, Calendar, Plus, X, FileText, Building2, ClipboardList,
-  Wrench, Library, Settings, Receipt, BookOpen, AlertTriangle,
+  Wrench, Library, Settings, Puzzle,
 } from "lucide-react";
 
 const GLOBAL_TABS = [
@@ -21,7 +21,7 @@ const PROJECT_TABS = [
   { path: "overview", label: "Overview", Ic: BarChart3 },
   { path: "quote", label: "Quote", Ic: PenLine },
   null, // FAB slot
-  { path: "costs", label: "Costs", Ic: DollarSign },
+  { path: "modules", label: "Modules", Ic: Puzzle },
   { id: "more", label: "More", Ic: MoreHorizontal },
 ];
 
@@ -34,15 +34,9 @@ const GLOBAL_MORE = [
 ];
 
 const PROJECT_MORE = [
-  { path: "schedule", label: "Schedule", Ic: Calendar },
   { path: "proposals", label: "Proposals", Ic: FileText },
-  { path: "variations", label: "Variations", Ic: ClipboardList },
-  { path: "invoices", label: "Invoices", Ic: Receipt },
-  { path: "bills", label: "Bills", Ic: DollarSign },
-  { path: "site-diary", label: "Site Diary", Ic: BookOpen },
-  { path: "defects", label: "Defects", Ic: AlertTriangle },
   { path: "documents", label: "Documents", Ic: FolderOpen },
-  { path: "trades", label: "Trades", Ic: Wrench },
+  { path: "modules", label: "Modules", Ic: Puzzle },
 ];
 
 export default function MobileBottomTabs() {
@@ -129,7 +123,6 @@ export default function MobileBottomTabs() {
   // Close sheets on overlay tap
   const closeAll = () => { setShowCreate(false); setShowMore(false); };
 
-  const TAB_H = 56;
   const FAB_SIZE = 52;
 
   return (
@@ -209,9 +202,9 @@ export default function MobileBottomTabs() {
         position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 51,
         background: _.surface, borderTop: `1px solid ${_.line}`,
         display: "flex", alignItems: "flex-end", justifyContent: "space-around",
-        height: "var(--mobile-tab-h)",
+        height: "calc(var(--mobile-tab-h) + var(--safe-bottom))",
         paddingBottom: "var(--safe-bottom)",
-        boxSizing: "content-box",
+        boxSizing: "border-box",
       }}>
         {tabs.map((item, i) => {
           // Center FAB
@@ -223,7 +216,8 @@ export default function MobileBottomTabs() {
                   background: showCreate ? _.ink : _.ac,
                   display: "flex", alignItems: "center", justifyContent: "center",
                   cursor: "pointer", boxShadow: "0 4px 12px rgba(37,99,235,0.35)",
-                  position: "absolute", bottom: 10,
+                  position: "absolute",
+                  bottom: "calc(var(--safe-bottom) + 10px)",
                   transition: "background 0.15s, transform 0.15s",
                   transform: showCreate ? "rotate(45deg)" : "none",
                 }}>

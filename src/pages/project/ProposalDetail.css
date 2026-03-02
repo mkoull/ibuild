@@ -1,0 +1,64 @@
+.printRoot{background:#fff;color:#0f172a;max-width:100%;font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;font-size:12px;line-height:1.45}
+.printRoot .avoidBreak{break-inside:avoid}
+.printRoot .printSection{break-inside:avoid}
+.printRoot .printHeader{display:flex;justify-content:space-between;align-items:flex-start;padding:0 0 20px;border-bottom:2px solid #0f172a;margin-bottom:0}
+.printRoot .hdrLeft{display:flex;align-items:center;gap:12px}
+.printRoot .hdrLogo{max-height:36px;max-width:140px}
+.printRoot .hdrFallback{width:28px;height:28px;background:#0f172a;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff}
+.printRoot .hdrCompany{font-size:16px;font-weight:700;color:#0f172a;letter-spacing:-0.02em}
+.printRoot .hdrCompanyDetail{font-size:10px;color:#64748b;margin-top:2px}
+.printRoot .hdrRight{text-align:right}
+.printRoot .hdrDocType{font-size:9px;letter-spacing:0.12em;font-weight:700;color:#94a3b8;text-transform:uppercase}
+.printRoot .hdrQuoteNum{font-size:14px;font-weight:700;color:#0f172a;margin-top:2px}
+.printRoot .metaGrid{display:grid;grid-template-columns:1fr 1fr;gap:0;border-bottom:1px solid #e2e8f0;margin-top:20px}
+.printRoot .metaBlock{padding:16px 0}
+.printRoot .metaBlock+.metaBlock{padding-left:20px;border-left:1px solid #e2e8f0}
+.printRoot .metaLabel{font-size:9px;letter-spacing:0.08em;font-weight:600;color:#94a3b8;text-transform:uppercase;margin-bottom:4px}
+.printRoot .metaValue{font-size:13px;font-weight:500;color:#0f172a}
+.printRoot .metaValueLg{font-size:18px;font-weight:700;color:#0f172a;letter-spacing:-0.02em}
+.printRoot .metaValueSm{font-size:11px;color:#64748b;margin-top:2px}
+.printRoot .summaryStrip{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-bottom:1px solid #e2e8f0;background:#f8fafc}
+.printRoot .summaryCell{padding:12px 16px;border-right:1px solid #e2e8f0}
+.printRoot .summaryCell:last-child{border-right:none}
+.printRoot .summaryLabel{font-size:9px;letter-spacing:0.06em;font-weight:600;color:#94a3b8;text-transform:uppercase}
+.printRoot .summaryVal{font-size:13px;font-weight:600;color:#0f172a;margin-top:3px}
+.printRoot .summaryValBold{font-size:15px;font-weight:700;color:#0f172a;margin-top:3px}
+.printRoot .briefBlock{padding:16px 0;border-bottom:1px solid #e2e8f0}
+.printRoot .briefLabel{font-size:9px;letter-spacing:0.06em;font-weight:600;color:#94a3b8;text-transform:uppercase;margin-bottom:6px}
+.printRoot .briefText{font-size:12px;line-height:1.7;color:#475569}
+.printRoot .scopeHeading{font-size:9px;letter-spacing:0.06em;font-weight:700;color:#94a3b8;text-transform:uppercase;padding:20px 0 12px}
+.printRoot .printEndBlock{break-inside:avoid;page-break-inside:avoid;margin-top:28px}
+.printRoot .catHeader{display:flex;justify-content:space-between;align-items:baseline;padding:7px 8px;border-bottom:2px solid #0f172a;font-size:12px;font-weight:600;color:#0f172a;margin-top:12px;background:#f8fafc;border-radius:3px}
+.printRoot .catNum{color:#94a3b8;margin-right:6px;font-weight:700}
+.printRoot .scopeTable{width:100%;border-collapse:collapse;margin-bottom:4px}
+.printRoot .scopeTable th{font-size:9px;letter-spacing:0.06em;font-weight:600;color:#94a3b8;text-transform:uppercase;padding:5px 0;text-align:left;border-bottom:1px solid #e2e8f0}
+.printRoot .scopeTable th:nth-child(2){text-align:center;width:48px}
+.printRoot .scopeTable th:nth-child(3){text-align:right;width:64px}
+.printRoot .scopeTable th:nth-child(4){text-align:center;width:36px}
+.printRoot .scopeTable th:nth-child(5){text-align:right;width:72px}
+.printRoot .scopeTable td{padding:4px 0;font-size:11px;color:#475569;border-bottom:1px solid #f1f5f9}
+.printRoot .scopeTable td:first-child{color:#0f172a;font-weight:500}
+.printRoot .scopeTable td:nth-child(2){text-align:center}
+.printRoot .scopeTable td:nth-child(3){text-align:right;font-variant-numeric:tabular-nums}
+.printRoot .scopeTable td:nth-child(4){text-align:center;color:#94a3b8}
+.printRoot .scopeTable td:nth-child(5){text-align:right;font-weight:600;color:#0f172a;font-variant-numeric:tabular-nums}
+.printRoot .printTotals{margin-top:16px;display:flex;justify-content:flex-end}
+.printRoot .totalsBox{width:280px;border:1.5px solid #e2e8f0;border-radius:6px;overflow:hidden}
+.printRoot .totalsRow{display:flex;justify-content:space-between;padding:6px 14px;font-size:11px;color:#64748b;font-variant-numeric:tabular-nums}
+.printRoot .totalsRow+.totalsRow{border-top:1px solid #f1f5f9}
+.printRoot .totalsGrand{display:flex;justify-content:space-between;padding:10px 14px;font-size:16px;font-weight:700;color:#0f172a;background:#f8fafc;border-top:2px solid #0f172a;letter-spacing:-0.02em;font-variant-numeric:tabular-nums}
+.printRoot .printTerms{padding:20px 0 0;border-top:1px solid #e2e8f0;margin-top:24px}
+.printRoot .termsHeading{font-size:9px;letter-spacing:0.06em;font-weight:700;color:#94a3b8;text-transform:uppercase;margin-bottom:10px}
+.printRoot .termsList{list-style:none;padding:0}
+.printRoot .termsList li{font-size:11px;color:#475569;line-height:1.8;padding-left:14px;position:relative}
+.printRoot .termsList li::before{content:'\2022';position:absolute;left:0;color:#94a3b8}
+.printRoot .printAcceptance{padding:20px 0 0;border-top:1px solid #e2e8f0;margin-top:16px}
+.printRoot .acceptHeading{font-size:9px;letter-spacing:0.06em;font-weight:700;color:#94a3b8;text-transform:uppercase;margin-bottom:4px}
+.printRoot .acceptText{font-size:10px;color:#94a3b8;margin-bottom:14px}
+.printRoot .sigGrid{display:grid;grid-template-columns:1fr 1fr;gap:32px}
+.printRoot .sigBlock .sigLabel{font-size:10px;font-weight:600;color:#0f172a;margin-bottom:8px}
+.printRoot .sigBlock .sigLine{border-bottom:1px solid #d1d5db;height:36px;margin-bottom:4px}
+.printRoot .sigBlock .sigDate{font-size:9px;color:#94a3b8}
+.printRoot .printFooter{margin-top:24px;padding:10px 0;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;font-size:9px;color:#94a3b8}
+.printRoot .scopeTable tbody tr:last-child{break-after:avoid}
+

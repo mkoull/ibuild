@@ -6,6 +6,7 @@ import { useRateLibrary } from "../hooks/useRateLibrary.js";
 import { useToast } from "../hooks/useToast.js";
 import { useMobile } from "../hooks/useMobile.js";
 import { useSettings } from "../hooks/useSettings.js";
+import { useModules } from "../hooks/useModules.js";
 
 const ProjectsCtx = createContext(null);
 const SettingsCtx = createContext(null);
@@ -16,6 +17,7 @@ export function AppProvider({ children }) {
   const clientsHook = useClients();
   const tradesHook = useTrades();
   const rateLibrary = useRateLibrary();
+  const modulesHook = useModules(projectsHook.projects);
   const { toast, notify, dismiss } = useToast();
   const mobile = useMobile();
   const settingsHook = useSettings();
@@ -27,7 +29,9 @@ export function AppProvider({ children }) {
     trades: tradesHook.trades,
     tradesHook,
     rateLibrary,
-  }), [projectsHook, clientsHook, tradesHook, rateLibrary]);
+    modules: modulesHook.modules,
+    modulesHook,
+  }), [projectsHook, clientsHook, tradesHook, rateLibrary, modulesHook]);
 
   const settingsValue = useMemo(() => ({
     settings: settingsHook.settings,

@@ -277,12 +277,13 @@ export default function InvoicesPage() {
   const coDetails = [co, settings.abn ? `ABN ${settings.abn}` : "", settings.address || "", settings.contactPhone || "", settings.contactEmail || ""].filter(Boolean).join(" · ");
 
   const printInvoice = (inv) => {
+    const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
     const w = window.open("", "_blank");
     if (!w) { notify("Pop-up blocked", "error"); return; }
     const logoHtml = settings.logo ? `<img src="${settings.logo}" style="max-height:36px;max-width:140px" />` : "";
     const payDays = settings.defaultPaymentTermsDays || 14;
-    const gstAmt = Math.round((inv.amount || 0) / 11);
-    const exGst = (inv.amount || 0) - gstAmt;
+    const gstAmt = round2((inv.amount || 0) / 11);
+    const exGst = round2((inv.amount || 0) - gstAmt);
 
     // Build line items table
     let linesHtml = "";

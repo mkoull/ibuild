@@ -11,19 +11,28 @@ export default function GlobalShell() {
   const { mobile, toast } = useApp();
 
   return (
-    <div style={{ minHeight: "100svh", background: _.bg, color: _.ink, fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,sans-serif" }}>
+    <div style={{
+      height: "100dvh",
+      minHeight: "100svh",
+      overflow: "hidden",
+      background: _.bg,
+      color: _.ink,
+      fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,sans-serif",
+    }}>
       <Toast toast={toast} />
       {!mobile && <Sidebar />}
       {mobile && <MobileHeader />}
-      <div style={{ marginLeft: mobile ? 0 : 240, display: "flex", flexDirection: "column", minHeight: "100svh" }}>
+      <div style={{ marginLeft: mobile ? 0 : 240, display: "flex", flexDirection: "column", height: "100%", minHeight: "100svh", overflow: "hidden" }}>
         {!mobile && <TopBar />}
         <main style={{
           flex: 1,
+          minHeight: 0,
+          overflowY: "auto",
+          WebkitOverflowScrolling: "touch",
           paddingTop: mobile ? "var(--mobile-header-h)" : `${_.s9}px`,
           paddingLeft: mobile ? `${_.s4}px` : `${_.s10}px`,
           paddingRight: mobile ? `${_.s4}px` : `${_.s10}px`,
-          paddingBottom: mobile ? "calc(var(--mobile-bottom-total) + 20px)" : "80px",
-          WebkitOverflowScrolling: "touch",
+          paddingBottom: mobile ? "var(--app-bottom-pad)" : "80px",
         }}>
           <Outlet />
         </main>

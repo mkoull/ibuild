@@ -12,6 +12,7 @@ import {
 } from "../../lib/metrics.js";
 import Section from "../../components/ui/Section.jsx";
 import Card from "../../components/ui/Card.jsx";
+import PageHero from "../../components/ui/PageHero.jsx";
 import { ArrowRight, AlertCircle, Clock, DollarSign, FileText, Hammer, TrendingUp, Check } from "lucide-react";
 
 const SEED_TRADES = [
@@ -83,16 +84,19 @@ export default function DashboardPage() {
 
   return (
     <Section>
-      <h1 style={{ fontSize: mobile ? _.fontSize["3xl"] : _.fontSize["4xl"], fontWeight: _.fontWeight.bold, letterSpacing: _.letterSpacing.tight, marginBottom: _.s2 }}>Dashboard</h1>
-      <div style={{ fontSize: _.fontSize.base, color: _.muted, marginBottom: mobile ? _.s6 : _.s8 }}>{projects.length} project{projects.length !== 1 ? "s" : ""} · {ds()}</div>
+      <PageHero
+        icon={TrendingUp}
+        title="Dashboard"
+        subtitle={`${projects.length} project${projects.length !== 1 ? "s" : ""} · ${ds()}`}
+        actions={<button onClick={() => navigate("/projects")} style={{ border: "none", background: "transparent", cursor: "pointer", color: _.ac, fontSize: _.fontSize.sm, fontWeight: _.fontWeight.semi }}>View all projects</button>}
+      />
 
       {/* KPI Row */}
       <div style={{ display: "grid", gridTemplateColumns: mobile ? "repeat(2, 1fr)" : `repeat(${kpis.length}, 1fr)`, gap: mobile ? _.s2 : _.s3, marginBottom: mobile ? _.s6 : _.s8 }}>
         {kpis.map(k => (
-          <Card key={k.label} style={{ padding: mobile ? _.s3 : _.s5 }}>
+          <Card key={k.label} icon={k.Ic} subtitle={k.label} accent={k.value !== "—"} style={{ padding: mobile ? _.s3 : _.s5 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: _.s3 }}>
-              <k.Ic size={14} color={k.color} />
-              <span style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase" }}>{k.label}</span>
+              <span style={{ width: 8, height: 8, borderRadius: 8, background: k.color }} />
             </div>
             <div style={{ fontSize: mobile ? _.fontSize.xl : _.fontSize["2xl"], fontWeight: _.fontWeight.bold, color: k.value === "\u2014" ? _.faint : _.ink, fontVariantNumeric: "tabular-nums", lineHeight: _.lineHeight.heading }}>{k.value}</div>
             {k.sub && <div style={{ fontSize: _.fontSize.sm, color: _.muted, marginTop: _.s1 }}>{k.sub}</div>}
@@ -145,11 +149,11 @@ export default function DashboardPage() {
 
       {/* Needs Attention */}
       <div style={{ marginBottom: mobile ? _.s6 : _.s8 }}>
-        <div style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.semi, color: _.ink, marginBottom: _.s3 }}>Needs Attention</div>
+        <div style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.semi, color: _.ink, marginBottom: _.s3, paddingLeft: _.s2, borderLeft: `3px solid ${_.amber}` }}>Needs Attention</div>
         {attention.length === 0 ? (
           <div style={{ padding: `${_.s4}px 0`, fontSize: _.fontSize.base, color: _.faint }}>No urgent items</div>
         ) : (
-          <Card style={{ padding: 0 }}>
+          <Card style={{ padding: 0 }} accent>
             {attention.slice(0, 8).map((a, i) => (
               <div key={`${a.id}-${i}`} onClick={() => navigate(`/projects/${a.id}/overview`)} style={{
                 padding: `${_.s3}px ${_.s4}px`, display: "flex", alignItems: "center", gap: _.s3, cursor: "pointer",
@@ -170,7 +174,7 @@ export default function DashboardPage() {
       <div style={{ height: 1, background: _.line, marginBottom: mobile ? _.s6 : _.s8 }} />
 
       {/* Condensed Projects Table */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: _.s3 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: _.s3, paddingLeft: _.s2, borderLeft: `3px solid ${_.ac}` }}>
         <div style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.semi, color: _.ink }}>All Projects</div>
         <button onClick={() => navigate("/projects")} style={{ fontSize: _.fontSize.sm, color: _.ac, background: "none", border: "none", cursor: "pointer", fontWeight: _.fontWeight.semi, fontFamily: "inherit", display: "flex", alignItems: "center", gap: 4 }}>
           View all <ArrowRight size={12} />

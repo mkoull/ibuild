@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { BarChart3, PenLine, Ruler, DollarSign, ClipboardList, FileText, ArrowUpRight, Receipt, BookOpen, AlertTriangle, Wrench, FolderOpen, Users, Building2, Library, Settings, LayoutDashboard, ArrowLeft, Calendar, PieChart, Hammer } from "lucide-react";
+import { BarChart3, PenLine, Ruler, FileText, FolderOpen, Users, Building2, Library, Settings, LayoutDashboard, ArrowLeft, Hammer, Puzzle } from "lucide-react";
 import _ from "../../theme/tokens.js";
 import { useProjectsCtx } from "../../context/AppContext.jsx";
 import { pName } from "../../theme/styles.js";
@@ -27,20 +27,11 @@ const PROJECT_NAV = [
     { path: "overview", label: "Overview", Ic: BarChart3 },
     { path: "quote", label: "Quote", Ic: PenLine },
     { path: "plans", label: "Plans AI", Ic: Ruler },
-    { path: "costs", label: "Costs", Ic: DollarSign },
-    { path: "schedule", label: "Schedule", Ic: ClipboardList },
-  ]},
-  { group: "FINANCIALS", items: [
     { path: "proposals", label: "Proposals", Ic: FileText },
-    { path: "variations", label: "Variations", Ic: ArrowUpRight },
-    { path: "invoices", label: "Invoices", Ic: Receipt },
-    { path: "bills", label: "Bills", Ic: PieChart },
     { path: "documents", label: "Documents", Ic: FolderOpen },
   ]},
-  { group: "SITE", items: [
-    { path: "site-diary", label: "Site Diary", Ic: BookOpen },
-    { path: "defects", label: "Defects", Ic: AlertTriangle },
-    { path: "trades", label: "Trades", Ic: Wrench },
+  { group: "MODULES", items: [
+    { path: "modules", label: "Modules", Ic: Puzzle },
   ]},
 ];
 

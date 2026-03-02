@@ -35,6 +35,8 @@ function todayStr() {
 export function syncLegacyFields(m) {
   return {
     ...m,
+    pinnedStart: m.pinnedStart || "",
+    pinnedFinish: m.pinnedFinish || "",
     wk: Math.round((m.offsetDays || 0) / 7),
     done: m.status === "complete",
     date: m.actualFinish || m.actualStart || m.date || "",
@@ -147,6 +149,18 @@ export function calculateSchedule(milestones, startDate) {
 
   return sorted.map(m => {
     const copy = { ...m };
+    const dur = copy.durationDays || 7;
+
+    if (copy.manuallyPinned && copy.pinnedStart) {
+      copy.plannedStart = copy.pinnedStart;
+      copy.plannedFinish = copy.pinnedFinish || addDays(copy.pinnedStart, dur);
+      if (startDate) {
+        copy.offsetDays = Math.max(0, daysBetween(startDate, copy.plannedStart));
+      }
+      copy.pinnedFinish = copy.plannedFinish;
+      byId[copy.id] = copy;
+      return syncLegacyFields(copy);
+    }
 
     // Only override start from dependencies if NOT manually pinned
     if (!copy.manuallyPinned && copy.dependsOn && copy.dependsOn.length > 0) {
@@ -170,7 +184,7 @@ export function calculateSchedule(milestones, startDate) {
       copy.plannedStart = addDays(startDate, copy.offsetDays || 0);
     }
 
-    copy.plannedFinish = addDays(copy.plannedStart, copy.durationDays || 7);
+    copy.plannedFinish = addDays(copy.plannedStart, dur);
 
     byId[copy.id] = copy;
     return syncLegacyFields(copy);

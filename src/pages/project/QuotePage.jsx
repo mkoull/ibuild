@@ -6,7 +6,8 @@ import _ from "../../theme/tokens.js";
 import { fmt, input, label, btnGhost, uid, ds, ts } from "../../theme/styles.js";
 import { STAGES, DEFAULT_EXCLUSIONS, DEFAULT_ALLOWANCES, DEFAULT_PC_ITEMS, DEFAULT_QUALIFICATIONS, DEFAULT_TERMS } from "../../data/defaults.js";
 import { calc } from "../../lib/calc.js";
-import { canTransition } from "../../lib/lifecycle.js";
+import { canTransition, isQuote, isJob, needsQuoteToJobConversion } from "../../lib/lifecycle.js";
+import { usePageBottomBar } from "../../hooks/usePageBottomBar.js";
 import Card from "../../components/ui/Card.jsx";
 import Modal from "../../components/ui/Modal.jsx";
 import Button from "../../components/ui/Button.jsx";
@@ -54,6 +55,7 @@ export default function QuotePage() {
   const hasScope = T.items > 0;
   const quoteReady = clientName && hasScope;
   const proposalGenerated = p.proposal && p.proposal.status === "Generated";
+  usePageBottomBar(mobile && T.curr > 0 ? 64 : 0);
 
   // Step completeness
   const stepDone = {
@@ -245,7 +247,7 @@ export default function QuotePage() {
   };
 
   return (
-    <div style={{ animation: "fadeUp 0.2s ease", maxWidth: 1200, paddingBottom: mobile && T.curr > 0 ? 56 : 0 }}>
+    <div style={{ animation: "fadeUp 0.2s ease", maxWidth: 1200 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: _.s2 }}>
         <h1 style={{ fontSize: mobile ? _.fontSize["3xl"] : _.fontSize["4xl"], fontWeight: _.fontWeight.bold, letterSpacing: _.letterSpacing.tight }}>Quote</h1>
         {mobile && T.curr > 0 && <span style={{ fontSize: _.fontSize["2xl"], fontWeight: _.fontWeight.bold, color: _.ink, letterSpacing: _.letterSpacing.tight, fontVariantNumeric: "tabular-nums" }}>{fmt(T.curr)}</span>}
@@ -393,7 +395,24 @@ export default function QuotePage() {
                 </div>
                 <div>
                   <label style={label}>Stage</label>
-                  <select style={{ ...input, cursor: "pointer" }} value={stage} onChange={e => { const nv = e.target.value; up(pr => { pr.stage = nv; pr.status = nv; return pr; }); log("Status → " + nv); }}>
+                  <select
+                    style={{ ...input, cursor: "pointer" }}
+                    value={stage}
+                    onChange={e => {
+                      const nv = e.target.value;
+                      if (nv === stage) return;
+                      if (canTransition(stage, nv)) {
+                        transitionStage(nv);
+                        log(`Stage → ${nv}`);
+                        return;
+                      }
+                      if (needsQuoteToJobConversion(stage, nv) || (isQuote(stage) && isJob(nv))) {
+                        navigate("../overview?action=convert");
+                        return;
+                      }
+                      notify(`Invalid stage transition: ${stage} → ${nv}`, "error");
+                    }}
+                  >
                     {STAGES.map(s => <option key={s}>{s}</option>)}
                   </select>
                 </div>
@@ -475,15 +494,18 @@ export default function QuotePage() {
                             </div>
                             {/* Row 2: qty / unit / rate / total — only when enabled */}
                             {item.on && (
-                              <div style={{ display: "flex", gap: _.s2, alignItems: "center", marginTop: 4, paddingLeft: 28 }}>
-                                <input type="number" style={{ width: 52, height: 36, padding: "0 6px", background: _.well, border: `1px solid ${_.line}`, borderRadius: _.rXs, color: _.ink, fontSize: _.fontSize.base, textAlign: "center", outline: "none", fontWeight: _.fontWeight.semi, fontFamily: "inherit" }}
-                                  value={item.qty} onChange={e => uI(cat, idx, "qty", parseFloat(e.target.value) || 0)} />
-                                <input style={{ width: 44, height: 36, padding: "0 4px", background: "transparent", border: `1px solid ${_.line}`, borderRadius: _.rXs, outline: "none", fontSize: _.fontSize.sm, color: _.muted, fontFamily: "inherit", textAlign: "center" }}
-                                  value={item.unit} onChange={e => uI(cat, idx, "unit", e.target.value)} />
-                                <span style={{ fontSize: _.fontSize.sm, color: _.faint }}>@</span>
-                                <input type="number" style={{ width: 72, height: 36, padding: "0 6px", background: _.well, border: `1px solid ${_.line}`, borderRadius: _.rXs, color: _.ink, fontSize: _.fontSize.base, textAlign: "right", outline: "none", fontWeight: _.fontWeight.semi, fontFamily: "inherit" }}
-                                  value={item.rate} onChange={e => uI(cat, idx, "rate", parseFloat(e.target.value) || 0)} />
-                                <span style={{ flex: 1, fontSize: _.fontSize.md, fontWeight: _.fontWeight.bold, textAlign: "right", fontVariantNumeric: "tabular-nums", color: _.ink }}>{fmt(item.rate * item.qty)}</span>
+                              <div style={{ marginTop: 6, paddingLeft: 28 }}>
+                                <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: _.s2 }}>
+                                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: _.s2, minWidth: 0 }}>
+                                    <input type="number" style={{ width: "100%", height: 36, padding: "0 6px", background: _.well, border: `1px solid ${_.line}`, borderRadius: _.rXs, color: _.ink, fontSize: _.fontSize.base, textAlign: "center", outline: "none", fontWeight: _.fontWeight.semi, fontFamily: "inherit", minWidth: 0 }}
+                                      value={item.qty} onChange={e => uI(cat, idx, "qty", parseFloat(e.target.value) || 0)} />
+                                    <input style={{ width: "100%", height: 36, padding: "0 4px", background: "transparent", border: `1px solid ${_.line}`, borderRadius: _.rXs, outline: "none", fontSize: _.fontSize.sm, color: _.muted, fontFamily: "inherit", textAlign: "center", minWidth: 0 }}
+                                      value={item.unit} onChange={e => uI(cat, idx, "unit", e.target.value)} />
+                                  </div>
+                                  <input type="number" style={{ width: "100%", height: 36, padding: "0 8px", background: _.well, border: `1px solid ${_.line}`, borderRadius: _.rXs, color: _.ink, fontSize: _.fontSize.base, textAlign: "right", outline: "none", fontWeight: _.fontWeight.semi, fontFamily: "inherit", minWidth: 0 }}
+                                    value={item.rate} onChange={e => uI(cat, idx, "rate", parseFloat(e.target.value) || 0)} />
+                                  <span style={{ gridColumn: "1 / -1", fontSize: _.fontSize.md, fontWeight: _.fontWeight.bold, textAlign: "right", fontVariantNumeric: "tabular-nums", color: _.ink, paddingTop: 2 }}>{fmt(item.rate * item.qty)}</span>
+                                </div>
                               </div>
                             )}
                           </div>

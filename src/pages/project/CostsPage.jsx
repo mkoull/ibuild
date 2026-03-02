@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useProject } from "../../context/ProjectContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
 import { commitmentRemaining } from "../../lib/calc.js";
@@ -31,8 +31,9 @@ const COMMIT_COLOR = { Draft: _.amber, Committed: _.green, Cancelled: _.faint };
 
 export default function CostsPage() {
   const { project: p, update: up, T, log } = useProject();
-  const { trades, mobile, notify } = useApp();
+  const { trades, mobile, notify, modulesHook } = useApp();
   const navigate = useNavigate();
+  const params = useParams();
 
   const [tab, setTab] = useState("Job Control");
   const [budgetForm, setBudgetForm] = useState({ costCode: "", labelText: "", budgetAmount: "", tradeId: "", sectionName: "" });
@@ -49,13 +50,16 @@ export default function CostsPage() {
   const [quickAdd, setQuickAdd] = useState({ description: "", amount: "" });
   const [allocExpanded, setAllocExpanded] = useState(null);
 
-  const budgetLines = p.budget || [];
+  const budgetLines = p.workingBudget || p.budget || [];
   const commitments = p.commitments || [];
   const actuals = p.actuals || [];
   const bills = p.supplierBills || [];
 
   const variance = T.revisedBudget - T.combinedActuals;
   const committedVar = T.revisedBudget - T.committedTotal;
+  const activeModule = params.moduleId ? modulesHook.find(params.moduleId) : null;
+  const linkedQuoteModuleId = activeModule?.links?.derivedFrom || activeModule?.links?.sourceOfTruth || null;
+  const linkedQuoteModule = linkedQuoteModuleId ? modulesHook.find(linkedQuoteModuleId) : null;
 
   const tradeName = (tradeId) => {
     if (!tradeId) return "Unassigned";
@@ -249,6 +253,22 @@ export default function CostsPage() {
     setReplaceModal(false);
   };
 
+  const detachBaseline = () => {
+    up(pr => {
+      pr.quoteSnapshotBudget = null;
+      pr.budgetBaseline = null;
+      return pr;
+    });
+    if (activeModule) {
+      modulesHook.update(activeModule.id, m => {
+        m.links.derivedFrom = null;
+        m.links.sourceOfTruth = null;
+        return m;
+      });
+    }
+    notify("Baseline detached");
+  };
+
   const updateBudgetActual = (idx, rawValue) => {
     const str = String(rawValue).trim();
     up(pr => {
@@ -397,6 +417,16 @@ export default function CostsPage() {
       </div>
 
       {/* ═══ INITIALISE BUDGET CTA ═══ */}
+      {linkedQuoteModule && (
+        <div style={{ display: "flex", gap: _.s2, flexWrap: "wrap", marginBottom: _.s4 }}>
+          <span style={{ fontSize: _.fontSize.sm, color: _.muted, marginRight: _.s2, alignSelf: "center" }}>
+            Linked to quote module
+          </span>
+          <Button size="sm" variant="secondary" onClick={importMissing}>Sync</Button>
+          <Button size="sm" variant="secondary" onClick={replaceFromQuote}>Re-import</Button>
+          <Button size="sm" variant="ghost" onClick={detachBaseline}>Detach baseline</Button>
+        </div>
+      )}
       {!hasBaseline && hasScope && budgetLines.length === 0 && (
         <div style={{ padding: `${_.s6}px ${_.s5}px`, background: `${_.ac}06`, border: `1.5px dashed ${_.ac}30`, borderRadius: _.r, marginBottom: _.s6, textAlign: "center" }}>
           <div style={{ fontSize: _.fontSize.lg, fontWeight: _.fontWeight.semi, color: _.ink, marginBottom: _.s2 }}>Initialise budget from quote</div>

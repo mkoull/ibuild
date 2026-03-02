@@ -27,8 +27,20 @@ export default function Button({ variant = "primary", size = "md", icon: Icon, d
       onClick={disabled ? undefined : onClick}
       disabled={disabled}
       style={s}
+      onMouseEnter={e => {
+        if (disabled) return;
+        if (variant === "primary") e.currentTarget.style.background = _.acDark;
+        if (variant === "secondary") e.currentTarget.style.background = _.well;
+      }}
+      onMouseLeave={e => {
+        if (disabled) return;
+        if (variant === "primary") e.currentTarget.style.background = _.ac;
+        if (variant === "secondary") e.currentTarget.style.background = _.surface;
+      }}
       onFocus={e => { e.currentTarget.style.boxShadow = _.focusRing; }}
       onBlur={e => { e.currentTarget.style.boxShadow = "none"; }}
+      onMouseDown={e => { if (!disabled) e.currentTarget.style.transform = "translateY(1px)"; }}
+      onMouseUp={e => { if (!disabled) e.currentTarget.style.transform = "translateY(0)"; }}
       {...rest}
     >
       {Icon && <Icon size={size === "sm" ? 12 : 14} />}

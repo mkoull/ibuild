@@ -3,10 +3,11 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useProject } from "../../context/ProjectContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
 import _ from "../../theme/tokens.js";
-import { fmt, input, btnGhost, badge } from "../../theme/styles.js";
+import { fmt, input, btnGhost, badge, ds } from "../../theme/styles.js";
 import Section from "../../components/ui/Section.jsx";
 import SignatureCanvas from "../../components/ui/SignatureCanvas.jsx";
 import { ArrowRight, Printer, Check, X } from "lucide-react";
+import "./ProposalDetail.css";
 
 /* Scoped styles for on-screen preview (all rules nested under .printRoot) */
 const PREVIEW_CSS = `
@@ -163,10 +164,20 @@ export default function ProposalDetail() {
   const sig = SignatureCanvas({ width: 600, height: 100 });
 
   if (!propD) return <Section><div style={{ color: _.muted }}>Proposal not found</div></Section>;
-  const pricing = propD.pricing || {};
+  const pricing = {
+    sub: 0,
+    mar: 0,
+    con: 0,
+    gst: 0,
+    total: 0,
+    margin: 0,
+    contingency: 0,
+    ...(propD.pricing || {}),
+  };
 
-  const propDCats = Object.entries(propD.scope).filter(([, items]) => items.some(x => x.on));
-  const propCT = (sc, c) => sc[c].filter(i => i.on).reduce((t, i) => t + i.rate * i.qty, 0);
+  const safeScope = propD.scope || {};
+  const propDCats = Object.entries(safeScope).filter(([, items]) => Array.isArray(items) && items.some(x => x.on));
+  const propCT = (sc, c) => (Array.isArray(sc[c]) ? sc[c] : []).filter(i => i.on).reduce((t, i) => t + i.rate * i.qty, 0);
 
   const co = settings.companyName || "iBuild";
   const coDetail = [settings.abn ? `ABN ${settings.abn}` : "", settings.address || "", settings.contactPhone || "", settings.contactEmail || ""].filter(Boolean).join("  ·  ");
@@ -258,7 +269,7 @@ export default function ProposalDetail() {
         <div className="summaryStrip avoidBreak">
           <div className="summaryCell">
             <div className="summaryLabel">Date</div>
-            <div className="summaryVal">{propD.date}</div>
+            <div className="summaryVal">{propD.date || ds()}</div>
           </div>
           <div className="summaryCell">
             <div className="summaryLabel">Valid For</div>

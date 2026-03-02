@@ -1,10 +1,10 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { uid } from "../theme/styles.js";
+import { uid, ds } from "../theme/styles.js";
 import { mkProject } from "../data/models.js";
 import { loadVersioned, saveVersioned } from "../data/store.js";
 
 const STORAGE_KEY = "ib_projects";
-const STORE_VERSION = 9;
+const STORE_VERSION = 10;
 const SAVE_DEBOUNCE_MS = 300;
 
 function hydrateProject(pr) {
@@ -163,6 +163,40 @@ function migrateProjects(data, fromVersion) {
     });
     data = norm;
   }
+  if (fromVersion <= 9) {
+    const norm = data && data.byId ? data : { byId: {}, allIds: [] };
+    Object.values(norm.byId).forEach(p => {
+      // Costs: introduce workingBudget while keeping p.budget as alias.
+      if (!Array.isArray(p.workingBudget) && Array.isArray(p.budget)) {
+        p.workingBudget = p.budget;
+      } else if (Array.isArray(p.workingBudget) && !Array.isArray(p.budget)) {
+        p.budget = p.workingBudget;
+      } else if (Array.isArray(p.workingBudget) && Array.isArray(p.budget) && p.workingBudget.length !== p.budget.length) {
+        // workingBudget is canonical; keep budget as compatibility alias.
+        p.budget = p.workingBudget;
+      }
+      if (!Array.isArray(p.workingBudget)) p.workingBudget = [];
+      if (!Array.isArray(p.budget)) p.budget = p.workingBudget;
+
+      // Schedule: preserve pinned dates.
+      if (Array.isArray(p.schedule)) {
+        p.schedule.forEach(m => {
+          if (m.pinnedStart === undefined) m.pinnedStart = m.plannedStart || "";
+          if (m.pinnedFinish === undefined) m.pinnedFinish = m.plannedFinish || "";
+        });
+      }
+
+      // Invoices: normalize schema for detail rendering consistency.
+      if (Array.isArray(p.invoices)) {
+        p.invoices.forEach(inv => {
+          if (!inv.title) inv.title = inv.desc || "Invoice";
+          if (!inv.issuedAt) inv.issuedAt = inv.date || ds();
+          if (!Array.isArray(inv.lineItems)) inv.lineItems = [];
+        });
+      }
+    });
+    data = norm;
+  }
   return data;
 }
 
@@ -225,6 +259,14 @@ export function useProjects() {
       const copy = JSON.parse(JSON.stringify(existing));
       const result = fn(copy);
       const updated = result || copy;
+      if (Array.isArray(updated.workingBudget)) {
+        updated.budget = updated.workingBudget;
+      } else if (Array.isArray(updated.budget)) {
+        updated.workingBudget = updated.budget;
+      } else {
+        updated.workingBudget = [];
+        updated.budget = updated.workingBudget;
+      }
       return {
         ...prev,
         byId: { ...prev.byId, [id]: updated },

@@ -3,7 +3,7 @@ import { useProjectsCtx } from "./AppContext.jsx";
 import { useApp } from "./AppContext.jsx";
 import { calc } from "../lib/calc.js";
 import { ts, ds } from "../theme/styles.js";
-import { canTransition, applyJobConversion } from "../lib/lifecycle.js";
+import { canTransition, applyJobConversion, isQuote, isJob } from "../lib/lifecycle.js";
 
 const ProjectCtx = createContext(null);
 
@@ -29,6 +29,11 @@ export function ProjectProvider({ project, children }) {
   const transitionStage = (newStage) => {
     const currentStage = project.stage || "Lead";
     if (!canTransition(currentStage, newStage)) return;
+    if (isQuote(currentStage) && isJob(newStage)) {
+      up(pr => applyJobConversion(pr, { targetStage: newStage }));
+      notify(`Stage → ${newStage}`);
+      return;
+    }
     up(pr => {
       pr.stage = newStage;
       pr.updatedAt = new Date().toISOString();

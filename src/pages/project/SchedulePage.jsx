@@ -132,6 +132,7 @@ export default function SchedulePage() {
   }, [resizing]);
 
   const gridCols = `28px ${colWidths.name}px ${colWidths.dur}px ${colWidths.start}px ${colWidths.finish}px ${colWidths.trade}px ${colWidths.status}px ${colWidths.pct}px ${colWidths.deps}px ${colWidths.actions}px`;
+  const SCHEDULE_IMPACT_FIELDS = new Set(["offsetDays", "durationDays", "dependsOn", "constraintMode", "manuallyPinned", "pinnedStart", "pinnedFinish"]);
 
   // ── Handlers ──
 
@@ -168,7 +169,8 @@ export default function SchedulePage() {
   const updateMs = (idx, changes) => {
     up(pr => {
       pr.schedule[idx] = syncLegacyFields({ ...pr.schedule[idx], ...changes });
-      if (startDate) pr.schedule = calculateSchedule(pr.schedule, startDate);
+      const shouldRecalc = Object.keys(changes || {}).some(k => SCHEDULE_IMPACT_FIELDS.has(k));
+      if (startDate && shouldRecalc) pr.schedule = calculateSchedule(pr.schedule, startDate);
       return pr;
     });
   };
@@ -224,6 +226,8 @@ export default function SchedulePage() {
         const delta = newOffset - oldOffset;
         m.offsetDays = newOffset;
         m.manuallyPinned = true; // User explicitly set this date
+        m.pinnedStart = newDate;
+        m.pinnedFinish = addDays(newDate, m.durationDays || 7);
 
         if (autoCascade && delta !== 0) {
           pr.schedule[idx] = syncLegacyFields(m);
@@ -236,6 +240,8 @@ export default function SchedulePage() {
         // No project start date — store as plannedStart directly
         m.plannedStart = newDate;
         m.plannedFinish = addDays(newDate, m.durationDays || 7);
+        m.pinnedStart = newDate;
+        m.pinnedFinish = m.plannedFinish;
         pr.schedule[idx] = syncLegacyFields(m);
       }
       return pr;
@@ -251,6 +257,10 @@ export default function SchedulePage() {
       const newDur = Math.max(1, daysBetween(pStart, newDate));
       const delta = newDur - (m.durationDays || 7);
       m.durationDays = newDur;
+      if (m.manuallyPinned && m.plannedStart) {
+        m.pinnedStart = m.plannedStart;
+        m.pinnedFinish = newDate;
+      }
       pr.schedule[idx] = syncLegacyFields(m);
 
       if (autoCascade && delta !== 0) {
@@ -277,8 +287,16 @@ export default function SchedulePage() {
 
   const togglePin = (idx) => {
     up(pr => {
-      pr.schedule[idx].manuallyPinned = !pr.schedule[idx].manuallyPinned;
-      pr.schedule[idx] = syncLegacyFields(pr.schedule[idx]);
+      const m = pr.schedule[idx];
+      m.manuallyPinned = !m.manuallyPinned;
+      if (m.manuallyPinned) {
+        m.pinnedStart = m.plannedStart || m.pinnedStart || "";
+        m.pinnedFinish = m.plannedFinish || m.pinnedFinish || "";
+      } else {
+        m.pinnedStart = "";
+        m.pinnedFinish = "";
+      }
+      pr.schedule[idx] = syncLegacyFields(m);
       if (startDate) pr.schedule = calculateSchedule(pr.schedule, startDate);
       return pr;
     });
@@ -321,6 +339,7 @@ export default function SchedulePage() {
         id: uid(), name: name.trim(), durationDays: 28,
         offsetDays: maxOffset + 28, dependsOn: [], tradeId: null, freeTextTrade: "",
         constraintMode: "finish-to-start", manuallyPinned: false,
+        pinnedStart: "", pinnedFinish: "",
         status: "not_started", percentComplete: 0,
         plannedStart: "", plannedFinish: "", actualStart: "", actualFinish: "",
         order: pr.schedule.length, wk: Math.round((maxOffset + 28) / 7),
@@ -337,9 +356,14 @@ export default function SchedulePage() {
   // Gantt handlers — update single task only
   const handleGanttShift = (idx, newOffset) => {
     up(pr => {
-      pr.schedule[idx].offsetDays = newOffset;
-      pr.schedule[idx].manuallyPinned = true;
-      pr.schedule[idx] = syncLegacyFields(pr.schedule[idx]);
+      const m = pr.schedule[idx];
+      m.offsetDays = newOffset;
+      m.manuallyPinned = true;
+      if (startDate) {
+        m.pinnedStart = addDays(startDate, newOffset);
+        m.pinnedFinish = addDays(m.pinnedStart, m.durationDays || 7);
+      }
+      pr.schedule[idx] = syncLegacyFields(m);
       if (startDate) pr.schedule = calculateSchedule(pr.schedule, startDate);
       return pr;
     });

@@ -1,13 +1,28 @@
 :root {
-  --mobile-header-h: 52px;
-  --mobile-tab-h: 56px;
+  --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --mobile-header-base: 52px;
+  --mobile-header-h: calc(var(--mobile-header-base) + var(--safe-top));
+  --mobile-tab-h: 56px;
   --mobile-bottom-total: calc(var(--mobile-tab-h) + var(--safe-bottom));
+  --page-bottom-bar-h: 0px;
+  --app-bottom-pad: calc(var(--mobile-bottom-total) + var(--page-bottom-bar-h) + 20px);
+}
+
+html, body, #root {
+  margin: 0;
+  height: 100%;
 }
 
 html, body {
-  margin: 0;
-  height: auto;
+  overflow: hidden;
   overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 768px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
 }

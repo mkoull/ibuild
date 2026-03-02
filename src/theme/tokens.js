@@ -2,6 +2,7 @@
 const _ = {
   // Surfaces
   bg: "#F5F6F8",
+  bg2: "#EEF2F7",
   surface: "#ffffff",
   raised: "#ffffff",
   well: "#f0f1f3",
@@ -17,6 +18,7 @@ const _ = {
   // Accent
   ac: "#2563eb",
   acDark: "#1d4ed8",
+  acSoft: "#E8F0FF",
   // Semantic
   green: "#10b981",
   red: "#ef4444",
@@ -31,6 +33,7 @@ const _ = {
   sh1: "0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02)",
   sh2: "0 2px 6px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03)",
   sh3: "0 4px 12px rgba(0,0,0,0.07), 0 1px 3px rgba(0,0,0,0.04)",
+  shadowElevated: "0 10px 26px rgba(15,23,42,0.08), 0 2px 6px rgba(15,23,42,0.06)",
   // Focus
   focusRing: "0 0 0 2px #2563eb30",
   // Transition

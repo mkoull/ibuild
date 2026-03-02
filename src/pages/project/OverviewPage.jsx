@@ -12,6 +12,7 @@ import StagePipeline from "../../components/ui/StagePipeline.jsx";
 import Card from "../../components/ui/Card.jsx";
 import Button from "../../components/ui/Button.jsx";
 import Modal from "../../components/ui/Modal.jsx";
+import PageHero from "../../components/ui/PageHero.jsx";
 import { ArrowRight, Pencil, TrendingUp, Calendar, DollarSign, ChevronRight, Receipt } from "lucide-react";
 
 export default function OverviewPage() {
@@ -24,10 +25,13 @@ export default function OverviewPage() {
   const [showConvertModal, setShowConvertModal] = useState(false);
   const [importMode, setImportMode] = useState("section");
   const [mergeMode, setMergeMode] = useState("replace");
+  const [pendingReturnPath, setPendingReturnPath] = useState("");
 
   // Open modal from URL param (e.g. from JobModuleGate redirect)
   useEffect(() => {
     if (searchParams.get("action") === "convert") {
+      const requestedReturn = (searchParams.get("return") || "").trim();
+      setPendingReturnPath(/^[a-z0-9-]+$/i.test(requestedReturn) ? requestedReturn : "");
       setSearchParams({}, { replace: true });
       // Only open convert modal if project is at a quote stage
       const s = normaliseStage(p.stage || p.status);
@@ -51,6 +55,7 @@ export default function OverviewPage() {
     const s = normaliseStage(p.stage || p.status);
     if (!isQuote(s)) {
       setShowConvertModal(false);
+      setPendingReturnPath("");
       return;
     }
     convertToJob();
@@ -58,23 +63,26 @@ export default function OverviewPage() {
       up(pr => {
         pr.quoteSnapshotBudget = snapshotFromQuote(pr);
         const lines = importMode === "item" ? importItemLevel(pr) : importSectionLevel(pr);
-        if (mergeMode === "replace" || !pr.budget || pr.budget.length === 0) {
-          pr.budget = lines;
+        const working = Array.isArray(pr.workingBudget) ? pr.workingBudget : (Array.isArray(pr.budget) ? pr.budget : []);
+        if (mergeMode === "replace" || working.length === 0) {
+          pr.workingBudget = lines;
         } else {
-          pr.budget = [...pr.budget, ...lines];
+          pr.workingBudget = [...working, ...lines];
         }
+        // Keep legacy alias stable for existing consumers.
+        pr.budget = pr.workingBudget;
         // Create immutable budget baseline snapshot
         pr.budgetBaseline = createBudgetBaseline(pr);
         // Recalc cost allowance amounts from baseline total
         if (pr.costAllowances) {
-          const baseline = baselineBudgetTotal(pr.budget);
+          const baseline = baselineBudgetTotal(pr.workingBudget);
           pr.costAllowances = recalcAllowances(pr.costAllowances, baseline);
         }
         // Log baseline creation
         if (!Array.isArray(pr.activity)) pr.activity = [];
         pr.activity.unshift({
           type: "budget_baseline_created",
-          action: `Budget baseline created (${importMode}-level, ${pr.budget.length} lines)`,
+          action: `Budget baseline created (${importMode}-level, ${pr.workingBudget.length} lines)`,
           time: new Date().toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit" }),
           date: new Date().toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" }),
           at: Date.now(),
@@ -85,6 +93,10 @@ export default function OverviewPage() {
     }
     setShowConvertModal(false);
     notify("Converted to Job");
+    if (pendingReturnPath) {
+      navigate(`../${pendingReturnPath}`);
+      setPendingReturnPath("");
+    }
   };
 
   const handlePrimary = () => {
@@ -124,21 +136,17 @@ export default function OverviewPage() {
     <div style={{ animation: "fadeUp 0.2s ease", maxWidth: 1200 }}>
       {/* HERO */}
       <div style={{ marginBottom: mobile ? _.s7 : _.s9 }}>
-        <div style={{ marginBottom: mobile ? _.s6 : _.s8 }}>
-          <div style={{ display: "flex", alignItems: "baseline", gap: _.s3 }}>
-            <h1 style={{ fontSize: mobile ? _.fontSize["3xl"] : _.fontSize["4xl"], fontWeight: _.fontWeight.bold, letterSpacing: _.letterSpacing.tight, margin: 0, lineHeight: _.lineHeight.tight, color: _.ink }}>
-              {pName(p, clients) === "New Project" ? "Overview" : pName(p, clients)}
-            </h1>
-            <div onClick={() => navigate("../quote?step=details")}
-              style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: _.fontSize.sm, color: _.muted, cursor: "pointer", fontWeight: _.fontWeight.medium, transition: `color ${_.tr}`, flexShrink: 0 }}
-              onMouseEnter={e => e.currentTarget.style.color = _.ac}
-              onMouseLeave={e => e.currentTarget.style.color = _.muted}
-            ><Pencil size={10} /></div>
-          </div>
-          <div style={{ fontSize: _.fontSize.base, color: _.muted, marginTop: _.s2 }}>
-            {stage} · {p.buildType || p.type}{p.floorArea || p.area ? ` · ${p.floorArea || p.area}m²` : ""} · {ds()}
-          </div>
-        </div>
+        <PageHero
+          icon={TrendingUp}
+          title={pName(p, clients) === "New Project" ? "Overview" : pName(p, clients)}
+          subtitle={`${stage} · ${p.buildType || p.type}${p.floorArea || p.area ? ` · ${p.floorArea || p.area}m²` : ""} · ${ds()}`}
+          actions={(
+            <Button variant="ghost" size="sm" onClick={() => navigate("../quote?step=details")} icon={Pencil}>
+              Edit details
+            </Button>
+          )}
+          style={{ marginBottom: mobile ? _.s6 : _.s8 }}
+        />
 
         {/* Contract Value */}
         <div style={{ marginBottom: _.s7 }}>
@@ -171,7 +179,7 @@ export default function OverviewPage() {
       {/* ─── Commercial Snapshot (Jobs only) ─── */}
       {stageIsJob && (
         <div style={{ display: "grid", gridTemplateColumns: mobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: mobile ? _.s2 : _.s3, marginBottom: mobile ? _.s6 : _.s8 }}>
-          <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
+          <Card style={{ padding: mobile ? _.s3 : _.s4 }} icon={DollarSign} subtitle="Contract Value" accent>
             <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Contract Value</div>
             <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: _.ink }}>{T.curr > 0 ? fmt(T.curr) : "—"}</div>
           </Card>

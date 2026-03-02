@@ -115,6 +115,14 @@ export function getNextStage(stage) {
 }
 
 /**
+ * Returns true when a UI stage selection should go through quote->job conversion
+ * instead of directly mutating stage.
+ */
+export function needsQuoteToJobConversion(fromStage, toStage) {
+  return isQuote(fromStage) && isJob(toStage);
+}
+
+/**
  * Job-only module paths that should be gated when stage is a quote stage.
  */
 export const JOB_ONLY_MODULES = ["schedule", "costs", "invoices", "bills", "variations", "site-diary", "defects", "trades"];
@@ -139,12 +147,15 @@ export function applyJobConversion(pr, { targetStage = "Approved" } = {}) {
   // Guard: only convert from a quote stage
   const current = normaliseStage(pr.stage || pr.status);
   if (!QUOTE_STAGES.has(current)) return pr;
+  const nextStage = normaliseStage(targetStage);
+  const safeTargetStage = JOB_STAGES.has(nextStage) ? nextStage : "Approved";
 
   const now = new Date().toISOString();
   const ts = new Date().toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit" });
   const ds = new Date().toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" });
 
-  pr.stage = targetStage;
+  pr.stage = safeTargetStage;
+  pr.status = safeTargetStage;
   pr.updatedAt = now;
 
   pr.lockedQuote = true;
@@ -152,7 +163,8 @@ export function applyJobConversion(pr, { targetStage = "Approved" } = {}) {
 
   if (!Array.isArray(pr.invoices)) pr.invoices = [];
   if (!Array.isArray(pr.variations)) pr.variations = [];
-  if (!Array.isArray(pr.budget)) pr.budget = [];
+  if (!Array.isArray(pr.workingBudget)) pr.workingBudget = Array.isArray(pr.budget) ? pr.budget : [];
+  if (!Array.isArray(pr.budget)) pr.budget = pr.workingBudget;
   if (!Array.isArray(pr.commitments)) pr.commitments = [];
   if (!Array.isArray(pr.actuals)) pr.actuals = [];
   if (!Array.isArray(pr.diary)) pr.diary = [];

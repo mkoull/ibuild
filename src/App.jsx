@@ -37,7 +37,8 @@ import SiteDiaryPage from "./pages/project/SiteDiaryPage.jsx";
 import DefectsPage from "./pages/project/DefectsPage.jsx";
 import ProjectTradesPage from "./pages/project/ProjectTradesPage.jsx";
 import BillsPage from "./pages/project/BillsPage.jsx";
-import JobModuleGate from "./components/guards/JobModuleGate.jsx";
+import ProjectModulesPage from "./pages/project/ProjectModulesPage.jsx";
+import ModuleShell from "./pages/modules/ModuleShell.jsx";
 
 export default function App() {
   return (
@@ -57,6 +58,7 @@ export default function App() {
             <Route path="trades/:tradeId" element={<TradeDetailPage />} />
             <Route path="rate-library" element={<RateLibraryPage />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="modules/:moduleId" element={<ModuleShell />} />
 
             {/* Project routes */}
             <Route path="projects/:id" element={<ProjectShell />}>
@@ -65,19 +67,20 @@ export default function App() {
               <Route path="quote" element={<QuotePage />} />
               <Route path="scope" element={<ScopePage />} />
               <Route path="plans" element={<PlansAIPage />} />
-              <Route path="costs" element={<JobModuleGate moduleName="Costs"><CostsPage /></JobModuleGate>} />
-              <Route path="schedule" element={<JobModuleGate moduleName="Schedule"><SchedulePage /></JobModuleGate>} />
-              <Route path="variations" element={<JobModuleGate moduleName="Variations"><VariationsPage /></JobModuleGate>} />
-              <Route path="variations/:voIndex" element={<JobModuleGate moduleName="Variations"><VariationDetail /></JobModuleGate>} />
-              <Route path="invoices" element={<JobModuleGate moduleName="Invoices"><InvoicesPage /></JobModuleGate>} />
-              <Route path="invoices/:invIndex" element={<JobModuleGate moduleName="Invoices"><InvoiceDetail /></JobModuleGate>} />
-              <Route path="bills" element={<JobModuleGate moduleName="Bills"><BillsPage /></JobModuleGate>} />
+              <Route path="modules" element={<ProjectModulesPage />} />
+              <Route path="costs" element={<CostsPage />} />
+              <Route path="schedule" element={<SchedulePage />} />
+              <Route path="variations" element={<VariationsPage />} />
+              <Route path="variations/:voIndex" element={<VariationDetail />} />
+              <Route path="invoices" element={<InvoicesPage />} />
+              <Route path="invoices/:invIndex" element={<InvoiceDetail />} />
+              <Route path="bills" element={<BillsPage />} />
               <Route path="proposals" element={<ProposalsPage />} />
               <Route path="proposals/:propIndex" element={<ProposalDetail />} />
               <Route path="documents" element={<DocumentsPage />} />
-              <Route path="site-diary" element={<JobModuleGate moduleName="Site Diary"><SiteDiaryPage /></JobModuleGate>} />
-              <Route path="defects" element={<JobModuleGate moduleName="Defects"><DefectsPage /></JobModuleGate>} />
-              <Route path="trades" element={<JobModuleGate moduleName="Trades"><ProjectTradesPage /></JobModuleGate>} />
+              <Route path="site-diary" element={<SiteDiaryPage />} />
+              <Route path="defects" element={<DefectsPage />} />
+              <Route path="trades" element={<ProjectTradesPage />} />
             </Route>
           </Route>
         </Routes>
