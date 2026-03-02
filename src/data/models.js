@@ -23,6 +23,10 @@ export function mkContact(overrides = {}) {
     email: "",
     phone: "",
     role: "",
+    address: "",
+    suburb: "",
+    state: "",
+    postcode: "",
     ...overrides,
   };
 }
