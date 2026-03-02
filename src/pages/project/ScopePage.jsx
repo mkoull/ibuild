@@ -1,16 +1,16 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useProject } from "../../context/ProjectContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
 import _ from "../../theme/tokens.js";
-import { fmt, input, label, btnPrimary, btnGhost, uid, ds, ts } from "../../theme/styles.js";
+import { fmt, input, label, btnGhost, uid, ds, ts } from "../../theme/styles.js";
 import { STAGES } from "../../data/defaults.js";
 import { calc } from "../../lib/calc.js";
 import Section from "../../components/ui/Section.jsx";
 import Card from "../../components/ui/Card.jsx";
 import Modal from "../../components/ui/Modal.jsx";
 import Button from "../../components/ui/Button.jsx";
-import { Check, ChevronRight, Plus, ArrowRight, X, Library, Send } from "lucide-react";
+import { Check, ChevronRight, ChevronDown, Plus, ArrowRight, X, Library, Send, Search, UserPlus } from "lucide-react";
 
 export default function ScopePage() {
   const { project: p, update: up, T, client, log } = useProject();
@@ -23,6 +23,11 @@ export default function ScopePage() {
   const [ratePickerCat, setRatePickerCat] = useState(null);
   const [rfqCat, setRfqCat] = useState(null);
   const [delCat, setDelCat] = useState(null);
+  const [clientOpen, setClientOpen] = useState(false);
+  const [clientSearch, setClientSearch] = useState("");
+  const [newClientModal, setNewClientModal] = useState(false);
+  const [newClientForm, setNewClientForm] = useState({ displayName: "", companyName: "" });
+  const clientDropRef = useRef(null);
 
   const stage = p.stage || p.status;
   const margin = p.marginPct ?? p.margin ?? 0;
@@ -47,6 +52,46 @@ export default function ScopePage() {
   const clientName = p.client || (client ? client.displayName : "");
   const quoteReady = clientName && T.items > 0;
 
+  // ─── Client picker ───
+  const filteredClients = useMemo(() => {
+    const q = clientSearch.toLowerCase().trim();
+    if (!q) return clients.slice(0, 20);
+    return clients.filter(c =>
+      (c.displayName || "").toLowerCase().includes(q) ||
+      (c.companyName || "").toLowerCase().includes(q)
+    ).slice(0, 20);
+  }, [clients, clientSearch]);
+
+  const selectClient = (c) => {
+    up(pr => {
+      pr.clientId = c.id;
+      pr.client = c.displayName || c.companyName;
+      const contact = (c.contacts || [])[0];
+      if (contact) {
+        if (contact.email && !pr.email) pr.email = contact.email;
+        if (contact.phone && !pr.phone) pr.phone = contact.phone;
+      }
+      return pr;
+    });
+    setClientOpen(false);
+    setClientSearch("");
+    notify(`Client: ${c.displayName || c.companyName}`);
+  };
+
+  const createNewClient = () => {
+    const name = newClientForm.displayName.trim();
+    if (!name) { notify("Enter a client name", "error"); return; }
+    const c = clientsHook.create({
+      displayName: name,
+      companyName: newClientForm.companyName.trim(),
+    });
+    selectClient(c);
+    setNewClientModal(false);
+    setNewClientForm({ displayName: "", companyName: "" });
+    log(`Client created: ${name}`);
+  };
+
+  // ─── Proposal creation ───
   const createProp = (name) => {
     if (!name) name = `Proposal v${p.proposals.length + 1}`;
     up(pr => {
@@ -75,7 +120,7 @@ export default function ScopePage() {
     navigate("../proposals");
   };
 
-  // Rate Library picker: find items matching category name
+  // Rate Library picker
   const ratePickerItems = ratePickerCat ? (() => {
     const cat = rateLibrary.categories.find(c => c.name.toLowerCase() === ratePickerCat.toLowerCase());
     if (cat) return rateLibrary.getItemsByCategory(cat.id);
@@ -95,16 +140,16 @@ export default function ScopePage() {
     notify(`Added: ${item.name}`);
   };
 
-  // Sticky sidebar content
+  // Sidebar: summary only, no CTA
   const SummaryContent = () => (
     <>
       <div style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 11, fontWeight: 600, color: _.muted, letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 8 }}>Quote Summary</div>
-        <div style={{ fontSize: 32, fontWeight: 700, letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", color: T.curr > 0 ? _.ink : _.faint, lineHeight: 1 }}>
+        <div style={{ fontSize: _.fontSize.caption, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: 8 }}>Quote Summary</div>
+        <div style={{ fontSize: _.fontSize["3xl"], fontWeight: _.fontWeight.bold, letterSpacing: _.letterSpacing.tight, fontVariantNumeric: "tabular-nums", color: T.curr > 0 ? _.ink : _.faint, lineHeight: 1 }}>
           {fmt(T.curr)}
         </div>
       </div>
-      <div style={{ borderTop: `1px solid ${_.line}`, paddingTop: 12, marginBottom: 16 }}>
+      <div style={{ borderTop: `1px solid ${_.line}`, paddingTop: 12 }}>
         {[
           ["Items", T.items],
           ["Subtotal", fmt(T.sub)],
@@ -112,37 +157,32 @@ export default function ScopePage() {
           [`Contingency ${contingency}%`, fmt(T.con)],
           ["GST", fmt(T.gst)],
         ].map(([l, v]) => (
-          <div key={l} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 13, color: _.body }}>
-            <span>{l}</span><span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{v}</span>
+          <div key={l} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: _.fontSize.base, color: _.body }}>
+            <span>{l}</span><span style={{ fontWeight: _.fontWeight.semi, fontVariantNumeric: "tabular-nums" }}>{v}</span>
           </div>
         ))}
-        <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0 4px", fontSize: 14, fontWeight: 700, color: _.ink, borderTop: `1px solid ${_.line}`, marginTop: 8 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0 4px", fontSize: _.fontSize.md, fontWeight: _.fontWeight.bold, color: _.ink, borderTop: `1px solid ${_.line}`, marginTop: 8 }}>
           <span>Total</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{fmt(T.curr)}</span>
         </div>
       </div>
-      {quoteReady ? (
-        <Button onClick={() => createProp()} icon={ArrowRight} style={{ width: "100%" }}>Generate Proposal</Button>
-      ) : (
-        <Button disabled style={{ width: "100%" }}>Add client details first</Button>
-      )}
     </>
   );
 
   return (
     <div style={{ animation: "fadeUp 0.2s ease", maxWidth: 1200 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: _.s2 }}>
-        <h1 style={{ fontSize: mobile ? 28 : 40, fontWeight: 700, letterSpacing: "-0.03em" }}>Quote</h1>
-        {mobile && T.curr > 0 && <span style={{ fontSize: 24, fontWeight: 700, color: _.ink, letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums" }}>{fmt(T.curr)}</span>}
+        <h1 style={{ fontSize: mobile ? _.fontSize["3xl"] : _.fontSize["4xl"], fontWeight: _.fontWeight.bold, letterSpacing: _.letterSpacing.tight }}>Quote</h1>
+        {mobile && T.curr > 0 && <span style={{ fontSize: _.fontSize["2xl"], fontWeight: _.fontWeight.bold, color: _.ink, letterSpacing: _.letterSpacing.tight, fontVariantNumeric: "tabular-nums" }}>{fmt(T.curr)}</span>}
       </div>
 
       {/* Step indicator */}
       <div style={{ display: "flex", gap: _.s6, marginBottom: _.s7, paddingBottom: _.s5, borderBottom: `1px solid ${_.line}` }}>
-        {[["Details", !!clientName], ["Scope", T.items > 0], ["Review", T.curr > 0]].map(([l, done]) => (
+        {[["Details", !!clientName], ["Scope", T.items > 0], ["Review", quoteReady && T.curr > 0]].map(([l, done]) => (
           <div key={l} style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <div style={{ width: 20, height: 20, borderRadius: 10, background: done ? _.green : _.well, border: done ? "none" : `1.5px solid ${_.line2}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
               {done && <Check size={11} strokeWidth={3} color="#fff" />}
             </div>
-            <span style={{ fontSize: 13, fontWeight: done ? 600 : 400, color: done ? _.ink : _.muted }}>{l}</span>
+            <span style={{ fontSize: _.fontSize.base, fontWeight: done ? _.fontWeight.semi : _.fontWeight.normal, color: done ? _.ink : _.muted }}>{l}</span>
           </div>
         ))}
       </div>
@@ -151,14 +191,86 @@ export default function ScopePage() {
       <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "1fr 280px", gap: mobile ? 0 : 32, alignItems: "start" }}>
         {/* LEFT: scope builder */}
         <div>
-          {/* Client details */}
+          {/* ═══ STEP 1: CLIENT & PROJECT DETAILS ═══ */}
           <div style={{ marginBottom: _.s8 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: _.s5 }}>
-              <div style={{ fontSize: 18, fontWeight: 600, color: _.ink }}>Client & Project</div>
+              <div style={{ fontSize: _.fontSize.unit, fontWeight: _.fontWeight.semi, color: _.ink }}>Client & Project</div>
               {p.clientId && client && (
                 <button onClick={() => navigate(`/clients/${p.clientId}`)} style={btnGhost}>Edit client</button>
               )}
             </div>
+
+            {/* Client picker */}
+            <div style={{ marginBottom: _.s4, position: "relative" }} ref={clientDropRef}>
+              <label style={label}>Select Client</label>
+              <div
+                onClick={() => setClientOpen(!clientOpen)}
+                style={{
+                  ...input, cursor: "pointer", display: "flex", justifyContent: "space-between",
+                  alignItems: "center", borderColor: clientOpen ? _.ac : "transparent",
+                }}
+              >
+                <span style={{ color: clientName ? _.ink : _.muted }}>
+                  {clientName || "Choose a client…"}
+                </span>
+                <ChevronDown size={14} color={_.muted} style={{ transform: clientOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
+              </div>
+              {clientOpen && (
+                <div style={{
+                  position: "absolute", top: "100%", left: 0, right: 0, zIndex: 40,
+                  background: _.surface, border: `1.5px solid ${_.line}`, borderRadius: _.rSm,
+                  boxShadow: "0 8px 24px rgba(0,0,0,0.12)", maxHeight: 280, overflow: "hidden",
+                  display: "flex", flexDirection: "column",
+                }}>
+                  <div style={{ padding: "8px 10px", borderBottom: `1px solid ${_.line}`, display: "flex", alignItems: "center", gap: 6 }}>
+                    <Search size={13} color={_.muted} />
+                    <input
+                      autoFocus
+                      style={{ flex: 1, border: "none", background: "transparent", outline: "none", fontSize: _.fontSize.base, color: _.ink, fontFamily: "inherit" }}
+                      value={clientSearch}
+                      onChange={e => setClientSearch(e.target.value)}
+                      placeholder="Search clients…"
+                    />
+                  </div>
+                  <div style={{ overflowY: "auto", flex: 1 }}>
+                    {filteredClients.map(c => (
+                      <div
+                        key={c.id}
+                        onClick={() => selectClient(c)}
+                        style={{
+                          padding: "8px 12px", cursor: "pointer", fontSize: _.fontSize.base,
+                          color: _.ink, transition: `background ${_.tr}`,
+                          background: p.clientId === c.id ? `${_.ac}0A` : "transparent",
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = _.well}
+                        onMouseLeave={e => e.currentTarget.style.background = p.clientId === c.id ? `${_.ac}0A` : "transparent"}
+                      >
+                        <div style={{ fontWeight: _.fontWeight.medium }}>{c.displayName || c.companyName}</div>
+                        {c.companyName && c.displayName && (
+                          <div style={{ fontSize: _.fontSize.sm, color: _.muted }}>{c.companyName}</div>
+                        )}
+                      </div>
+                    ))}
+                    {filteredClients.length === 0 && (
+                      <div style={{ padding: "12px", fontSize: _.fontSize.sm, color: _.muted, textAlign: "center" }}>No matching clients</div>
+                    )}
+                  </div>
+                  <div
+                    onClick={() => { setClientOpen(false); setNewClientModal(true); }}
+                    style={{
+                      padding: "10px 12px", borderTop: `1px solid ${_.line}`, cursor: "pointer",
+                      display: "flex", alignItems: "center", gap: 6, fontSize: _.fontSize.base,
+                      color: _.ac, fontWeight: _.fontWeight.semi, transition: `background ${_.tr}`,
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = _.well}
+                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                  >
+                    <UserPlus size={14} /> Create new client
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div style={{ marginBottom: _.s4 }}>
               <label style={label}>Project name</label>
               <input style={input} value={p.name || ""} onChange={e => up(pr => { pr.name = e.target.value; return pr; })} placeholder="e.g. Johnson Residence Extension" />
@@ -200,11 +312,11 @@ export default function ScopePage() {
             <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "1fr 1fr 1fr", gap: _.s4, marginTop: _.s4 }}>
               <div>
                 <label style={label}>Margin %</label>
-                <input type="number" style={{ ...input, textAlign: "center", fontWeight: 600, fontSize: 18 }} value={margin} onChange={e => up(pr => { pr.marginPct = parseFloat(e.target.value) || 0; pr.margin = pr.marginPct; return pr; })} />
+                <input type="number" style={{ ...input, textAlign: "center", fontWeight: _.fontWeight.semi, fontSize: _.fontSize.unit }} value={margin} onChange={e => up(pr => { pr.marginPct = parseFloat(e.target.value) || 0; pr.margin = pr.marginPct; return pr; })} />
               </div>
               <div>
                 <label style={label}>Contingency %</label>
-                <input type="number" style={{ ...input, textAlign: "center", fontWeight: 600, fontSize: 18 }} value={contingency} onChange={e => up(pr => { pr.contingencyPct = parseFloat(e.target.value) || 0; pr.contingency = pr.contingencyPct; return pr; })} />
+                <input type="number" style={{ ...input, textAlign: "center", fontWeight: _.fontWeight.semi, fontSize: _.fontSize.unit }} value={contingency} onChange={e => up(pr => { pr.contingencyPct = parseFloat(e.target.value) || 0; pr.contingency = pr.contingencyPct; return pr; })} />
               </div>
               <div>
                 <label style={label}>Stage</label>
@@ -215,11 +327,11 @@ export default function ScopePage() {
             </div>
           </div>
 
-          {/* Scope of Works */}
+          {/* ═══ STEP 2: SCOPE OF WORKS ═══ */}
           <div style={{ marginBottom: _.s8 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: _.s5 }}>
-              <div style={{ fontSize: 18, fontWeight: 600, color: _.ink }}>Scope of Works</div>
-              {T.items > 0 && <span style={{ fontSize: 14, color: _.body }}>{T.items} items · {fmt(T.sub)}</span>}
+              <div style={{ fontSize: _.fontSize.unit, fontWeight: _.fontWeight.semi, color: _.ink }}>Scope of Works</div>
+              {T.items > 0 && <span style={{ fontSize: _.fontSize.md, color: _.body }}>{T.items} items · {fmt(T.sub)}</span>}
             </div>
             {Object.entries(p.scope).map(([cat, items]) => {
               const open = exp[cat];
@@ -236,7 +348,7 @@ export default function ScopePage() {
                         <ChevronRight size={13} color={n > 0 ? _.ac : _.muted} />
                       </span>
                       {editCat === cat ? (
-                        <input autoFocus style={{ fontSize: 14, fontWeight: 600, color: _.ink, background: _.well, border: `1px solid ${_.line}`, borderRadius: _.rXs, padding: "2px 6px", outline: "none", fontFamily: "inherit" }}
+                        <input autoFocus style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.semi, color: _.ink, background: _.well, border: `1px solid ${_.line}`, borderRadius: _.rXs, padding: "2px 6px", outline: "none", fontFamily: "inherit" }}
                           value={editCatName} onChange={e => setEditCatName(e.target.value)}
                           onClick={e => e.stopPropagation()}
                           onKeyDown={e => {
@@ -253,12 +365,12 @@ export default function ScopePage() {
                           }}
                         />
                       ) : (
-                        <span onClick={e => { e.stopPropagation(); setEditCat(cat); setEditCatName(cat); }} style={{ fontSize: 14, fontWeight: n > 0 ? 600 : 400, color: n > 0 ? _.ink : _.muted, cursor: "text" }}>{cat}</span>
+                        <span onClick={e => { e.stopPropagation(); setEditCat(cat); setEditCatName(cat); }} style={{ fontSize: _.fontSize.md, fontWeight: n > 0 ? _.fontWeight.semi : _.fontWeight.normal, color: n > 0 ? _.ink : _.muted, cursor: "text" }}>{cat}</span>
                       )}
-                      {n > 0 && <span style={{ fontSize: 11, fontWeight: 600, color: _.ac, marginLeft: 4 }}>{n}</span>}
+                      {n > 0 && <span style={{ fontSize: _.fontSize.caption, fontWeight: _.fontWeight.semi, color: _.ac, marginLeft: 4 }}>{n}</span>}
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: _.s3 }}>
-                      {catT > 0 && <span style={{ fontSize: 14, fontWeight: 700, fontVariantNumeric: "tabular-nums", color: _.ink }}>{fmt(catT)}</span>}
+                      {catT > 0 && <span style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: _.ink }}>{fmt(catT)}</span>}
                       <div onClick={e => { e.stopPropagation(); setDelCat(cat); }}
                         style={{ cursor: "pointer", color: _.faint, transition: `color ${_.tr}`, padding: 2 }}
                         onMouseEnter={e => e.currentTarget.style.color = _.red}
@@ -275,16 +387,16 @@ export default function ScopePage() {
                             background: item.on ? _.ac : "transparent", cursor: "pointer",
                             display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
                           }}>{item.on && <Check size={10} strokeWidth={3} color="#fff" />}</div>
-                          <input style={{ flex: 1, fontSize: 13, color: item.on ? _.ink : _.muted, background: "transparent", border: "none", outline: "none", fontFamily: "inherit", padding: 0 }}
+                          <input style={{ flex: 1, fontSize: _.fontSize.base, color: item.on ? _.ink : _.muted, background: "transparent", border: "none", outline: "none", fontFamily: "inherit", padding: 0 }}
                             value={item.item} onChange={e => uI(cat, idx, "item", e.target.value)} />
                           {item.on && <>
-                            <input type="number" style={{ width: 48, padding: "3px 5px", background: _.well, border: `1px solid ${_.line}`, borderRadius: _.rXs, color: _.ink, fontSize: 12, textAlign: "center", outline: "none", fontWeight: 600 }}
+                            <input type="number" style={{ width: 48, padding: "3px 5px", background: _.well, border: `1px solid ${_.line}`, borderRadius: _.rXs, color: _.ink, fontSize: _.fontSize.sm, textAlign: "center", outline: "none", fontWeight: _.fontWeight.semi }}
                               value={item.qty} onChange={e => uI(cat, idx, "qty", parseFloat(e.target.value) || 0)} />
-                            <input style={{ width: 40, padding: "3px 4px", background: "transparent", border: "none", outline: "none", fontSize: 11, color: _.muted, fontFamily: "inherit", textAlign: "center" }}
+                            <input style={{ width: 40, padding: "3px 4px", background: "transparent", border: "none", outline: "none", fontSize: _.fontSize.caption, color: _.muted, fontFamily: "inherit", textAlign: "center" }}
                               value={item.unit} onChange={e => uI(cat, idx, "unit", e.target.value)} />
-                            <input type="number" style={{ width: 60, padding: "3px 5px", background: _.well, border: `1px solid ${_.line}`, borderRadius: _.rXs, color: _.ink, fontSize: 12, textAlign: "right", outline: "none", fontWeight: 600 }}
+                            <input type="number" style={{ width: 60, padding: "3px 5px", background: _.well, border: `1px solid ${_.line}`, borderRadius: _.rXs, color: _.ink, fontSize: _.fontSize.sm, textAlign: "right", outline: "none", fontWeight: _.fontWeight.semi }}
                               value={item.rate} onChange={e => uI(cat, idx, "rate", parseFloat(e.target.value) || 0)} />
-                            <span style={{ fontSize: 13, fontWeight: 600, minWidth: 56, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmt(item.rate * item.qty)}</span>
+                            <span style={{ fontSize: _.fontSize.base, fontWeight: _.fontWeight.semi, minWidth: 56, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmt(item.rate * item.qty)}</span>
                           </>}
                           <div onClick={() => delI(cat, idx)}
                             style={{ cursor: "pointer", color: _.faint, transition: `color ${_.tr}`, flexShrink: 0, padding: 2 }}
@@ -293,17 +405,16 @@ export default function ScopePage() {
                           ><X size={12} /></div>
                         </div>
                       ))}
-                      {/* Action buttons */}
                       <div style={{ display: "flex", gap: _.s3, paddingTop: 4, flexWrap: "wrap" }}>
-                        <div onClick={() => addC(cat)} style={{ padding: "6px 0", cursor: "pointer", color: _.ac, fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}
+                        <div onClick={() => addC(cat)} style={{ padding: "6px 0", cursor: "pointer", color: _.ac, fontSize: _.fontSize.sm, fontWeight: _.fontWeight.semi, display: "flex", alignItems: "center", gap: 4 }}
                           onMouseEnter={e => e.currentTarget.style.opacity = "0.7"}
                           onMouseLeave={e => e.currentTarget.style.opacity = "1"}
                         ><Plus size={13} /> Add custom</div>
-                        <div onClick={() => setRatePickerCat(cat)} style={{ padding: "6px 0", cursor: "pointer", color: _.ac, fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}
+                        <div onClick={() => setRatePickerCat(cat)} style={{ padding: "6px 0", cursor: "pointer", color: _.ac, fontSize: _.fontSize.sm, fontWeight: _.fontWeight.semi, display: "flex", alignItems: "center", gap: 4 }}
                           onMouseEnter={e => e.currentTarget.style.opacity = "0.7"}
                           onMouseLeave={e => e.currentTarget.style.opacity = "1"}
                         ><Library size={12} /> From library</div>
-                        <div onClick={() => setRfqCat(cat)} style={{ padding: "6px 0", cursor: "pointer", color: _.muted, fontSize: 12, fontWeight: 500, display: "flex", alignItems: "center", gap: 4 }}
+                        <div onClick={() => setRfqCat(cat)} style={{ padding: "6px 0", cursor: "pointer", color: _.muted, fontSize: _.fontSize.sm, fontWeight: _.fontWeight.medium, display: "flex", alignItems: "center", gap: 4 }}
                           onMouseEnter={e => e.currentTarget.style.opacity = "0.7"}
                           onMouseLeave={e => e.currentTarget.style.opacity = "1"}
                         ><Send size={11} /> Request quote</div>
@@ -331,21 +442,31 @@ export default function ScopePage() {
             </div>
           </div>
 
-          {/* Review section */}
+          {/* ═══ STEP 3: REVIEW ═══ */}
           {T.curr > 0 && (
             <div style={{ paddingTop: _.s8, marginTop: _.s4, borderTop: `2px solid ${_.ink}`, marginBottom: _.s7 }}>
-              <div style={{ fontSize: 11, color: _.body, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 16 }}>Review</div>
+              <div style={{ fontSize: _.fontSize.caption, color: _.body, fontWeight: _.fontWeight.semi, letterSpacing: _.letterSpacing.wider, textTransform: "uppercase", marginBottom: 16 }}>Review</div>
+
+              {/* Client & address summary */}
+              {(clientName || p.address) && (
+                <div style={{ marginBottom: 20, padding: "12px 16px", background: _.well, borderRadius: _.rSm }}>
+                  {clientName && <div style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.semi, color: _.ink }}>{clientName}</div>}
+                  {p.address && <div style={{ fontSize: _.fontSize.base, color: _.muted, marginTop: 2 }}>{p.address}{p.suburb ? `, ${p.suburb}` : ""}</div>}
+                  {(p.buildType || p.type) && <div style={{ fontSize: _.fontSize.sm, color: _.muted, marginTop: 2 }}>{p.buildType || p.type}{p.floorArea ? ` · ${p.floorArea}m²` : ""}{p.storeys ? ` · ${p.storeys}` : ""}</div>}
+                </div>
+              )}
+
               {/* Category breakdown */}
               {Object.entries(p.scope).filter(([, items]) => items.some(i => i.on)).map(([cat, items]) => {
                 const catItems = items.filter(i => i.on);
                 const catTotal = catItems.reduce((t, i) => t + i.rate * i.qty, 0);
                 return (
                   <div key={cat} style={{ marginBottom: 16 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 600, color: _.ink, marginBottom: 6, paddingBottom: 4, borderBottom: `1px solid ${_.line}` }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: _.fontSize.base, fontWeight: _.fontWeight.semi, color: _.ink, marginBottom: 6, paddingBottom: 4, borderBottom: `1px solid ${_.line}` }}>
                       <span>{cat}</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{fmt(catTotal)}</span>
                     </div>
                     {catItems.map((item, i) => (
-                      <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: _.body, padding: "2px 0 2px 12px" }}>
+                      <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: _.fontSize.sm, color: _.body, padding: "2px 0 2px 12px" }}>
                         <span>{item.item} × {item.qty} {item.unit}</span>
                         <span style={{ fontVariantNumeric: "tabular-nums" }}>{fmt(item.rate * item.qty)}</span>
                       </div>
@@ -353,28 +474,40 @@ export default function ScopePage() {
                   </div>
                 );
               })}
+
+              {/* Notes / exclusions */}
+              {p.notes && (
+                <div style={{ marginBottom: 16, padding: "10px 14px", background: _.well, borderRadius: _.rSm, fontSize: _.fontSize.sm, color: _.body, lineHeight: _.lineHeight.body }}>
+                  <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: 4 }}>Notes</div>
+                  {p.notes}
+                </div>
+              )}
+
               {/* Totals */}
               <div style={{ borderTop: `2px solid ${_.ink}`, paddingTop: 12, marginTop: 8 }}>
                 {[["Subtotal", fmt(T.sub)], [`Margin ${margin}%`, fmt(T.mar)], [`Contingency ${contingency}%`, fmt(T.con)], ["GST 10%", fmt(T.gst)]].map(([l, v]) => (
-                  <div key={l} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 13, color: _.muted }}>
+                  <div key={l} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: _.fontSize.base, color: _.muted }}>
                     <span>{l}</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{v}</span>
                   </div>
                 ))}
-                <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0 4px", fontSize: 20, fontWeight: 700, color: _.ink, borderTop: `1px solid ${_.line}`, marginTop: 8 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0 4px", fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, color: _.ink, borderTop: `1px solid ${_.line}`, marginTop: 8 }}>
                   <span>Contract Total</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{fmt(T.curr)}</span>
                 </div>
               </div>
-              <div style={{ display: "flex", gap: _.s2, marginTop: 20 }}>
-                {quoteReady
-                  ? <Button onClick={() => createProp()} icon={ArrowRight}>Generate Proposal</Button>
-                  : <Button disabled>Add client details first</Button>}
-                <Button variant="ghost" onClick={() => navigate("../costs")}>Cost tracker</Button>
+
+              {/* Primary CTA: Generate Proposal */}
+              <div style={{ marginTop: 24 }}>
+                {quoteReady ? (
+                  <Button onClick={() => createProp()} icon={ArrowRight}>Generate Proposal</Button>
+                ) : (
+                  <Button disabled>Add client details to generate proposal</Button>
+                )}
               </div>
             </div>
           )}
         </div>
 
-        {/* RIGHT: Sticky sidebar (desktop only) */}
+        {/* RIGHT: Sticky sidebar (desktop only) — summary numbers, no CTA */}
         {!mobile && (
           <div style={{ position: "sticky", top: 0 }}>
             <Card style={{ padding: 20 }}>
@@ -384,7 +517,7 @@ export default function ScopePage() {
         )}
       </div>
 
-      {/* Mobile: floating summary bar */}
+      {/* Mobile: floating summary bar with CTA */}
       {mobile && T.curr > 0 && (
         <div style={{
           position: "fixed", bottom: 72, left: 0, right: 0,
@@ -393,22 +526,38 @@ export default function ScopePage() {
           boxShadow: "0 -2px 8px rgba(0,0,0,0.06)", zIndex: 50,
         }}>
           <div>
-            <div style={{ fontSize: 11, color: _.muted, fontWeight: 600 }}>{T.items} items</div>
-            <div style={{ fontSize: 20, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{fmt(T.curr)}</div>
+            <div style={{ fontSize: _.fontSize.caption, color: _.muted, fontWeight: _.fontWeight.semi }}>{T.items} items</div>
+            <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums" }}>{fmt(T.curr)}</div>
           </div>
           {quoteReady && <Button size="sm" onClick={() => createProp()} icon={ArrowRight}>Generate</Button>}
         </div>
       )}
 
+      {/* ─── New Client Modal ─── */}
+      <Modal open={newClientModal} onClose={() => setNewClientModal(false)} title="Create New Client" width={420}>
+        <div style={{ marginBottom: _.s3 }}>
+          <label style={label}>Client name *</label>
+          <input style={input} value={newClientForm.displayName} onChange={e => setNewClientForm(f => ({ ...f, displayName: e.target.value }))} placeholder="e.g. John Smith" autoFocus />
+        </div>
+        <div style={{ marginBottom: _.s5 }}>
+          <label style={label}>Company name</label>
+          <input style={input} value={newClientForm.companyName} onChange={e => setNewClientForm(f => ({ ...f, companyName: e.target.value }))} placeholder="Optional" />
+        </div>
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+          <Button variant="ghost" onClick={() => setNewClientModal(false)}>Cancel</Button>
+          <Button onClick={createNewClient} icon={UserPlus}>Create & Select</Button>
+        </div>
+      </Modal>
+
       {/* Rate Library Picker Modal */}
       <Modal open={!!ratePickerCat} onClose={() => setRatePickerCat(null)} title={`Add from Rate Library — ${ratePickerCat}`}>
         {ratePickerItems.length === 0 ? (
-          <div style={{ padding: 16, textAlign: "center", color: _.muted, fontSize: 13 }}>
+          <div style={{ padding: 16, textAlign: "center", color: _.muted, fontSize: _.fontSize.base }}>
             No matching items in rate library. Add items via <span style={{ color: _.ac, cursor: "pointer" }} onClick={() => { setRatePickerCat(null); navigate("/rate-library"); }}>Rate Library</span>.
           </div>
         ) : (
           <>
-            <div style={{ fontSize: 12, color: _.muted, marginBottom: 12 }}>Click to add items to scope</div>
+            <div style={{ fontSize: _.fontSize.sm, color: _.muted, marginBottom: 12 }}>Click to add items to scope</div>
             {ratePickerItems.map(item => (
               <div key={item.id} onClick={() => addFromLibrary(item)} style={{
                 display: "flex", justifyContent: "space-between", alignItems: "center",
@@ -419,8 +568,8 @@ export default function ScopePage() {
                 onMouseLeave={e => e.currentTarget.style.background = "transparent"}
               >
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: _.ink }}>{item.name}</div>
-                  <div style={{ fontSize: 12, color: _.muted }}>{item.unit} · {fmt(item.unitRate)}</div>
+                  <div style={{ fontSize: _.fontSize.base, fontWeight: _.fontWeight.medium, color: _.ink }}>{item.name}</div>
+                  <div style={{ fontSize: _.fontSize.sm, color: _.muted }}>{item.unit} · {fmt(item.unitRate)}</div>
                 </div>
                 <Plus size={14} color={_.ac} />
               </div>
@@ -436,8 +585,8 @@ export default function ScopePage() {
       <Modal open={!!rfqCat} onClose={() => setRfqCat(null)} title="Request for Quote" width={400}>
         <div style={{ textAlign: "center", padding: "16px 0" }}>
           <Send size={32} color={_.muted} style={{ marginBottom: 16 }} />
-          <div style={{ fontSize: 14, color: _.body, marginBottom: 8 }}>RFQ feature coming soon</div>
-          <div style={{ fontSize: 13, color: _.muted }}>You'll be able to send quote requests to trades for <strong>{rfqCat}</strong> directly from here.</div>
+          <div style={{ fontSize: _.fontSize.md, color: _.body, marginBottom: 8 }}>RFQ feature coming soon</div>
+          <div style={{ fontSize: _.fontSize.base, color: _.muted }}>You'll be able to send quote requests to trades for <strong>{rfqCat}</strong> directly from here.</div>
         </div>
         <div style={{ marginTop: 16, textAlign: "center" }}>
           <Button variant="secondary" onClick={() => setRfqCat(null)}>Close</Button>
@@ -446,7 +595,7 @@ export default function ScopePage() {
 
       {/* Delete category confirmation modal */}
       <Modal open={!!delCat} onClose={() => setDelCat(null)} title="Delete Category" width={400}>
-        <div style={{ fontSize: 14, color: _.body, marginBottom: 24 }}>
+        <div style={{ fontSize: _.fontSize.md, color: _.body, marginBottom: 24 }}>
           Delete <strong>{delCat}</strong> and all its items?
         </div>
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>

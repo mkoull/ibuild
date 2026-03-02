@@ -1,70 +1,57 @@
 /**
- * getNextStep — deterministic "Continue setup" routing.
+ * getNextStepForProject — deterministic "what should I do next?" for any project.
  *
- * Returns the ordered step list and the first incomplete step.
+ * Returns ONE primary action based on the project's stage AND its data completeness.
+ * This replaces the static lifecycle CTA for data-aware stages (Lead, Quoted).
  *
- * @param {object} opts
- * @param {object} opts.project    — current project object
- * @param {object} opts.totals     — { items, sub } from calc()
- * @param {boolean} opts.hasPlanData — whether planData is truthy
- * @returns {{ steps: Step[], next: Step|null, done: number }}
- *
- * Each Step: { key, label, done, detail, tab, optional? }
- *   - tab is the route segment to navigate to
- *   - key "proposal" has flag `needsQuote` when scope+client incomplete
+ * @param {object} project
+ * @param {object} totals — from calc()
+ * @returns {{ label, description, route, reason, primary, action? } | null}
  */
-export function getNextStep({ project: p, totals: T, hasPlanData }) {
+import { normaliseStage } from "./lifecycle.js";
+import { fmt } from "../theme/styles.js";
+
+export function getNextStepForProject(project, totals) {
+  const stage = normaliseStage(project.stage || project.status);
+  const T = totals;
+  const hasClient = !!(project.client || project.clientId);
   const hasScope = T.items > 0;
-  // Support both old (p.client string) and new (p.clientId) shapes
-  const clientName = p.client || "";
-  const hasClient = !!(clientName && (p.email || p.phone) && p.address);
-  const hasProposal = p.proposals.length > 0;
-  const milestones = p.schedule || p.milestones || [];
+  const hasProposal = (project.proposals || []).length > 0;
+  const milestones = project.schedule || [];
   const hasSchedule = milestones.some(m => m.planned);
 
-  const steps = [
-    {
-      key: "plans",
-      label: "Upload plans",
-      done: !!hasPlanData,
-      detail: hasPlanData ? "Plans analysed" : "Optional — AI scope extraction",
-      tab: "plans",
-      optional: true,
-    },
-    {
-      key: "scope",
-      label: "Build scope",
-      done: hasScope,
-      detail: hasScope ? `${T.items} items` : "Select items from rate library",
-      tab: "scope",
-    },
-    {
-      key: "client",
-      label: "Add client details",
-      done: hasClient,
-      detail: hasClient ? clientName : "Name, contact, address",
-      tab: "scope",
-    },
-    {
-      key: "proposal",
-      label: "Generate proposal",
-      done: hasProposal,
-      detail: hasProposal ? `${p.proposals.length} saved` : "Requires scope + client",
-      tab: "proposals",
-      needsQuote: !hasScope || !hasClient,
-    },
-    {
-      key: "schedule",
-      label: "Set schedule",
-      done: hasSchedule,
-      detail: `${milestones.filter(m => m.planned).length} of ${milestones.length} dates set`,
-      tab: "schedule",
-    },
-  ];
+  if (stage === "Lead") {
+    if (!hasClient)
+      return { label: "Add client details", description: "Set client, site address and project info", route: "scope", reason: "missing_client", primary: true };
+    if (!hasScope)
+      return { label: "Build scope", description: "Select items from rate library", route: "scope", reason: "missing_scope", primary: true };
+    if (!hasProposal)
+      return { label: "Review & generate proposal", description: "Scope complete — create client proposal", route: "scope", reason: "missing_proposal", primary: true };
+    return { label: "Send quote", description: "Review proposal and send to client", route: "proposals", reason: "ready_to_send", primary: true };
+  }
 
-  // First required incomplete step; optional steps never block flow
-  const next = steps.find(s => !s.done && !s.optional) || null;
-  const done = steps.filter(s => s.done).length;
+  if (stage === "Quoted") {
+    if (!hasProposal)
+      return { label: "Generate proposal", description: "Create a proposal before converting", route: "scope", reason: "missing_proposal", primary: true };
+    return { label: "Convert to Job", description: "Accept quote and unlock job modules", route: null, reason: "ready_to_convert", primary: true, action: "convert_job" };
+  }
 
-  return { steps, next, done };
+  if (stage === "Approved") {
+    if (!hasSchedule)
+      return { label: "Set schedule", description: "Plan milestone dates before starting", route: "schedule", reason: "missing_schedule", primary: true };
+    return { label: "Start Build", description: "Begin active construction", route: null, reason: "ready_to_start", primary: true, action: "start_build" };
+  }
+
+  if (stage === "Active") {
+    const outstanding = T.outstanding || 0;
+    if (outstanding > 0)
+      return { label: "Chase payment", description: `${fmt(outstanding)} outstanding`, route: "invoices", reason: "outstanding_invoices", primary: true };
+    return { label: "Raise progress claim", description: "Create next invoice", route: "invoices", reason: "raise_claim", primary: true };
+  }
+
+  if (stage === "Invoiced") {
+    return { label: "Complete Build", description: "Mark project as delivered", route: null, reason: "ready_to_complete", primary: true, action: "complete_build" };
+  }
+
+  return null;
 }
