@@ -384,13 +384,18 @@ export default function ProposalDetail() {
         <div className="printTerms">
           <div className="termsHeading">Terms & Conditions</div>
           <ul className="termsList">
-            <li><strong>Validity:</strong> This quotation is valid for {validDays} days from the date above.</li>
-            <li><strong>Deposit:</strong> 5% deposit required upon acceptance to secure commencement.</li>
-            <li><strong>Progress Claims:</strong> Progress claims issued per milestone, payable within {paymentDays} days.</li>
-            <li><strong>Variations:</strong> Any scope changes require a written Variation Order (VO) and will be priced separately.</li>
-            <li><strong>Insurance:</strong> Builder carries full public liability and contract works insurance.</li>
-            <li><strong>Defects Liability:</strong> 13-week defects liability period from practical completion.</li>
-            <li><strong>Exclusions:</strong> Unless specifically listed above, all other works are excluded from this quotation.</li>
+            {propD.terms?.filter(t => t.on).length > 0
+              ? propD.terms.filter(t => t.on).map((t, i) => <li key={i}>{t.text}</li>)
+              : <>
+                  <li><strong>Validity:</strong> This quotation is valid for {validDays} days from the date above.</li>
+                  <li><strong>Deposit:</strong> {propD.depositPct ?? 5}% deposit required upon acceptance to secure commencement.</li>
+                  <li><strong>Progress Claims:</strong> Progress claims issued per milestone, payable within {paymentDays} days.</li>
+                  <li><strong>Variations:</strong> Any scope changes require a written Variation Order (VO) and will be priced separately.</li>
+                  <li><strong>Insurance:</strong> Builder carries full public liability and contract works insurance.</li>
+                  <li><strong>Defects Liability:</strong> {propD.defectsWeeks ?? 13}-week defects liability period from practical completion.</li>
+                  <li><strong>Exclusions:</strong> Unless specifically listed above, all other works are excluded from this quotation.</li>
+                </>
+            }
           </ul>
         </div>
 

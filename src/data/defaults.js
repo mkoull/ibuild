@@ -143,3 +143,13 @@ export const DEFAULT_QUALIFICATIONS = [
   "Builder access to site for duration of works",
   "No heritage overlay or special planning conditions apply",
 ];
+
+export const DEFAULT_TERMS = [
+  "This quotation is valid for {validDays} days from the date above.",
+  "{depositPct}% deposit required upon acceptance to secure commencement.",
+  "Progress claims issued per milestone, payable within {paymentDays} days.",
+  "Any scope changes require a written Variation Order (VO) and will be priced separately.",
+  "Builder carries full public liability and contract works insurance.",
+  "{defectsWeeks}-week defects liability period from practical completion.",
+  "Unless specifically listed above, all other works are excluded from this quotation.",
+];

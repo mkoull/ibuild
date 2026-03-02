@@ -35,6 +35,10 @@ export default function ProposalsPage() {
         allowances: JSON.parse(JSON.stringify(pr.allowances || [])),
         pcItems: JSON.parse(JSON.stringify(pr.pcItems || [])),
         qualifications: JSON.parse(JSON.stringify(pr.qualifications || [])),
+        terms: JSON.parse(JSON.stringify(pr.terms || [])),
+        depositPct: pr.depositPct ?? 5,
+        paymentDays: pr.paymentDays ?? 14,
+        defectsWeeks: pr.defectsWeeks ?? 13,
         pricing: { sub: t.sub, mar: t.mar, con: t.con, gst: t.gst, total: t.curr, margin: t.margin, contingency: t.contingency },
         sigData: null, status: "draft",
       });

@@ -4,7 +4,7 @@ import { useProject } from "../../context/ProjectContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
 import _ from "../../theme/tokens.js";
 import { fmt, input, label, btnGhost, uid, ds, ts } from "../../theme/styles.js";
-import { STAGES, DEFAULT_EXCLUSIONS, DEFAULT_ALLOWANCES, DEFAULT_PC_ITEMS, DEFAULT_QUALIFICATIONS } from "../../data/defaults.js";
+import { STAGES, DEFAULT_EXCLUSIONS, DEFAULT_ALLOWANCES, DEFAULT_PC_ITEMS, DEFAULT_QUALIFICATIONS, DEFAULT_TERMS } from "../../data/defaults.js";
 import { calc } from "../../lib/calc.js";
 import { canTransition } from "../../lib/lifecycle.js";
 import Card from "../../components/ui/Card.jsx";
@@ -38,11 +38,12 @@ export default function QuotePage() {
   const clientDropRef = useRef(null);
 
   // Extras step state
-  const [extrasExp, setExtrasExp] = useState({ exclusions: true, allowances: true, pcItems: true, qualifications: true });
+  const [extrasExp, setExtrasExp] = useState({ exclusions: true, allowances: true, pcItems: true, qualifications: true, terms: true });
   const [exclInput, setExclInput] = useState("");
   const [allowInput, setAllowInput] = useState({ description: "", amount: "" });
   const [pcInput, setPcInput] = useState({ description: "", amount: "" });
   const [qualInput, setQualInput] = useState("");
+  const [termInput, setTermInput] = useState("");
 
   const stage = p.stage || p.status;
   const margin = p.marginPct ?? p.margin ?? 0;
@@ -151,6 +152,23 @@ export default function QuotePage() {
     return pr;
   });
 
+  const addTerm = (text) => { if (!text.trim()) return; up(pr => { pr.terms.push({ _id: uid(), text: text.trim(), on: true }); return pr; }); setTermInput(""); };
+  const delTerm = (idx) => up(pr => { pr.terms.splice(idx, 1); return pr; });
+  const updateTerm = (idx, text) => up(pr => { pr.terms[idx].text = text; return pr; });
+  const loadDefaultTerms = () => up(pr => {
+    const fill = (t) => t
+      .replace("{validDays}", String(pr.validDays || 30))
+      .replace("{depositPct}", String(pr.depositPct ?? 5))
+      .replace("{paymentDays}", String(pr.paymentDays ?? 14))
+      .replace("{defectsWeeks}", String(pr.defectsWeeks ?? 13));
+    const existing = new Set(pr.terms.map(e => e.text.toLowerCase()));
+    DEFAULT_TERMS.forEach(t => {
+      const filled = fill(t);
+      if (!existing.has(filled.toLowerCase())) pr.terms.push({ _id: uid(), text: filled, on: true });
+    });
+    return pr;
+  });
+
   // ─── Generate Proposal ───
   const generateProposal = () => {
     const version = (p.proposal?.version || 0) + 1;
@@ -181,6 +199,10 @@ export default function QuotePage() {
         allowances: JSON.parse(JSON.stringify(pr.allowances || [])),
         pcItems: JSON.parse(JSON.stringify(pr.pcItems || [])),
         qualifications: JSON.parse(JSON.stringify(pr.qualifications || [])),
+        terms: JSON.parse(JSON.stringify(pr.terms || [])),
+        depositPct: pr.depositPct ?? 5,
+        paymentDays: pr.paymentDays ?? 14,
+        defectsWeeks: pr.defectsWeeks ?? 13,
         pricing: { sub: t.sub, mar: t.mar, con: t.con, gst: t.gst, total: t.curr, margin: t.margin, contingency: t.contingency },
         sigData: null,
         status: "draft",
@@ -348,7 +370,7 @@ export default function QuotePage() {
                 <label style={label}>Notes</label>
                 <textarea style={{ ...input, minHeight: 56, resize: "vertical" }} value={p.notes || ""} onChange={e => up(pr => { pr.notes = e.target.value; return pr; })} placeholder="Scope notes, special requirements..." />
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "1fr 1fr 1fr", gap: _.s4, marginTop: _.s4 }}>
+              <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr 1fr" : "1fr 1fr 1fr", gap: `${_.s3}px ${_.s4}px`, marginTop: _.s4 }}>
                 <div>
                   <label style={label}>Margin %</label>
                   <input type="number" style={{ ...input, textAlign: "center", fontWeight: _.fontWeight.semi, fontSize: _.fontSize.unit }} value={margin} onChange={e => up(pr => { pr.marginPct = parseFloat(e.target.value) || 0; pr.margin = pr.marginPct; return pr; })} />
@@ -356,6 +378,18 @@ export default function QuotePage() {
                 <div>
                   <label style={label}>Contingency %</label>
                   <input type="number" style={{ ...input, textAlign: "center", fontWeight: _.fontWeight.semi, fontSize: _.fontSize.unit }} value={contingency} onChange={e => up(pr => { pr.contingencyPct = parseFloat(e.target.value) || 0; pr.contingency = pr.contingencyPct; return pr; })} />
+                </div>
+                <div>
+                  <label style={label}>Deposit %</label>
+                  <input type="number" style={{ ...input, textAlign: "center", fontWeight: _.fontWeight.semi, fontSize: _.fontSize.unit }} value={p.depositPct ?? 5} onChange={e => up(pr => { pr.depositPct = parseFloat(e.target.value) || 0; return pr; })} />
+                </div>
+                <div>
+                  <label style={label}>Payment days</label>
+                  <input type="number" style={{ ...input, textAlign: "center", fontWeight: _.fontWeight.semi, fontSize: _.fontSize.unit }} value={p.paymentDays ?? 14} onChange={e => up(pr => { pr.paymentDays = parseInt(e.target.value) || 0; return pr; })} />
+                </div>
+                <div>
+                  <label style={label}>Defects weeks</label>
+                  <input type="number" style={{ ...input, textAlign: "center", fontWeight: _.fontWeight.semi, fontSize: _.fontSize.unit }} value={p.defectsWeeks ?? 13} onChange={e => up(pr => { pr.defectsWeeks = parseInt(e.target.value) || 0; return pr; })} />
                 </div>
                 <div>
                   <label style={label}>Stage</label>
@@ -641,6 +675,38 @@ export default function QuotePage() {
                 )}
               </div>
 
+              {/* ── Terms & Conditions ── */}
+              <div style={{ marginBottom: _.s5, border: `1px solid ${_.line}`, borderRadius: _.rSm, overflow: "hidden" }}>
+                <div onClick={() => setExtrasExp(e => ({ ...e, terms: !e.terms }))} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", cursor: "pointer", background: _.well }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: _.s2 }}>
+                    <span style={{ transform: extrasExp.terms ? "rotate(90deg)" : "none", display: "inline-flex", transition: "transform 0.15s" }}><ChevronRight size={13} color={_.muted} /></span>
+                    <span style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.semi, color: _.ink }}>Terms & Conditions</span>
+                    {p.terms.length > 0 && <span style={{ fontSize: _.fontSize.caption, fontWeight: _.fontWeight.semi, color: _.ac }}>{p.terms.length}</span>}
+                  </div>
+                  <span onClick={e => { e.stopPropagation(); loadDefaultTerms(); }} style={{ fontSize: _.fontSize.sm, color: _.ac, fontWeight: _.fontWeight.semi, cursor: "pointer" }}>Load defaults</span>
+                </div>
+                {extrasExp.terms && (
+                  <div style={{ padding: "8px 14px 12px" }}>
+                    {p.terms.length === 0 && (
+                      <div style={{ fontSize: _.fontSize.sm, color: _.muted, padding: "8px 0" }}>No terms added yet. Click "Load defaults" for standard builder terms.</div>
+                    )}
+                    {p.terms.map((item, idx) => (
+                      <div key={item._id} style={{ display: "flex", alignItems: "flex-start", gap: _.s2, padding: "5px 0", borderBottom: `1px solid ${_.line}08` }}>
+                        <input style={{ flex: 1, fontSize: _.fontSize.base, color: _.ink, background: "transparent", border: "none", outline: "none", fontFamily: "inherit", padding: "2px 0" }}
+                          value={item.text} onChange={e => updateTerm(idx, e.target.value)} />
+                        <div onClick={() => delTerm(idx)} style={{ cursor: "pointer", color: _.faint, flexShrink: 0, padding: 2, marginTop: 2 }}
+                          onMouseEnter={e => e.currentTarget.style.color = _.red} onMouseLeave={e => e.currentTarget.style.color = _.faint}><X size={13} /></div>
+                      </div>
+                    ))}
+                    <div style={{ display: "flex", gap: _.s2, marginTop: 6 }}>
+                      <input style={{ ...input, flex: 1 }} value={termInput} onChange={e => setTermInput(e.target.value)} placeholder="Add term…"
+                        onKeyDown={e => { if (e.key === "Enter") addTerm(termInput); }} />
+                      <Button size="sm" onClick={() => addTerm(termInput)} icon={Plus}>Add</Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Nav */}
               <div style={{ marginTop: _.s7, display: "flex", gap: _.s3 }}>
                 <Button variant="ghost" onClick={() => setStep("scope")} icon={ArrowLeft}>Back to Scope</Button>
@@ -721,6 +787,12 @@ export default function QuotePage() {
                 <div style={{ marginBottom: 16, padding: "10px 14px", background: _.well, borderRadius: _.rSm }}>
                   <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: 4 }}>Qualifications & Assumptions</div>
                   {p.qualifications.filter(e => e.on).map((q, i) => <div key={i} style={{ fontSize: _.fontSize.sm, color: _.body, lineHeight: _.lineHeight.body }}>• {q.text}</div>)}
+                </div>
+              )}
+              {p.terms.filter(e => e.on).length > 0 && (
+                <div style={{ marginBottom: 16, padding: "10px 14px", background: _.well, borderRadius: _.rSm }}>
+                  <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: 4 }}>Terms & Conditions</div>
+                  {p.terms.filter(e => e.on).map((t, i) => <div key={i} style={{ fontSize: _.fontSize.sm, color: _.body, lineHeight: _.lineHeight.body }}>• {t.text}</div>)}
                 </div>
               )}
 
