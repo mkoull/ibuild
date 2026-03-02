@@ -4,7 +4,7 @@ import { mkProject } from "../data/models.js";
 import { loadVersioned, saveVersioned } from "../data/store.js";
 
 const STORAGE_KEY = "ib_projects";
-const STORE_VERSION = 7;
+const STORE_VERSION = 8;
 const SAVE_DEBOUNCE_MS = 300;
 
 function hydrateProject(pr) {
@@ -100,6 +100,34 @@ function migrateProjects(data, fromVersion) {
       if (p.depositPct === undefined) p.depositPct = 5;
       if (p.paymentDays === undefined) p.paymentDays = 14;
       if (p.defectsWeeks === undefined) p.defectsWeeks = 13;
+    });
+    data = norm;
+  }
+  if (fromVersion <= 7) {
+    const norm = data && data.byId ? data : { byId: {}, allIds: [] };
+    const JOB_STAGES = new Set(["Approved", "Active", "Invoiced", "Complete"]);
+    Object.values(norm.byId).forEach(p => {
+      if (!p.costAllowances) {
+        const isJob = JOB_STAGES.has(p.stage);
+        p.costAllowances = {
+          margin: { pct: isJob ? (p.marginPct ?? 0) : 0, amount: 0, locked: false },
+          contingency: { pct: isJob ? (p.contingencyPct ?? 0) : 0, amount: 0, locked: false },
+          siteOverhead: { pct: 0, amount: 0, locked: false },
+          officeOverhead: { pct: 0, amount: 0, locked: false },
+        };
+        // Recalc amounts from budget subtotal for job-stage projects
+        if (isJob && Array.isArray(p.budget)) {
+          const budgetSub = p.budget.reduce((t, b) => t + (b.budgetAmount || 0), 0);
+          for (const key of Object.keys(p.costAllowances)) {
+            const a = p.costAllowances[key];
+            if (a.pct > 0 && !a.locked) a.amount = Math.round(budgetSub * (a.pct / 100) * 100) / 100;
+          }
+        }
+      }
+      // Add allocations to existing budget lines
+      if (Array.isArray(p.budget)) {
+        p.budget.forEach(b => { if (!Array.isArray(b.allocations)) b.allocations = []; });
+      }
     });
     data = norm;
   }

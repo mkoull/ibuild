@@ -34,7 +34,20 @@ export function calc(p) {
   const forecastMargin = curr > 0 ? curr - combinedActuals : 0;
   const marginPctCalc = curr > 0 ? ((curr - combinedActuals) / curr) * 100 : 0;
 
-  return { sub, mar, con, gst, orig, aV, aVCount, curr, inv, paid, outstanding, act, cT, cA, cats, items, margin, contingency, budgetTotal, committedTotal, actualsTotal, budgetActualsTotal, combinedActuals, forecastMargin, marginPctCalc, billsTotal, billsPaid };
+  // Cost-control fields
+  const budget = p.budget || [];
+  const baselineBudget = budget.filter(b => b.source !== "variation").reduce((t, b) => t + (b.budgetAmount || 0), 0);
+  const variationBudget = budget.filter(b => b.source === "variation").reduce((t, b) => t + (b.budgetAmount || 0), 0);
+  const revisedBudget = budgetTotal; // baselineBudget + variationBudget
+
+  const ca = p.costAllowances || {};
+  const allowancesAmt = Object.values(ca).reduce((t, a) => t + (a.amount || 0), 0);
+
+  const forecastCost = committedTotal + Math.max(0, revisedBudget - committedTotal);
+  const forecastMarginNew = curr - forecastCost;
+  const marginPctNew = curr > 0 ? ((curr - forecastCost) / curr) * 100 : 0;
+
+  return { sub, mar, con, gst, orig, aV, aVCount, curr, inv, paid, outstanding, act, cT, cA, cats, items, margin, contingency, budgetTotal, committedTotal, actualsTotal, budgetActualsTotal, combinedActuals, forecastMargin, marginPctCalc, billsTotal, billsPaid, baselineBudget, variationBudget, revisedBudget, allowancesAmt, forecastCost, forecastMarginNew, marginPctNew };
 }
 
 export function commitmentRemaining(commitment, supplierBills) {

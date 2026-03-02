@@ -164,6 +164,16 @@ export function applyJobConversion(pr, { targetStage = "Approved" } = {}) {
   if (!pr.quoteSnapshotBudget) pr.quoteSnapshotBudget = null;
   if (!Array.isArray(pr.variationLedger)) pr.variationLedger = [];
 
+  // Seed cost allowances from quote-level margin/contingency
+  if (!pr.costAllowances) {
+    pr.costAllowances = {
+      margin: { pct: pr.marginPct ?? 0, amount: 0, locked: false },
+      contingency: { pct: pr.contingencyPct ?? 0, amount: 0, locked: false },
+      siteOverhead: { pct: 0, amount: 0, locked: false },
+      officeOverhead: { pct: 0, amount: 0, locked: false },
+    };
+  }
+
   if (!Array.isArray(pr.activity)) pr.activity = [];
   pr.activity.unshift({
     type: "job_converted",

@@ -141,5 +141,12 @@ export const selectFinancialSummary = memo1(project => {
     invoiced: T.inv,
     paid: T.paid,
     outstanding: T.outstanding,
+    baselineBudget: T.baselineBudget,
+    variationBudget: T.variationBudget,
+    revisedBudget: T.revisedBudget,
+    allowancesAmt: T.allowancesAmt,
+    forecastCost: T.forecastCost,
+    forecastMarginNew: T.forecastMarginNew,
+    marginPctNew: T.marginPctNew,
   };
 });

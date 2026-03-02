@@ -74,6 +74,16 @@ function mkScope() {
   return s;
 }
 
+export function mkCostAllowances(overrides = {}) {
+  return {
+    margin: { pct: 0, amount: 0, locked: false },
+    contingency: { pct: 0, amount: 0, locked: false },
+    siteOverhead: { pct: 0, amount: 0, locked: false },
+    officeOverhead: { pct: 0, amount: 0, locked: false },
+    ...overrides,
+  };
+}
+
 export function mkProject(overrides = {}) {
   const now = new Date().toISOString();
   return {

@@ -7,7 +7,7 @@ import { fmt, pName, ds } from "../../theme/styles.js";
 import { getNextActions } from "../../lib/nextActions.js";
 import { getNextStepForProject } from "../../lib/nextStep.js";
 import { canTransition, isJob, isQuote, normaliseStage } from "../../lib/lifecycle.js";
-import { snapshotFromQuote, importSectionLevel, importItemLevel } from "../../lib/budgetEngine.js";
+import { snapshotFromQuote, importSectionLevel, importItemLevel, recalcAllowances, baselineBudgetTotal } from "../../lib/budgetEngine.js";
 import StagePipeline from "../../components/ui/StagePipeline.jsx";
 import Card from "../../components/ui/Card.jsx";
 import Button from "../../components/ui/Button.jsx";
@@ -62,6 +62,11 @@ export default function OverviewPage() {
           pr.budget = lines;
         } else {
           pr.budget = [...pr.budget, ...lines];
+        }
+        // Recalc cost allowance amounts from baseline total
+        if (pr.costAllowances) {
+          const baseline = baselineBudgetTotal(pr.budget);
+          pr.costAllowances = recalcAllowances(pr.costAllowances, baseline);
         }
         return pr;
       });
