@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext.jsx";
 import _ from "../../theme/tokens.js";
@@ -5,12 +6,15 @@ import { input, label, btnPrimary, btnSecondary, btnGhost, fmt, pName } from "..
 import { mkContact } from "../../data/models.js";
 import { selectCalc as calc } from "../../lib/selectors.js";
 import Section from "../../components/ui/Section.jsx";
+import Modal from "../../components/ui/Modal.jsx";
+import Button from "../../components/ui/Button.jsx";
 import { ArrowLeft, Plus, X } from "lucide-react";
 
 export default function ClientDetailPage() {
   const { clientId } = useParams();
   const navigate = useNavigate();
-  const { clientsHook, projects, clients, mobile, notify } = useApp();
+  const { clientsHook, projects, clients, update, mobile, notify } = useApp();
+  const [showDelete, setShowDelete] = useState(false);
 
   const client = clientsHook.find(clientId);
   if (!client) return <Section><div style={{ color: _.muted }}>Client not found</div></Section>;
@@ -18,12 +22,27 @@ export default function ClientDetailPage() {
   const up = (fn) => clientsHook.update(clientId, fn);
 
   const linkedProjects = projects.filter(p => p.clientId === clientId);
+  const deleteClient = () => {
+    linkedProjects.forEach(pr => {
+      update(pr.id, p => {
+        p.clientId = "";
+        if ((p.client || "").trim().toLowerCase() === (client.displayName || "").trim().toLowerCase()) {
+          p.client = "";
+        }
+        return p;
+      });
+    });
+    clientsHook.remove(clientId);
+    notify("Client deleted");
+    navigate("/clients");
+  };
 
   return (
     <Section>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 32 }}>
         <button onClick={() => navigate("/clients")} style={btnGhost}><ArrowLeft size={14} /> Clients</button>
         <h1 style={{ fontSize: _.fontSize["3xl"], fontWeight: _.fontWeight.bold, letterSpacing: _.letterSpacing.tight, flex: 1 }}>{client.displayName || "Unnamed Client"}</h1>
+        <button onClick={() => setShowDelete(true)} style={{ ...btnGhost, color: _.red }}>Delete Client</button>
       </div>
 
       {/* Details form */}
@@ -82,6 +101,21 @@ export default function ClientDetailPage() {
           </div>
         ))}
       </div>
+
+      <Modal open={showDelete} onClose={() => setShowDelete(false)} title="Delete Client" width={420}>
+        <div style={{ fontSize: _.fontSize.md, color: _.body, lineHeight: _.lineHeight.body, marginBottom: _.s5 }}>
+          Delete <strong>{client.displayName || "this client"}</strong>?
+          {linkedProjects.length > 0 && (
+            <div style={{ marginTop: _.s2 }}>
+              This will unlink {linkedProjects.length} project{linkedProjects.length !== 1 ? "s" : ""} from this client.
+            </div>
+          )}
+        </div>
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: _.s2 }}>
+          <Button variant="ghost" onClick={() => setShowDelete(false)}>Cancel</Button>
+          <Button variant="danger" onClick={deleteClient}>Delete</Button>
+        </div>
+      </Modal>
     </Section>
   );
 }

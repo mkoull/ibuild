@@ -1,46 +1,12 @@
 import { memo, useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import {
-  ClipboardList, FileText, Users, ListChecks, BriefcaseBusiness, CalendarClock,
-  Landmark, GitCompareArrows, ShoppingCart, Wrench, ReceiptText, FileCheck,
-  HandCoins, FolderOpen, NotebookText, Bug, HardHat, ArrowLeft, PanelLeftClose, PanelLeftOpen,
-} from "lucide-react";
+import { ArrowLeft, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import _ from "../../theme/tokens.js";
 import { useProjectsCtx } from "../../context/AppContext.jsx";
 import { pName } from "../../theme/styles.js";
 import { calc } from "../../lib/calc.js";
 import { isJob } from "../../lib/lifecycle.js";
-
-const GLOBAL_NAV = [
-  { group: "LEADS & CLIENTS", items: [
-    { path: "/clients", label: "Clients", Ic: Users },
-    { path: "/leads", label: "Leads", Ic: ClipboardList },
-  ]},
-  { group: "PRE-CONSTRUCTION", items: [
-    { path: "/projects", label: "Scope", Ic: ListChecks },
-    { path: "/quotes", label: "Proposal", Ic: FileCheck },
-    { path: "/quotes", label: "Quote", Ic: FileText },
-  ]},
-  { group: "JOB", items: [
-    { path: "/jobs", label: "Job Details", Ic: BriefcaseBusiness },
-    { path: "/jobs", label: "Schedule", Ic: CalendarClock },
-    { path: "/jobs", label: "Cost Tracker", Ic: Landmark },
-    { path: "/jobs", label: "Variations", Ic: GitCompareArrows },
-    { path: "/jobs", label: "Purchase Orders", Ic: ShoppingCart },
-    { path: "/jobs", label: "Work Orders", Ic: Wrench },
-  ]},
-  { group: "FINANCIALS", items: [
-    { path: "/jobs", label: "Invoices", Ic: ReceiptText },
-    { path: "/jobs", label: "Bills", Ic: FileText },
-    { path: "/jobs", label: "Payments", Ic: HandCoins },
-  ]},
-  { group: "SITE", items: [
-    { path: "/jobs", label: "Documents", Ic: FolderOpen },
-    { path: "/jobs", label: "Site Diary", Ic: NotebookText },
-    { path: "/jobs", label: "Defects", Ic: Bug },
-    { path: "/trades", label: "Trades", Ic: HardHat },
-  ]},
-];
+import { NAV_STRUCTURE } from "../../config/navStructure.js";
 
 function Sidebar() {
   const location = useLocation();
@@ -61,47 +27,24 @@ function Sidebar() {
     };
   }, [collapsed]);
 
-  const PROJECT_NAV = [
-    { group: "LEADS & CLIENTS", items: [
-      { path: "overview", label: "Clients", Ic: Users },
-      { path: "overview", label: "Leads", Ic: ClipboardList },
-    ]},
-    { group: "PRE-CONSTRUCTION", items: [
-      { path: "scope", label: "Scope", Ic: ListChecks },
-      { path: "proposals", label: "Proposal", Ic: FileCheck },
-      { path: "quote", label: "Quote", Ic: FileText },
-    ]},
-    { group: "JOB", items: [
-      { path: "overview", label: "Job Details", Ic: BriefcaseBusiness },
-      { path: "schedule", label: "Schedule", Ic: CalendarClock },
-      { path: "costs", label: "Cost Tracker", Ic: Landmark },
-      { path: "variations", label: "Variations", Ic: GitCompareArrows },
-      { path: "purchase-orders", label: "Purchase Orders", Ic: ShoppingCart },
-      { path: "work-orders", label: "Work Orders", Ic: Wrench },
-    ]},
-    { group: "FINANCIALS", items: [
-      { path: "invoices", label: "Invoices", Ic: ReceiptText },
-      { path: "bills", label: "Bills", Ic: FileText },
-      { path: "payments", label: "Payments", Ic: HandCoins },
-    ]},
-    { group: "SITE", items: [
-      { path: "documents", label: "Documents", Ic: FolderOpen },
-      { path: "site-diary", label: "Site Diary", Ic: NotebookText },
-      { path: "defects", label: "Defects", Ic: Bug },
-      { path: "trades", label: "Trades", Ic: HardHat },
-    ]},
-  ];
-
-  const nav = isProjectMode ? PROJECT_NAV : GLOBAL_NAV;
+  const nav = isProjectMode ? NAV_STRUCTURE.project : NAV_STRUCTURE.global;
   const totals = project ? calc(project) : null;
   const variance = totals ? totals.revisedBudget - totals.combinedActuals : 0;
 
-  const isActive = (path) => {
+  const isActive = (item) => {
     if (isProjectMode) {
-      const full = `/projects/${params.id}/${path}`;
+      if (item.to.startsWith("/")) {
+        return location.pathname.startsWith(item.match || item.to);
+      }
+      const full = `/projects/${params.id}/${item.match || item.to}`;
       return location.pathname.startsWith(full);
     }
-    return location.pathname.startsWith(path);
+    if (item.to.includes("#")) {
+      const [p, h] = item.to.split("#");
+      return location.pathname.startsWith(p) && location.hash === `#${h}`;
+    }
+    const routePath = item.match || item.to;
+    return location.pathname.startsWith(routePath);
   };
 
   return (
@@ -168,16 +111,19 @@ function Sidebar() {
 
       <div style={{ flex: 1, overflowY: "auto", padding: `${_.s1}px 0` }}>
         {nav.map(g => (
-          <div key={g.group} style={{ marginBottom: _.s1 }}>
+          <div key={g.id} style={{ marginBottom: _.s1 }}>
             {!collapsed && <div style={{ padding: `${_.s2}px ${_.s3}px ${_.s1}px`, fontSize: _.fontSize.xs, fontWeight: _.fontWeight.bold, color: "#64748b", letterSpacing: _.letterSpacing.wider, textTransform: "uppercase" }}>
               {g.group}
             </div>}
             {g.items.map(item => {
-              const active = item.path ? isActive(item.path) : false;
+              const active = isActive(item);
               return (
-                <div key={item.path} onClick={() => {
-                  if (isProjectMode) navigate(`/projects/${params.id}/${item.path}`);
-                  else navigate(item.path);
+                <div key={item.id} onClick={() => {
+                  if (isProjectMode && !item.to.startsWith("/")) {
+                    navigate(`/projects/${params.id}/${item.to}`);
+                    return;
+                  }
+                  navigate(item.to);
                 }} style={{
                   display: "flex", alignItems: "center", gap: _.s2, padding: collapsed ? "8px 0" : "7px 10px", justifyContent: collapsed ? "center" : "flex-start", fontSize: _.fontSize.base, cursor: "pointer",
                   borderLeft: active ? "2px solid #60a5fa" : "2px solid transparent",
