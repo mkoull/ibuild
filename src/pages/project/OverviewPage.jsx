@@ -19,8 +19,8 @@ export default function OverviewPage() {
   const stage = p.stage || p.status;
   const stageIsJob = isJob(stage);
   const milestones = p.schedule || [];
-  const msDone = milestones.filter(m => m.done).length;
-  const nextMs = milestones.find(m => !m.done);
+  const msDone = milestones.filter(m => m.status === "complete" || m.done).length;
+  const nextMs = milestones.find(m => m.status ? m.status !== "complete" : !m.done);
 
   // ─── Deterministic primary CTA ───
   const step = getNextStepForProject(p, T);

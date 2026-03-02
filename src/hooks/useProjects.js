@@ -4,7 +4,7 @@ import { mkProject } from "../data/models.js";
 import { loadVersioned, saveVersioned } from "../data/store.js";
 
 const STORAGE_KEY = "ib_projects";
-const STORE_VERSION = 2;
+const STORE_VERSION = 3;
 const SAVE_DEBOUNCE_MS = 300;
 
 function hydrateProject(pr) {
@@ -28,7 +28,40 @@ function migrateProjects(data, fromVersion) {
       byId[h.id] = h;
       allIds.push(h.id);
     });
-    return { byId, allIds };
+    data = { byId, allIds };
+  }
+  if (fromVersion <= 2) {
+    const norm = data && data.byId ? data : { byId: {}, allIds: [] };
+    Object.values(norm.byId).forEach(p => {
+      const milestones = p.schedule || [];
+      milestones.forEach((m, i) => {
+        if (!m.id) m.id = uid();
+        if (m.durationDays == null) {
+          // Derive duration from gap to next milestone
+          const nextMs = milestones[i + 1];
+          m.durationDays = nextMs ? Math.max(7, ((nextMs.wk || 0) - (m.wk || 0)) * 7) : 7;
+        }
+        if (m.offsetDays == null) m.offsetDays = (m.wk || 0) * 7;
+        if (!m.dependsOn) m.dependsOn = [];
+        if (m.tradeId === undefined) m.tradeId = null;
+        if (!m.status) m.status = m.done ? "complete" : "not_started";
+        if (m.percentComplete == null) m.percentComplete = m.done ? 100 : 0;
+        if (m.plannedStart === undefined) m.plannedStart = "";
+        if (m.plannedFinish === undefined) m.plannedFinish = "";
+        if (m.actualStart === undefined) m.actualStart = m.done && m.date ? m.date : "";
+        if (m.actualFinish === undefined) m.actualFinish = m.done && m.date ? m.date : "";
+        if (m.order == null) m.order = i;
+      });
+      // Add milestoneId to payment schedule entries
+      if (p.paymentSchedule) {
+        p.paymentSchedule.forEach(c => {
+          if (c.milestoneIdx != null && !c.milestoneId && milestones[c.milestoneIdx]) {
+            c.milestoneId = milestones[c.milestoneIdx].id;
+          }
+        });
+      }
+    });
+    data = norm;
   }
   return data;
 }

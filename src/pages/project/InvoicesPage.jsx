@@ -125,13 +125,15 @@ export default function InvoicesPage() {
 
     up(pr => {
       if (!pr.paymentSchedule) pr.paymentSchedule = [];
+      const msIdx = claimForm.dueOn === "milestone" && claimForm.milestoneIdx !== "" ? parseInt(claimForm.milestoneIdx) : undefined;
       pr.paymentSchedule.push({
         id: uid(),
         label: claimForm.label,
         percent: pct || undefined,
         amount: pct ? undefined : amt,
         dueOn: claimForm.dueOn,
-        milestoneIdx: claimForm.dueOn === "milestone" && claimForm.milestoneIdx !== "" ? parseInt(claimForm.milestoneIdx) : undefined,
+        milestoneIdx: msIdx,
+        milestoneId: msIdx != null && milestones[msIdx] ? milestones[msIdx].id : undefined,
         status: "Planned",
       });
       return pr;
@@ -393,8 +395,10 @@ export default function InvoicesPage() {
                 <span style={{ textAlign: "right" }}>Action</span>
               </div>
               {resolvedClaims.map((c, i) => {
-                const msName = c.dueOn === "milestone" && c.milestoneIdx != null && milestones[c.milestoneIdx]
-                  ? milestones[c.milestoneIdx].name : null;
+                const msMatch = c.dueOn === "milestone"
+                  ? (c.milestoneId ? milestones.find(m => m.id === c.milestoneId) : null) || (c.milestoneIdx != null ? milestones[c.milestoneIdx] : null)
+                  : null;
+                const msName = msMatch ? msMatch.name : null;
                 return (
                   <div key={c.id} style={{
                     display: "grid", gridTemplateColumns: mobile ? "1fr auto auto" : "1fr 70px 100px 140px 80px 130px", gap: _.s2,

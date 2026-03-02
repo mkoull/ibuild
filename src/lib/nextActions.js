@@ -14,7 +14,7 @@ import { fmt } from "../theme/styles.js";
 export function getNextActions({ project: p, totals: T, primaryRoute, primaryReason }) {
   const stage = p.stage || p.status;
   const milestones = p.schedule || [];
-  const nextMs = milestones.find(m => !m.done);
+  const nextMs = milestones.find(m => m.status ? m.status !== "complete" : !m.done);
   const pendingInvoices = (p.invoices || []).filter(i => i.status === "pending" || i.status === "sent");
   const pendingAmount = pendingInvoices.reduce((s, i) => s + (i.amount || 0), 0);
   const openDefects = (p.defects || []).filter(d => !d.done);
@@ -22,7 +22,7 @@ export function getNextActions({ project: p, totals: T, primaryRoute, primaryRea
   const hasScope = T.items > 0;
   const hasClient = !!(p.client || p.clientId);
   const hasProposal = p.proposal && p.proposal.status === "Generated";
-  const hasSchedule = milestones.some(m => m.planned);
+  const hasSchedule = milestones.some(m => m.plannedStart || m.planned);
 
   const actions = [];
 
@@ -65,7 +65,7 @@ export function getNextActions({ project: p, totals: T, primaryRoute, primaryRea
   }
 
   if (stage === "Complete") {
-    const msDone = milestones.filter(m => m.done).length;
+    const msDone = milestones.filter(m => m.status === "complete" || m.done).length;
     actions.push({ label: "Project delivered", detail: `${msDone}/${milestones.length} milestones complete`, path: "schedule" });
     if (T.paid > 0) actions.push({ label: `Total collected: ${fmt(T.paid)}`, detail: `of ${fmt(T.curr)} contract`, path: "invoices" });
     if (openDefects.length > 0) actions.push({ label: `${openDefects.length} outstanding defect${openDefects.length !== 1 ? "s" : ""}`, detail: "Warranty items", path: "defects" });

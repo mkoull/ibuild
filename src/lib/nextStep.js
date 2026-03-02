@@ -19,7 +19,7 @@ export function getNextStepForProject(project, totals) {
   const proposal = project.proposal;
   const hasProposal = proposal && proposal.status === "Generated";
   const milestones = project.schedule || [];
-  const hasSchedule = milestones.some(m => m.planned);
+  const hasSchedule = milestones.some(m => m.plannedStart || m.planned);
 
   if (stage === "Lead") {
     if (!hasClient)

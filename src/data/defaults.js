@@ -87,15 +87,15 @@ export const RATES = {
 };
 
 export const MILESTONES = [
-  { name: "Deposit", wk: 0 },
-  { name: "Permits Approved", wk: 4 },
-  { name: "Slab Poured", wk: 8 },
-  { name: "Frame Up", wk: 12 },
-  { name: "Lock Up", wk: 18 },
-  { name: "Rough-In Complete", wk: 22 },
-  { name: "Fix Stage", wk: 28 },
-  { name: "Practical Completion", wk: 34 },
-  { name: "Handover", wk: 36 },
+  { name: "Deposit", wk: 0, durationDays: 28 },
+  { name: "Permits Approved", wk: 4, durationDays: 28 },
+  { name: "Slab Poured", wk: 8, durationDays: 28 },
+  { name: "Frame Up", wk: 12, durationDays: 42 },
+  { name: "Lock Up", wk: 18, durationDays: 28 },
+  { name: "Rough-In Complete", wk: 22, durationDays: 42 },
+  { name: "Fix Stage", wk: 28, durationDays: 42 },
+  { name: "Practical Completion", wk: 34, durationDays: 14 },
+  { name: "Handover", wk: 36, durationDays: 7 },
 ];
 
 export const STAGES = ["Lead", "Quoted", "Approved", "Active", "Invoiced", "Complete"];

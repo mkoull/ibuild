@@ -67,7 +67,7 @@ export function getPaidTotal(pr) {
 }
 
 export function getNextMilestone(pr) {
-  const ms = (pr.schedule || []).find(m => !m.done);
+  const ms = (pr.schedule || []).find(m => m.status ? m.status !== "complete" : !m.done);
   return ms || null;
 }
 
