@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useProject } from "../../context/ProjectContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
 import { commitmentRemaining } from "../../lib/calc.js";
-import { importSectionLevel, actualFromPercent } from "../../lib/budgetEngine.js";
+import { importSectionLevel, importMissingLines, snapshotFromQuote, actualFromPercent } from "../../lib/budgetEngine.js";
 import _ from "../../theme/tokens.js";
 import { fmt, input, label, badge, uid, ds } from "../../theme/styles.js";
 import Section from "../../components/ui/Section.jsx";
@@ -39,6 +39,7 @@ export default function CostsPage() {
   const [commitForm, setCommitForm] = useState({ vendor: "", description: "", amount: "", tradeId: "", status: "Draft" });
   const [actualForm, setActualForm] = useState({ costCode: "", description: "", amount: "", tradeId: "", date: "" });
   const [deleteModal, setDeleteModal] = useState(null);
+  const [replaceModal, setReplaceModal] = useState(false);
   const [expandedTrade, setExpandedTrade] = useState(null);
   const [expandedCode, setExpandedCode] = useState(null);
 
@@ -99,14 +100,30 @@ export default function CostsPage() {
     setBudgetForm({ costCode: "", labelText: "", budgetAmount: "", tradeId: "", sectionName: "" });
   };
 
-  const importFromQuote = () => {
+  const hasScope = Object.keys(p.scope || {}).length > 0;
+
+  const importMissing = () => {
     up(pr => {
-      const lines = importSectionLevel(pr);
-      pr.budget = lines;
+      if (!pr.quoteSnapshotBudget) pr.quoteSnapshotBudget = snapshotFromQuote(pr);
+      const missing = importMissingLines(pr, pr.budget || []);
+      if (missing.length === 0) { notify("All scope categories already in budget", "info"); return pr; }
+      if (!pr.budget) pr.budget = [];
+      pr.budget.push(...missing);
       return pr;
     });
-    log("Budget imported from quote (section-level)");
-    notify("Budget imported from quote");
+    log("Budget: imported missing lines from quote");
+    notify("Missing lines imported");
+  };
+
+  const replaceFromQuote = () => {
+    up(pr => {
+      pr.quoteSnapshotBudget = snapshotFromQuote(pr);
+      pr.budget = importSectionLevel(pr);
+      return pr;
+    });
+    log("Budget replaced from quote (section-level)");
+    notify("Budget replaced from quote");
+    setReplaceModal(false);
   };
 
   const updateBudgetActual = (idx, rawValue) => {
@@ -435,15 +452,15 @@ export default function CostsPage() {
             </div>
             <Button onClick={addBudgetLine} icon={Plus}>Add budget line</Button>
           </div>
-          {budgetLines.length === 0 ? (
-            <div>
-              <Empty icon={BarChart3} text="No budget lines yet" />
-              {p.quoteSnapshotBudget && (
-                <div style={{ textAlign: "center", marginTop: _.s4 }}>
-                  <Button icon={Upload} variant="secondary" onClick={importFromQuote}>Import from Quote</Button>
-                </div>
-              )}
+          {/* Import toolbar */}
+          {hasScope && (
+            <div style={{ display: "flex", gap: _.s2, marginBottom: _.s5, flexWrap: "wrap" }}>
+              <Button icon={Upload} variant="secondary" size="sm" onClick={importMissing}>Import missing lines</Button>
+              <Button icon={Download} variant="ghost" size="sm" onClick={() => setReplaceModal(true)}>Replace all from quote</Button>
             </div>
+          )}
+          {budgetLines.length === 0 ? (
+            <Empty icon={BarChart3} text="No budget lines yet" />
           ) : (
             <>
               <div style={{ display: "grid", gridTemplateColumns: mobile ? "60px 1fr 90px 30px" : "80px 60px 1fr 120px 100px 80px 30px", gap: _.s2, padding: `${_.s2}px 0`, borderBottom: `2px solid ${_.ink}`, fontSize: _.fontSize.xs, color: _.muted, fontWeight: _.fontWeight.semi, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase" }}>
@@ -662,6 +679,17 @@ export default function CostsPage() {
         <div style={{ display: "flex", gap: _.s2, justifyContent: "flex-end" }}>
           <Button variant="ghost" onClick={() => setDeleteModal(null)}>Cancel</Button>
           <Button variant="danger" onClick={removeItem}>Delete</Button>
+        </div>
+      </Modal>
+
+      {/* Replace budget confirmation modal */}
+      <Modal open={replaceModal} onClose={() => setReplaceModal(false)} title="Replace Budget" width={440}>
+        <div style={{ fontSize: _.fontSize.md, color: _.body, lineHeight: _.lineHeight.body, marginBottom: _.s6 }}>
+          This will <strong>replace all existing budget lines</strong> with a fresh import from the quote scope. Manual lines and variation lines will be removed.
+        </div>
+        <div style={{ display: "flex", gap: _.s2, justifyContent: "flex-end" }}>
+          <Button variant="ghost" onClick={() => setReplaceModal(false)}>Cancel</Button>
+          <Button variant="danger" onClick={replaceFromQuote}>Replace all</Button>
         </div>
       </Modal>
     </Section>

@@ -111,6 +111,13 @@ export function createVariationLedgerEntry(variation, budgetLineId) {
   };
 }
 
+/** Import only lines for scope categories not already in the budget */
+export function importMissingLines(project, existingBudget) {
+  const full = importSectionLevel(project);
+  const existingNames = new Set((existingBudget || []).map(b => b.sectionName));
+  return full.filter(line => !existingNames.has(line.sectionName));
+}
+
 /** Converts % to $ amount */
 export function actualFromPercent(budgetAmount, percent) {
   return Math.round(((budgetAmount || 0) * (percent / 100)) * 100) / 100;

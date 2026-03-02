@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useProject } from "../../context/ProjectContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
 import _ from "../../theme/tokens.js";
@@ -15,12 +15,21 @@ const STATUS_COLOR = { draft: _.muted, sent: _.amber, pending: _.amber, paid: _.
 const STATUS_LABEL = { draft: "Draft", sent: "Sent", pending: "Sent", paid: "Paid", void: "Void" };
 const CLAIM_COLOR = { Planned: _.muted, Invoiced: _.amber, Paid: _.green };
 
+function getPreviousClaims(invoices, budgetLineId) {
+  return invoices
+    .filter(inv => inv.status !== "void" && inv.lineItems)
+    .flatMap(inv => inv.lineItems || [])
+    .filter(li => li.budgetLineId === budgetLineId)
+    .reduce((t, li) => ({ pct: t.pct + (li.claimPct || 0), amt: t.amt + (li.claimAmount || 0) }), { pct: 0, amt: 0 });
+}
+
 export default function InvoicesPage() {
   const { project: p, update: up, T, log } = useProject();
   const { mobile, notify, settings } = useApp();
 
   const [tab, setTab] = useState("Invoices");
   const [form, setForm] = useState({ type: "Progress", title: "", amount: "", percent: "", dueAt: "" });
+  const [lineItems, setLineItems] = useState([]);
   const [overModal, setOverModal] = useState(null);
   const [deleteIdx, setDeleteIdx] = useState(null);
 
@@ -33,6 +42,9 @@ export default function InvoicesPage() {
   const paymentSchedule = p.paymentSchedule || [];
   const retentionPct = p.retentionPercent || 0;
   const retentionHeld = T.curr > 0 ? T.curr * (retentionPct / 100) : 0;
+  const budgetLines = p.budget || [];
+  const hasBudget = budgetLines.length > 0;
+  const isProgressWithBudget = form.type === "Progress" && hasBudget;
 
   // Derive claim amounts from percent where applicable
   const resolvedClaims = useMemo(() =>
@@ -60,8 +72,84 @@ export default function InvoicesPage() {
     setForm(f => ({ ...f, amount: amtStr, percent: pct !== "" ? String(pct) : "" }));
   };
 
+  // ─── PROGRESS LINE ITEMS ───
+  const initLineItems = useCallback(() => {
+    if (budgetLines.length === 0) return;
+    setLineItems(budgetLines.map(b => {
+      const prev = getPreviousClaims(p.invoices, b.id);
+      return {
+        budgetLineId: b.id,
+        description: b.label || b.description || b.sectionName || "",
+        budgetAmount: b.budgetAmount || 0,
+        prevPct: prev.pct,
+        prevAmt: prev.amt,
+        claimPct: "",
+        claimAmount: "",
+        isOverride: false,
+      };
+    }));
+  }, [budgetLines, p.invoices]);
+
+  const updateLineClaimPct = (idx, pctStr) => {
+    setLineItems(items => items.map((li, i) => {
+      if (i !== idx) return li;
+      const pct = parseFloat(pctStr);
+      const amt = !isNaN(pct) ? Math.round(li.budgetAmount * (pct / 100) * 100) / 100 : "";
+      return { ...li, claimPct: pctStr, claimAmount: amt !== "" ? String(amt) : "", isOverride: false };
+    }));
+  };
+
+  const updateLineClaimAmt = (idx, amtStr) => {
+    setLineItems(items => items.map((li, i) => {
+      if (i !== idx) return li;
+      const amt = parseFloat(amtStr);
+      const pct = li.budgetAmount > 0 && !isNaN(amt) ? Math.round((amt / li.budgetAmount) * 100 * 100) / 100 : "";
+      return { ...li, claimAmount: amtStr, claimPct: pct !== "" ? String(pct) : "", isOverride: true };
+    }));
+  };
+
+  const lineTotal = useMemo(() =>
+    lineItems.reduce((s, li) => s + (parseFloat(li.claimAmount) || 0), 0),
+    [lineItems],
+  );
+
   // ─── INVOICE HANDLERS ───
   const createInvoice = (force) => {
+    if (isProgressWithBudget) {
+      // Per-line mode
+      const validLines = lineItems.filter(li => (parseFloat(li.claimAmount) || 0) > 0);
+      if (validLines.length === 0) { notify("Enter at least one claim amount", "error"); return; }
+      const total = lineTotal;
+      if (!force && T.inv + total > T.curr && T.curr > 0) { setOverModal({ amt: total }); return; }
+      up(pr => {
+        pr.invoices.push({
+          id: `INV-${uid()}`,
+          type: "Progress",
+          title: form.title || `Progress claim ${pr.invoices.length + 1}`,
+          amount: total,
+          status: "draft",
+          issuedAt: ds(),
+          dueAt: form.dueAt || "",
+          lineItems: validLines.map(li => ({
+            budgetLineId: li.budgetLineId,
+            description: li.description,
+            budgetAmount: li.budgetAmount,
+            claimPct: parseFloat(li.claimPct) || 0,
+            claimAmount: parseFloat(li.claimAmount) || 0,
+            isOverride: li.isOverride,
+          })),
+        });
+        return pr;
+      });
+      log(`Invoice created: ${form.title || "Progress"} (${fmt(total)}) — ${validLines.length} lines`);
+      notify(`Invoice created — ${fmt(total)}`);
+      setForm({ type: "Progress", title: "", amount: "", percent: "", dueAt: "" });
+      setLineItems([]);
+      setOverModal(null);
+      return;
+    }
+
+    // Simple mode (Deposit / Final / Variation)
     const amt = parseFloat(form.amount);
     if (!amt || amt <= 0) { notify("Enter a valid amount", "error"); return; }
     if (!force && T.inv + amt > T.curr && T.curr > 0) { setOverModal({ amt }); return; }
@@ -195,11 +283,37 @@ export default function InvoicesPage() {
     const payDays = settings.defaultPaymentTermsDays || 14;
     const gstAmt = Math.round((inv.amount || 0) / 11);
     const exGst = (inv.amount || 0) - gstAmt;
+
+    // Build line items table
+    let linesHtml = "";
+    if (inv.lineItems && inv.lineItems.length > 0) {
+      const liRows = inv.lineItems.map(li => {
+        const prev = getPreviousClaims(
+          p.invoices.filter(x => x.id !== inv.id),
+          li.budgetLineId,
+        );
+        const remainPct = Math.max(0, 100 - prev.pct - (li.claimPct || 0));
+        const remainAmt = Math.max(0, (li.budgetAmount || 0) - prev.amt - (li.claimAmount || 0));
+        return `<tr><td>${li.description}</td><td class="tRight">${fmt(li.budgetAmount)}</td><td class="tRight">${prev.pct.toFixed(1)}%</td><td class="tRight">${fmt(prev.amt)}</td><td class="tRight bold">${(li.claimPct || 0).toFixed(1)}%</td><td class="tRight bold">${fmt(li.claimAmount)}</td><td class="tRight">${remainPct.toFixed(1)}%</td><td class="tRight">${fmt(remainAmt)}</td></tr>`;
+      }).join("");
+      linesHtml = `<table><thead><tr><th>Description</th><th class="tRight">Budget</th><th class="tRight">Prev %</th><th class="tRight">Prev $</th><th class="tRight">This %</th><th class="tRight">This $</th><th class="tRight">Rem %</th><th class="tRight">Rem $</th></tr></thead><tbody>${liRows}<tr style="border-top:2px solid #0f172a"><td class="bold">Total</td><td></td><td></td><td></td><td></td><td class="tRight bold">${fmt(inv.amount)}</td><td></td><td></td></tr></tbody></table>`;
+    } else {
+      linesHtml = `<table><thead><tr><th>Description</th><th class="tRight">Amount</th></tr></thead><tbody><tr><td>${inv.title || "Progress claim"} — ${inv.type || "Progress"}</td><td class="tRight bold">${fmt(inv.amount)}</td></tr></tbody></table>`;
+    }
+
     const css = `@page{size:A4;margin:14mm 12mm 16mm}*{margin:0;padding:0;box-sizing:border-box}html,body{height:auto!important;font-family:'Inter',-apple-system,sans-serif;color:#0f172a;font-size:12px;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}.root{padding:36px 44px 28px}.hdr{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:20px;border-bottom:2px solid #0f172a}.hdrLeft{display:flex;align-items:center;gap:12px}.coName{font-size:16px;font-weight:700}.coDetail{font-size:10px;color:#64748b;margin-top:2px}.docType{font-size:9px;letter-spacing:0.12em;font-weight:700;color:#94a3b8;text-transform:uppercase}.docNum{font-size:16px;font-weight:700;margin-top:2px}.meta{display:grid;grid-template-columns:1fr 1fr;gap:0;border-bottom:1px solid #e2e8f0;margin-top:20px}.metaL,.metaR{padding:16px 0}.metaR{padding-left:20px;border-left:1px solid #e2e8f0}.ml{font-size:9px;letter-spacing:0.08em;font-weight:600;color:#94a3b8;text-transform:uppercase;margin-bottom:4px}.mv{font-size:13px;font-weight:500}.mvLg{font-size:18px;font-weight:700;letter-spacing:-0.02em}.mvSm{font-size:11px;color:#64748b;margin-top:2px}table{width:100%;border-collapse:collapse;margin-top:20px}th{font-size:9px;letter-spacing:0.06em;font-weight:600;color:#94a3b8;text-transform:uppercase;padding:6px 0;text-align:left;border-bottom:1px solid #e2e8f0}td{padding:8px 0;font-size:12px;border-bottom:1px solid #f1f5f9}.tRight{text-align:right}table .bold{font-weight:600}.totBox{width:260px;margin-left:auto;margin-top:16px;border:1.5px solid #e2e8f0;border-radius:6px;overflow:hidden}.tRow{display:flex;justify-content:space-between;padding:6px 14px;font-size:11px;color:#64748b;font-variant-numeric:tabular-nums}.tRow+.tRow{border-top:1px solid #f1f5f9}.tGrand{display:flex;justify-content:space-between;padding:10px 14px;font-size:16px;font-weight:700;background:#f8fafc;border-top:2px solid #0f172a;font-variant-numeric:tabular-nums}.terms{margin-top:32px;padding-top:16px;border-top:1px solid #e2e8f0;font-size:10px;color:#94a3b8;line-height:1.8}.ft{margin-top:24px;padding-top:10px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;font-size:9px;color:#94a3b8}`;
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${inv.id} — ${co}</title><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>${css}</style></head><body><div class="root"><div class="hdr"><div class="hdrLeft">${logoHtml}<div><div class="coName">${co}</div>${coDetails ? `<div class="coDetail">${coDetails}</div>` : ""}</div></div><div style="text-align:right"><div class="docType">Tax Invoice</div><div class="docNum">${inv.id}</div></div></div><div class="meta"><div class="metaL"><div class="ml">Bill To</div><div class="mvLg">${clientName}</div>${clientAddr ? `<div class="mvSm">${clientAddr}</div>` : ""}</div><div class="metaR"><div class="ml">Invoice Details</div><div class="mv">${inv.title || inv.desc || "—"}</div><div class="mvSm">Type: ${inv.type || "Progress"}</div></div></div><table><thead><tr><th>Description</th><th class="tRight">Amount</th></tr></thead><tbody><tr><td>${inv.title || "Progress claim"} — ${inv.type || "Progress"}</td><td class="tRight bold">${fmt(inv.amount)}</td></tr></tbody></table><div class="totBox"><div class="tRow"><span>Subtotal (ex GST)</span><span>${fmt(exGst)}</span></div><div class="tRow"><span>GST</span><span>${fmt(gstAmt)}</span></div><div class="tGrand"><span>Total (inc GST)</span><span>${fmt(inv.amount)}</span></div></div><div class="meta" style="margin-top:20px"><div class="metaL"><div class="ml">Issued</div><div class="mv">${inv.issuedAt || inv.date || "—"}</div></div><div class="metaR"><div class="ml">Due Date</div><div class="mv">${inv.dueAt || "—"}</div></div></div><div class="terms">Payment terms: ${payDays} days from date of invoice. Please reference <strong>${inv.id}</strong> with payment.<br>Bank details available on request.</div><div class="ft"><span>${co}${settings.abn ? ` · ABN ${settings.abn}` : ""}${settings.address ? ` · ${settings.address}` : ""}</span><span>${settings.contactPhone || settings.contactEmail || ""}</span></div></div></body></html>`;
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${inv.id} — ${co}</title><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>${css}</style></head><body><div class="root"><div class="hdr"><div class="hdrLeft">${logoHtml}<div><div class="coName">${co}</div>${coDetails ? `<div class="coDetail">${coDetails}</div>` : ""}</div></div><div style="text-align:right"><div class="docType">Tax Invoice</div><div class="docNum">${inv.id}</div></div></div><div class="meta"><div class="metaL"><div class="ml">Bill To</div><div class="mvLg">${clientName}</div>${clientAddr ? `<div class="mvSm">${clientAddr}</div>` : ""}</div><div class="metaR"><div class="ml">Invoice Details</div><div class="mv">${inv.title || inv.desc || "—"}</div><div class="mvSm">Type: ${inv.type || "Progress"}</div></div></div>${linesHtml}<div class="totBox"><div class="tRow"><span>Subtotal (ex GST)</span><span>${fmt(exGst)}</span></div><div class="tRow"><span>GST</span><span>${fmt(gstAmt)}</span></div><div class="tGrand"><span>Total (inc GST)</span><span>${fmt(inv.amount)}</span></div></div><div class="meta" style="margin-top:20px"><div class="metaL"><div class="ml">Issued</div><div class="mv">${inv.issuedAt || inv.date || "—"}</div></div><div class="metaR"><div class="ml">Due Date</div><div class="mv">${inv.dueAt || "—"}</div></div></div><div class="terms">Payment terms: ${payDays} days from date of invoice. Please reference <strong>${inv.id}</strong> with payment.<br>Bank details available on request.</div><div class="ft"><span>${co}${settings.abn ? ` · ABN ${settings.abn}` : ""}${settings.address ? ` · ${settings.address}` : ""}</span><span>${settings.contactPhone || settings.contactEmail || ""}</span></div></div></body></html>`;
     w.document.write(html);
     w.document.close();
     setTimeout(() => w.print(), 500);
+  };
+
+  // Handle type change — init line items when switching to Progress with budget
+  const handleTypeChange = (newType) => {
+    setForm(f => ({ ...f, type: newType }));
+    if (newType === "Progress" && hasBudget && lineItems.length === 0) {
+      initLineItems();
+    }
   };
 
   return (
@@ -242,10 +356,12 @@ export default function InvoicesPage() {
           {/* Create invoice */}
           <div style={{ marginBottom: _.s7, paddingBottom: _.s7, borderBottom: `1px solid ${_.line}` }}>
             <div style={{ fontSize: _.fontSize.caption, color: _.muted, fontWeight: _.fontWeight.semi, letterSpacing: _.letterSpacing.wider, textTransform: "uppercase", marginBottom: _.s4 }}>New Invoice</div>
-            <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "120px 1fr 90px 140px 130px", gap: `${_.s3}px ${_.s4}px`, marginBottom: _.s2 }}>
+
+            {/* Type + Title + Due date row */}
+            <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : isProgressWithBudget ? "120px 1fr 130px" : "120px 1fr 90px 140px 130px", gap: `${_.s3}px ${_.s4}px`, marginBottom: _.s2 }}>
               <div>
                 <label style={label}>Type</label>
-                <select style={{ ...input, cursor: "pointer" }} value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}>
+                <select style={{ ...input, cursor: "pointer" }} value={form.type} onChange={e => handleTypeChange(e.target.value)}>
                   {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
@@ -253,28 +369,123 @@ export default function InvoicesPage() {
                 <label style={label}>Title</label>
                 <input style={input} value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder={`${form.type} claim`} />
               </div>
-              <div>
-                <label style={label}>% of contract</label>
-                <input type="number" step="0.01" min="0" max="100" style={{ ...input, textAlign: "center", fontWeight: _.fontWeight.semi }} value={form.percent} onChange={e => setAmountFromPct(e.target.value)} placeholder="10" />
-              </div>
-              <div>
-                <label style={label}>Amount (inc GST) *</label>
-                <input type="number" style={input} value={form.amount} onChange={e => setPctFromAmount(e.target.value)} placeholder="25000" />
-              </div>
+              {!isProgressWithBudget && (
+                <>
+                  <div>
+                    <label style={label}>% of contract</label>
+                    <input type="number" step="0.01" min="0" max="100" style={{ ...input, textAlign: "center", fontWeight: _.fontWeight.semi }} value={form.percent} onChange={e => setAmountFromPct(e.target.value)} placeholder="10" />
+                  </div>
+                  <div>
+                    <label style={label}>Amount (inc GST) *</label>
+                    <input type="number" style={input} value={form.amount} onChange={e => setPctFromAmount(e.target.value)} placeholder="25000" />
+                  </div>
+                </>
+              )}
               <div>
                 <label style={label}>Due date</label>
                 <input type="date" style={{ ...input, cursor: "pointer" }} value={form.dueAt} onChange={e => setForm({ ...form, dueAt: e.target.value })} />
               </div>
             </div>
-            {contractBase > 0 && (
+
+            {/* Per-line progress claim grid */}
+            {isProgressWithBudget && (
+              <div style={{ marginTop: _.s4, marginBottom: _.s4 }}>
+                {lineItems.length === 0 && (
+                  <div style={{ textAlign: "center", padding: `${_.s4}px 0` }}>
+                    <Button variant="secondary" icon={ClipboardList} onClick={initLineItems}>Load budget lines for claiming</Button>
+                  </div>
+                )}
+                {lineItems.length > 0 && (
+                  <>
+                    <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Progress Claim — Per Budget Line</div>
+                    {/* Header */}
+                    {!mobile && (
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 90px 60px 60px 70px 90px 60px", gap: _.s2, padding: `${_.s2}px 0`, borderBottom: `2px solid ${_.ink}`, fontSize: _.fontSize.xs, color: _.muted, fontWeight: _.fontWeight.semi, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase" }}>
+                        <span>Description</span>
+                        <span style={{ textAlign: "right" }}>Budget</span>
+                        <span style={{ textAlign: "right" }}>Prev %</span>
+                        <span style={{ textAlign: "right" }}>Prev $</span>
+                        <span style={{ textAlign: "center" }}>% Claim</span>
+                        <span style={{ textAlign: "right" }}>$ Claim</span>
+                        <span style={{ textAlign: "right" }}>Rem %</span>
+                      </div>
+                    )}
+                    {lineItems.map((li, idx) => {
+                      const remainPct = Math.max(0, 100 - li.prevPct - (parseFloat(li.claimPct) || 0));
+                      return (
+                        <div key={li.budgetLineId} style={{
+                          display: mobile ? "flex" : "grid",
+                          flexDirection: mobile ? "column" : undefined,
+                          gridTemplateColumns: mobile ? undefined : "1fr 90px 60px 60px 70px 90px 60px",
+                          gap: mobile ? _.s1 : _.s2,
+                          padding: `${_.s3}px 0`, borderBottom: `1px solid ${_.line}`, alignItems: mobile ? "stretch" : "center", fontSize: _.fontSize.base,
+                        }}>
+                          <div style={{ fontWeight: _.fontWeight.medium, color: _.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {li.description}
+                            {mobile && <span style={{ color: _.muted, fontWeight: _.fontWeight.normal }}> — {fmt(li.budgetAmount)}</span>}
+                          </div>
+                          {!mobile && <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmt(li.budgetAmount)}</span>}
+                          {!mobile && <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", color: _.muted, fontSize: _.fontSize.sm }}>{li.prevPct > 0 ? `${li.prevPct.toFixed(1)}%` : "—"}</span>}
+                          {!mobile && <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", color: _.muted, fontSize: _.fontSize.sm }}>{li.prevAmt > 0 ? fmt(li.prevAmt) : "—"}</span>}
+                          <div style={{ display: "flex", gap: _.s2, alignItems: "center", justifyContent: mobile ? "flex-start" : "center" }}>
+                            {mobile && <span style={{ fontSize: _.fontSize.sm, color: _.muted, width: 40 }}>%</span>}
+                            <input type="number" step="0.1" min="0" max="100"
+                              style={{ ...input, width: mobile ? 80 : "100%", textAlign: "center", fontWeight: _.fontWeight.semi, padding: "3px 4px", fontSize: _.fontSize.sm }}
+                              value={li.claimPct} onChange={e => updateLineClaimPct(idx, e.target.value)} placeholder="0" />
+                            {mobile && <span style={{ fontSize: _.fontSize.sm, color: _.muted, width: 20 }}>$</span>}
+                            {mobile && (
+                              <input type="number"
+                                style={{ ...input, width: 100, textAlign: "right", padding: "3px 4px", fontSize: _.fontSize.sm }}
+                                value={li.claimAmount} onChange={e => updateLineClaimAmt(idx, e.target.value)} placeholder="0" />
+                            )}
+                            {mobile && li.isOverride && <span style={{ fontSize: 9, color: _.amber }}>*</span>}
+                          </div>
+                          {!mobile && (
+                            <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
+                              <input type="number"
+                                style={{ ...input, width: "100%", textAlign: "right", padding: "3px 4px", fontSize: _.fontSize.sm }}
+                                value={li.claimAmount} onChange={e => updateLineClaimAmt(idx, e.target.value)} placeholder="0" />
+                              {li.isOverride && <span style={{ fontSize: 9, color: _.amber, flexShrink: 0 }} title="Manual override">*</span>}
+                            </div>
+                          )}
+                          {!mobile && <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", fontSize: _.fontSize.sm, color: remainPct < 1 ? _.green : _.muted }}>{remainPct.toFixed(1)}%</span>}
+                        </div>
+                      );
+                    })}
+                    {/* Total row */}
+                    <div style={{
+                      display: mobile ? "flex" : "grid",
+                      gridTemplateColumns: mobile ? undefined : "1fr 90px 60px 60px 70px 90px 60px",
+                      gap: _.s2, padding: `${_.s3}px 0`, justifyContent: mobile ? "space-between" : undefined,
+                      fontWeight: _.fontWeight.bold, fontSize: _.fontSize.md,
+                    }}>
+                      <span>Total this claim</span>
+                      {!mobile && <span></span>}
+                      {!mobile && <span></span>}
+                      {!mobile && <span></span>}
+                      {!mobile && <span></span>}
+                      <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", color: _.ac }}>{fmt(lineTotal)}</span>
+                      {!mobile && <span></span>}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {!isProgressWithBudget && contractBase > 0 && (
               <div style={{ fontSize: _.fontSize.sm, color: _.faint, marginBottom: _.s3 }}>
                 % of contract value: <strong style={{ color: _.muted }}>{fmt(contractBase)}</strong>
                 {form.amount && remaining > 0 ? <span> · Remaining after this: {fmt(remaining - (parseFloat(form.amount) || 0))}</span> : null}
               </div>
             )}
-            {form.amount && T.curr > 0 && T.inv + (parseFloat(form.amount) || 0) > T.curr && (
+            {!isProgressWithBudget && form.amount && T.curr > 0 && T.inv + (parseFloat(form.amount) || 0) > T.curr && (
               <div style={{ display: "flex", alignItems: "center", gap: _.s2, fontSize: _.fontSize.base, color: _.red, marginBottom: _.s3 }}>
                 <AlertTriangle size={13} /> This will exceed the contract value by {fmt(T.inv + (parseFloat(form.amount) || 0) - T.curr)}
+              </div>
+            )}
+            {isProgressWithBudget && lineTotal > 0 && T.curr > 0 && T.inv + lineTotal > T.curr && (
+              <div style={{ display: "flex", alignItems: "center", gap: _.s2, fontSize: _.fontSize.base, color: _.red, marginBottom: _.s3 }}>
+                <AlertTriangle size={13} /> This will exceed the contract value by {fmt(T.inv + lineTotal - T.curr)}
               </div>
             )}
             <Button icon={ArrowRight} onClick={() => createInvoice(false)}>Create invoice</Button>
@@ -293,6 +504,7 @@ export default function InvoicesPage() {
                 const isSent = inv.status === "sent" || inv.status === "pending";
                 const isPaid = inv.status === "paid";
                 const isVoid = inv.status === "void";
+                const hasLines = inv.lineItems && inv.lineItems.length > 0;
                 return (
                   <div key={i} style={{
                     display: "grid", gridTemplateColumns: mobile ? "1fr auto" : "auto 1fr 80px 50px 100px 80px 160px", gap: _.s2,
@@ -306,6 +518,7 @@ export default function InvoicesPage() {
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.medium, color: _.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {inv.title || inv.desc || "—"}
+                        {hasLines && <span style={{ fontSize: _.fontSize.xs, color: _.muted, marginLeft: 6 }}>({inv.lineItems.length} lines)</span>}
                       </div>
                       <div style={{ fontSize: _.fontSize.sm, color: _.muted, marginTop: 1 }}>
                         {inv.issuedAt || inv.date || "—"}{inv.dueAt ? ` · Due ${inv.dueAt}` : ""}

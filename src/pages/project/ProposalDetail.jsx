@@ -39,7 +39,8 @@ const PREVIEW_CSS = `
 .printRoot .briefLabel{font-size:9px;letter-spacing:0.06em;font-weight:600;color:#94a3b8;text-transform:uppercase;margin-bottom:6px}
 .printRoot .briefText{font-size:12px;line-height:1.7;color:#475569}
 .printRoot .scopeHeading{font-size:9px;letter-spacing:0.06em;font-weight:700;color:#94a3b8;text-transform:uppercase;padding:20px 0 12px}
-.printRoot .catHeader{display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;border-bottom:2px solid #0f172a;font-size:12px;font-weight:600;color:#0f172a;margin-top:12px}
+.printRoot .printEndBlock{break-inside:avoid;page-break-inside:avoid;margin-top:28px}
+.printRoot .catHeader{display:flex;justify-content:space-between;align-items:baseline;padding:7px 8px;border-bottom:2px solid #0f172a;font-size:12px;font-weight:600;color:#0f172a;margin-top:12px;background:#f8fafc;border-radius:3px}
 .printRoot .catNum{color:#94a3b8;margin-right:6px;font-weight:700}
 .printRoot .scopeTable{width:100%;border-collapse:collapse;margin-bottom:4px}
 .printRoot .scopeTable th{font-size:9px;letter-spacing:0.06em;font-weight:600;color:#94a3b8;text-transform:uppercase;padding:5px 0;text-align:left;border-bottom:1px solid #e2e8f0}
@@ -71,13 +72,14 @@ const PREVIEW_CSS = `
 .printRoot .sigBlock .sigLine{border-bottom:1px solid #d1d5db;height:36px;margin-bottom:4px}
 .printRoot .sigBlock .sigDate{font-size:9px;color:#94a3b8}
 .printRoot .printFooter{margin-top:24px;padding:10px 0;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;font-size:9px;color:#94a3b8}
+.printRoot .scopeTable tbody tr:last-child{break-after:avoid}
 `;
 
 /* Full CSS for print popup window (global resets are safe in isolated window) */
 const PRINT_CSS = `
-@page{size:A4;margin:14mm 12mm 16mm}
+@page{size:A4;margin:14mm 12mm 16mm;@bottom-center{content:"Page " counter(page);font-size:8px;color:#94a3b8}}
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{height:auto!important;overflow:visible!important;font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;color:#0f172a;font-size:12px;line-height:1.45;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+html,body{height:auto!important;overflow:visible!important;font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;color:#0f172a;font-size:12px;line-height:1.45;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;orphans:3;widows:3}
 .avoidBreak{break-inside:avoid;page-break-inside:avoid}
 .breakBefore{break-before:page;page-break-before:always}
 .printSection{break-inside:avoid;page-break-inside:avoid}
@@ -111,7 +113,8 @@ thead{display:table-header-group}
 .briefLabel{font-size:9px;letter-spacing:0.06em;font-weight:600;color:#94a3b8;text-transform:uppercase;margin-bottom:6px}
 .briefText{font-size:12px;line-height:1.7;color:#475569}
 .scopeHeading{font-size:9px;letter-spacing:0.06em;font-weight:700;color:#94a3b8;text-transform:uppercase;padding:20px 0 12px}
-.catHeader{display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;border-bottom:2px solid #0f172a;font-size:12px;font-weight:600;color:#0f172a;margin-top:12px}
+.printEndBlock{break-inside:avoid;page-break-inside:avoid;margin-top:28px}
+.catHeader{display:flex;justify-content:space-between;align-items:baseline;padding:7px 8px;border-bottom:2px solid #0f172a;font-size:12px;font-weight:600;color:#0f172a;margin-top:12px;background:#f8fafc;border-radius:3px}
 .catNum{color:#94a3b8;margin-right:6px;font-weight:700}
 .scopeTable{width:100%;border-collapse:collapse;margin-bottom:4px}
 .scopeTable th{font-size:9px;letter-spacing:0.06em;font-weight:600;color:#94a3b8;text-transform:uppercase;padding:5px 0;text-align:left;border-bottom:1px solid #e2e8f0}
@@ -143,6 +146,7 @@ thead{display:table-header-group}
 .sigBlock .sigLine{border-bottom:1px solid #d1d5db;height:36px;margin-bottom:4px}
 .sigBlock .sigDate{font-size:9px;color:#94a3b8}
 .printFooter{margin-top:24px;padding:10px 0;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;font-size:9px;color:#94a3b8}
+.scopeTable tbody tr:last-child{break-after:avoid}
 `;
 
 export default function ProposalDetail() {
@@ -314,7 +318,8 @@ export default function ProposalDetail() {
           );
         })}
 
-        {/* ── Totals ── */}
+        {/* ── Totals + Terms + Acceptance (grouped to avoid page splits) ── */}
+        <div className="printEndBlock">
         <div className="printTotals avoidBreak">
           <div className="totalsBox">
             <div className="totalsRow"><span>Subtotal</span><span>{fmt(pricing.sub)}</span></div>
@@ -326,7 +331,7 @@ export default function ProposalDetail() {
         </div>
 
         {/* ── Terms ── */}
-        <div className="printTerms avoidBreak">
+        <div className="printTerms">
           <div className="termsHeading">Terms & Conditions</div>
           <ul className="termsList">
             <li><strong>Validity:</strong> This quotation is valid for {validDays} days from the date above.</li>
@@ -340,7 +345,7 @@ export default function ProposalDetail() {
         </div>
 
         {/* ── Acceptance ── */}
-        <div className="printAcceptance avoidBreak">
+        <div className="printAcceptance">
           <div className="acceptHeading">Acceptance</div>
           <div className="acceptText">I/We accept the scope and pricing above and authorise {co} to proceed with the works as described.</div>
           <div className="sigGrid">
@@ -365,6 +370,7 @@ export default function ProposalDetail() {
             </div>
           </div>
         </div>
+        </div>{/* end printEndBlock */}
 
         {/* ── Footer ── */}
         <div className="printFooter">
