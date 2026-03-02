@@ -66,8 +66,10 @@ function Sidebar() {
 
   return (
     <aside style={{
-      width: 240, flexShrink: 0, background: _.sidebar,
+      position: "fixed", top: 0, left: 0, bottom: 0,
+      width: 240, background: _.sidebar,
       borderRight: `1px solid ${_.line}`, display: "flex", flexDirection: "column",
+      zIndex: 40,
     }}>
       {/* Logo */}
       <div style={{ padding: `${_.s5}px ${_.s4}px ${_.s4}px`, display: "flex", alignItems: "center", gap: _.s2, borderBottom: `1px solid ${_.line}` }}>

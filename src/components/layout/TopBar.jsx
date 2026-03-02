@@ -74,9 +74,10 @@ export default function TopBar() {
 
   return (
     <div style={{
+      position: "sticky", top: 0,
       height: 48, display: "flex", alignItems: "center", gap: _.s3,
       padding: `0 ${_.s6}px`, background: _.surface, borderBottom: `1px solid ${_.line}`,
-      flexShrink: 0, zIndex: 100,
+      zIndex: 100,
     }}>
       {/* Project switcher */}
       <div ref={switcherRef} style={{ position: "relative" }}>

@@ -11,13 +11,13 @@ export default function GlobalShell() {
   const { mobile, toast } = useApp();
 
   return (
-    <div style={{ display: "flex", height: "100vh", background: _.bg, color: _.ink, fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,sans-serif" }}>
+    <div style={{ minHeight: "100svh", background: _.bg, color: _.ink, fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,sans-serif" }}>
       <Toast toast={toast} />
       {!mobile && <Sidebar />}
       {mobile && <MobileHeader />}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <div style={{ marginLeft: mobile ? 0 : 240, display: "flex", flexDirection: "column", minHeight: "100svh" }}>
         {!mobile && <TopBar />}
-        <main style={{ flex: 1, overflowY: "auto", padding: mobile ? `72px ${_.s4}px 88px` : `${_.s9}px ${_.s10}px 80px` }}>
+        <main style={{ flex: 1, padding: mobile ? `72px ${_.s4}px 88px` : `${_.s9}px ${_.s10}px 80px` }}>
           <Outlet />
         </main>
       </div>
