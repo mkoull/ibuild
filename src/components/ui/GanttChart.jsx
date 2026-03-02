@@ -2,7 +2,12 @@ import { useRef, useState, useCallback, useMemo } from "react";
 import _ from "../../theme/tokens.js";
 import { daysBetween } from "../../lib/scheduleEngine.js";
 
-const WEEK_PX = 44;
+const ZOOM_PRESETS = {
+  day:   { weekPx: 154, label: "Day" },
+  week:  { weekPx: 44,  label: "Week" },
+  month: { weekPx: 11,  label: "Month" },
+};
+const DEFAULT_ZOOM = "week";
 const WEEK_PX_MOBILE = 26;
 const ROW_H = 38;
 const LABEL_W = 200;
@@ -23,7 +28,9 @@ function isOverdue(m) {
 }
 
 export default function GanttChart({ milestones, startDate, readOnly, mobile, onShift, onResize, onSelect, conflicts }) {
-  const weekPx = mobile ? WEEK_PX_MOBILE : WEEK_PX;
+  const [zoom, setZoom] = useState(DEFAULT_ZOOM);
+  const [showDeps, setShowDeps] = useState(true);
+  const weekPx = mobile ? WEEK_PX_MOBILE : ZOOM_PRESETS[zoom].weekPx;
   const labelW = mobile ? LABEL_W_MOBILE : LABEL_W;
   const scrollRef = useRef(null);
   const [dragging, setDragging] = useState(null);
@@ -107,14 +114,76 @@ export default function GanttChart({ milestones, startDate, readOnly, mobile, on
     return lines;
   }, [milestones, idxById, weekPx, conflictSet]);
 
+  // Week header label helper
+  const weekLabel = useCallback((w) => {
+    if (zoom === "month") {
+      // Show month name at month boundaries
+      if (!startDate) return w % 4 === 0 ? `W${w}` : "";
+      const d = new Date(startDate + "T00:00:00");
+      d.setDate(d.getDate() + w * 7);
+      const prevD = new Date(startDate + "T00:00:00");
+      prevD.setDate(prevD.getDate() + (w - 1) * 7);
+      if (w === 0 || d.getMonth() !== prevD.getMonth()) {
+        return d.toLocaleDateString("en-AU", { month: "short", year: "2-digit" });
+      }
+      return "";
+    }
+    if (zoom === "day") {
+      if (!startDate) return `W${w}`;
+      const d = new Date(startDate + "T00:00:00");
+      d.setDate(d.getDate() + w * 7);
+      return d.toLocaleDateString("en-AU", { day: "numeric", month: "short" });
+    }
+    // week zoom
+    return w % (mobile ? 4 : 2) === 0 ? `W${w}` : "";
+  }, [zoom, startDate, mobile]);
+
   return (
-    <div
-      className="gantt-print-container"
-      style={{ display: "flex", border: `1px solid ${_.line}`, borderRadius: _.r, overflow: "hidden", background: _.surface }}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
-    >
+    <div style={{ display: "flex", flexDirection: "column", gap: _.s2 }}>
+      {/* ── Gantt toolbar ── */}
+      {!mobile && (
+        <div className="schedule-print-hide" style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: `${_.s2}px 0`,
+        }}>
+          {/* Zoom */}
+          <div style={{ display: "flex", alignItems: "center", gap: _.s1 }}>
+            <span style={{ fontSize: _.fontSize.xs, color: _.muted, fontWeight: _.fontWeight.semi, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginRight: _.s1 }}>Zoom</span>
+            {Object.entries(ZOOM_PRESETS).map(([key, preset]) => (
+              <div key={key} onClick={() => setZoom(key)} style={{
+                padding: `3px ${_.s2}px`, borderRadius: _.rXs, cursor: "pointer",
+                fontSize: _.fontSize.sm, fontWeight: zoom === key ? _.fontWeight.semi : _.fontWeight.normal,
+                background: zoom === key ? `${_.ac}14` : "transparent",
+                color: zoom === key ? _.ac : _.muted,
+                border: `1px solid ${zoom === key ? `${_.ac}30` : "transparent"}`,
+                transition: `all ${_.tr}`,
+              }}>
+                {preset.label}
+              </div>
+            ))}
+          </div>
+          {/* Dep lines toggle */}
+          <div onClick={() => setShowDeps(v => !v)} style={{
+            display: "flex", alignItems: "center", gap: 6, cursor: "pointer", userSelect: "none",
+          }}>
+            <span style={{ fontSize: _.fontSize.sm, color: showDeps ? _.ac : _.muted, fontWeight: showDeps ? _.fontWeight.semi : _.fontWeight.normal }}>
+              Dep lines
+            </span>
+            <div style={{ width: 28, height: 16, borderRadius: 8, background: showDeps ? _.ac : _.line2, transition: `background ${_.tr}`, position: "relative" }}>
+              <div style={{ position: "absolute", top: 2, left: showDeps ? 14 : 2, width: 12, height: 12, borderRadius: 6, background: "#fff", transition: `left ${_.tr}`, boxShadow: _.sh1 }} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Gantt chart ── */}
+      <div
+        className="gantt-print-container"
+        style={{ display: "flex", border: `1px solid ${_.line}`, borderRadius: _.r, overflow: "hidden", background: _.surface }}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+      >
       {/* Fixed label column */}
       <div style={{ width: labelW, flexShrink: 0, borderRight: `1px solid ${_.line}`, background: _.bg }}>
         <div style={{
@@ -150,15 +219,19 @@ export default function GanttChart({ milestones, startDate, readOnly, mobile, on
         <div style={{ width: timelineW, position: "relative" }}>
           {/* Week headers */}
           <div style={{ height: ROW_H, display: "flex", borderBottom: `2px solid ${_.line}` }}>
-            {Array.from({ length: totalWeeks }, (_, w) => (
-              <div key={w} style={{
-                width: weekPx, height: "100%", display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: _.fontSize.xs, color: _.faint, borderRight: `1px solid ${_.line}08`,
-                background: w === currentWeek ? `${_.ac}08` : "transparent",
-              }}>
-                {w % (mobile ? 4 : 2) === 0 ? `W${w}` : ""}
-              </div>
-            ))}
+            {Array.from({ length: totalWeeks }, (_, w) => {
+              const lbl = weekLabel(w);
+              return (
+                <div key={w} style={{
+                  width: weekPx, height: "100%", display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: _.fontSize.xs, color: _.faint, borderRight: `1px solid ${_.line}08`,
+                  background: w === currentWeek ? `${_.ac}08` : "transparent",
+                  overflow: "hidden", whiteSpace: "nowrap",
+                }}>
+                  {lbl}
+                </div>
+              );
+            })}
           </div>
 
           {/* Bars */}
@@ -204,7 +277,7 @@ export default function GanttChart({ milestones, startDate, readOnly, mobile, on
           })}
 
           {/* Dependency lines (SVG overlay) */}
-          {depLines.length > 0 && (
+          {showDeps && depLines.length > 0 && (
             <svg style={{ position: "absolute", top: 0, left: 0, width: timelineW, height: ROW_H + milestones.length * ROW_H, pointerEvents: "none", overflow: "visible" }}>
               <defs>
                 <marker id="arrowhead" markerWidth="6" markerHeight="4" refX="6" refY="2" orient="auto">
@@ -241,6 +314,7 @@ export default function GanttChart({ milestones, startDate, readOnly, mobile, on
           )}
         </div>
       </div>
+    </div>
     </div>
   );
 }
