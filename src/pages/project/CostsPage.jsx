@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useProject } from "../../context/ProjectContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
 import { commitmentRemaining } from "../../lib/calc.js";
-import { importSectionLevel, importMissingLines, snapshotFromQuote, actualFromPercent, recalcAllowances, baselineBudgetTotal, allowancesTotal, mkAllocation, validateAllocations, autoSplitAllocations } from "../../lib/budgetEngine.js";
+import { importSectionLevel, importItemLevel, importMissingLines, snapshotFromQuote, actualFromPercent, recalcAllowances, baselineBudgetTotal, allowancesTotal, mkAllocation, validateAllocations, autoSplitAllocations, createBudgetBaseline } from "../../lib/budgetEngine.js";
 import _ from "../../theme/tokens.js";
 import { fmt, input, label, badge, uid, ds } from "../../theme/styles.js";
 import Section from "../../components/ui/Section.jsx";
@@ -25,7 +25,7 @@ function TradeSelect({ value, onChange, trades }) {
   );
 }
 
-const TABS = ["Trade Breakdown", "Cost Code", "Budget", "Commitments", "Actuals", "Report", "Scope Costs"];
+const TABS = ["Job Control", "Trade Breakdown", "Cost Code", "Budget", "Commitments", "Actuals", "Report", "Scope Costs"];
 const COMMIT_STATUSES = ["Draft", "Committed", "Cancelled"];
 const COMMIT_COLOR = { Draft: _.amber, Committed: _.green, Cancelled: _.faint };
 
@@ -34,10 +34,11 @@ export default function CostsPage() {
   const { trades, mobile, notify } = useApp();
   const navigate = useNavigate();
 
-  const [tab, setTab] = useState("Trade Breakdown");
+  const [tab, setTab] = useState("Job Control");
   const [budgetForm, setBudgetForm] = useState({ costCode: "", labelText: "", budgetAmount: "", tradeId: "", sectionName: "" });
-  const [commitForm, setCommitForm] = useState({ vendor: "", description: "", amount: "", tradeId: "", status: "Draft" });
-  const [actualForm, setActualForm] = useState({ costCode: "", description: "", amount: "", tradeId: "", date: "" });
+  const [commitForm, setCommitForm] = useState({ vendor: "", description: "", amount: "", tradeId: "", status: "Draft", linkedBudgetLineId: "" });
+  const [actualForm, setActualForm] = useState({ costCode: "", description: "", amount: "", tradeId: "", date: "", linkedBudgetLineId: "" });
+  const [initMode, setInitMode] = useState("section");
   const [deleteModal, setDeleteModal] = useState(null);
   const [replaceModal, setReplaceModal] = useState(false);
   const [expandedTrade, setExpandedTrade] = useState(null);
@@ -113,6 +114,44 @@ export default function CostsPage() {
     });
   }, [budgetLines]);
 
+  // ─── Job Control groups (budget + committed + actual per section) ───
+  const jobControlGroups = useMemo(() => {
+    const map = {};
+    const ensure = (sec) => {
+      if (!map[sec]) map[sec] = { sectionName: sec, budget: 0, sellPrice: 0, costAllowance: 0, committed: 0, actual: 0, lines: [], commitItems: [], actualItems: [] };
+    };
+    budgetLines.forEach((b, idx) => {
+      const sec = b.sectionName || "Ungrouped";
+      ensure(sec);
+      map[sec].budget += b.budgetAmount || 0;
+      map[sec].sellPrice += b.sellPrice || 0;
+      map[sec].costAllowance += b.costAllowance || 0;
+      map[sec].lines.push({ ...b, _idx: idx });
+    });
+    commitments.filter(c => c.status === "Committed" || c.status === "approved").forEach(c => {
+      // Link to budget line's section if linkedBudgetLineId exists
+      const linked = c.linkedBudgetLineId ? budgetLines.find(b => b.id === c.linkedBudgetLineId) : null;
+      const sec = linked ? (linked.sectionName || "Ungrouped") : "Ungrouped";
+      ensure(sec);
+      map[sec].committed += c.amount || 0;
+      map[sec].commitItems.push(c);
+    });
+    actuals.forEach(a => {
+      const linked = a.linkedBudgetLineId ? budgetLines.find(b => b.id === a.linkedBudgetLineId) : null;
+      const sec = linked ? (linked.sectionName || "Ungrouped") : "Ungrouped";
+      ensure(sec);
+      map[sec].actual += a.amount || 0;
+      map[sec].actualItems.push(a);
+    });
+    return Object.values(map).sort((a, b) => {
+      if (a.sectionName === "Variations") return 1;
+      if (b.sectionName === "Variations") return -1;
+      return b.budget - a.budget;
+    });
+  }, [budgetLines, commitments, actuals]);
+
+  const [jcExpanded, setJcExpanded] = useState(null);
+
   const uI = (cat, idx, k, v) => up(pr => { pr.scope[cat][idx][k] = v; return pr; });
 
   const saveInlineEdit = (idx) => {
@@ -134,7 +173,7 @@ export default function CostsPage() {
     if (!quickAdd.description || !amt) { notify("Description and amount required", "error"); return; }
     up(pr => {
       if (!pr.budget) pr.budget = [];
-      pr.budget.push({ id: uid(), costCode: "", label: quickAdd.description, description: quickAdd.description, sectionName, budgetAmount: amt, tradeId: "", source: "manual", actualAmount: 0, actualPct: null, allocations: [] });
+      pr.budget.push({ id: uid(), costCode: "", label: quickAdd.description, description: quickAdd.description, sectionName, sellPrice: amt, costAllowance: amt, budgetAmount: amt, tradeId: "", source: "manual", actualAmount: 0, actualPct: null, allocations: [] });
       return pr;
     });
     log(`Budget line: ${quickAdd.description} (${fmt(amt)})`);
@@ -147,7 +186,7 @@ export default function CostsPage() {
     if (!budgetForm.labelText || !amt) { notify("Label and amount required", "error"); return; }
     up(pr => {
       if (!pr.budget) pr.budget = [];
-      pr.budget.push({ id: uid(), costCode: budgetForm.costCode, label: budgetForm.labelText, description: budgetForm.labelText, sectionName: budgetForm.sectionName, budgetAmount: amt, tradeId: budgetForm.tradeId, source: "manual", actualAmount: 0, actualPct: null, allocations: [] });
+      pr.budget.push({ id: uid(), costCode: budgetForm.costCode, label: budgetForm.labelText, description: budgetForm.labelText, sectionName: budgetForm.sectionName, sellPrice: amt, costAllowance: amt, budgetAmount: amt, tradeId: budgetForm.tradeId, source: "manual", actualAmount: 0, actualPct: null, allocations: [] });
       return pr;
     });
     log(`Budget line: ${budgetForm.labelText} (${fmt(amt)})`);
@@ -155,7 +194,36 @@ export default function CostsPage() {
     setBudgetForm({ costCode: "", labelText: "", budgetAmount: "", tradeId: "", sectionName: "" });
   };
 
-  const hasScope = Object.keys(p.scope || {}).length > 0;
+  const hasScope = Object.values(p.scope || {}).some(items => items.some(i => i.on));
+  const hasBaseline = !!p.budgetBaseline;
+
+  const initFromQuote = (mode) => {
+    up(pr => {
+      pr.quoteSnapshotBudget = snapshotFromQuote(pr);
+      const lines = mode === "item" ? importItemLevel(pr) : importSectionLevel(pr);
+      if (!pr.budget || pr.budget.length === 0) {
+        pr.budget = lines;
+      } else {
+        pr.budget = [...pr.budget, ...lines];
+      }
+      pr.budgetBaseline = createBudgetBaseline(pr);
+      if (pr.costAllowances) {
+        const baseline = baselineBudgetTotal(pr.budget);
+        pr.costAllowances = recalcAllowances(pr.costAllowances, baseline);
+      }
+      if (!Array.isArray(pr.activity)) pr.activity = [];
+      pr.activity.unshift({
+        type: "budget_baseline_created",
+        action: `Budget baseline created (${mode}-level, ${pr.budget.length} lines)`,
+        time: new Date().toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit" }),
+        date: new Date().toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" }),
+        at: Date.now(),
+      });
+      return pr;
+    });
+    log(`Budget initialised from quote (${mode}-level)`);
+    notify("Budget initialised from quote");
+  };
 
   const importMissing = () => {
     up(pr => {
@@ -206,12 +274,12 @@ export default function CostsPage() {
     if (!commitForm.description || !amt) { notify("Description and amount required", "error"); return; }
     up(pr => {
       if (!pr.commitments) pr.commitments = [];
-      pr.commitments.push({ id: uid(), vendorName: commitForm.vendor, vendor: commitForm.vendor, description: commitForm.description, amount: amt, tradeId: commitForm.tradeId, status: commitForm.status, createdAt: new Date().toISOString() });
+      pr.commitments.push({ id: uid(), vendorName: commitForm.vendor, vendor: commitForm.vendor, description: commitForm.description, amount: amt, tradeId: commitForm.tradeId, status: commitForm.status, linkedBudgetLineId: commitForm.linkedBudgetLineId || null, createdAt: new Date().toISOString() });
       return pr;
     });
     log(`Commitment: ${commitForm.description} (${fmt(amt)})`);
     notify("Commitment added");
-    setCommitForm({ vendor: "", description: "", amount: "", tradeId: "", status: "Draft" });
+    setCommitForm({ vendor: "", description: "", amount: "", tradeId: "", status: "Draft", linkedBudgetLineId: "" });
   };
 
   const addActual = () => {
@@ -219,12 +287,12 @@ export default function CostsPage() {
     if (!actualForm.description || !amt) { notify("Description and amount required", "error"); return; }
     up(pr => {
       if (!pr.actuals) pr.actuals = [];
-      pr.actuals.push({ id: uid(), costCode: actualForm.costCode, description: actualForm.description, amount: amt, tradeId: actualForm.tradeId, date: actualForm.date || ds(), source: "Manual" });
+      pr.actuals.push({ id: uid(), costCode: actualForm.costCode, description: actualForm.description, amount: amt, tradeId: actualForm.tradeId, date: actualForm.date || ds(), source: "Manual", linkedBudgetLineId: actualForm.linkedBudgetLineId || null });
       return pr;
     });
     log(`Actual cost: ${actualForm.description} (${fmt(amt)})`);
     notify("Actual recorded");
-    setActualForm({ costCode: "", description: "", amount: "", tradeId: "", date: "" });
+    setActualForm({ costCode: "", description: "", amount: "", tradeId: "", date: "", linkedBudgetLineId: "" });
   };
 
   const setCommitStatus = (i, newStatus) => {
@@ -249,26 +317,28 @@ export default function CostsPage() {
 
   // ─── CSV export ───
   const downloadCSV = useCallback(() => {
-    const rows = [["Type", "Section", "Trade", "Cost Code", "Description", "Budget", "Committed", "Actual", "Source", "Allocations"]];
+    const rows = [["Type", "Section", "Trade", "Cost Code", "Description", "Sell Price", "Cost Allowance", "Budget", "Committed", "Actual", "Source", "Allocations"]];
     budgetLines.forEach(b => {
       const allocs = (b.allocations || []).map(a => `${a.tradeLabel || tradeName(a.tradeId)}:${a.amount}`).join("; ");
-      rows.push(["Budget", b.sectionName || "", tradeName(b.tradeId), b.costCode || "", b.label, b.budgetAmount, "", b.actualAmount || "", b.source || "", allocs]);
+      rows.push(["Budget", b.sectionName || "", tradeName(b.tradeId), b.costCode || "", b.label, b.sellPrice || "", b.costAllowance || "", b.budgetAmount, "", b.actualAmount || "", b.source || "", allocs]);
     });
-    commitments.filter(c => c.status === "Committed" || c.status === "approved").forEach(c => rows.push(["Commitment", "", tradeName(c.tradeId), "", c.description, "", c.amount, "", c.vendorName || c.vendor || "", ""]));
-    actuals.forEach(a => rows.push(["Actual", "", tradeName(a.tradeId), a.costCode || "", a.description, "", "", a.amount, a.source || "Manual", ""]));
+    commitments.filter(c => c.status === "Committed" || c.status === "approved").forEach(c => rows.push(["Commitment", "", tradeName(c.tradeId), "", c.description, "", "", "", c.amount, "", c.vendorName || c.vendor || "", ""]));
+    actuals.forEach(a => rows.push(["Actual", "", tradeName(a.tradeId), a.costCode || "", a.description, "", "", "", "", a.amount, a.source || "Manual", ""]));
     // Summary rows
     rows.push([]);
     rows.push(["Summary"]);
-    rows.push(["Contract Value", "", "", "", "", T.curr]);
-    rows.push(["Original Budget", "", "", "", "", T.baselineBudget]);
-    rows.push(["Variation Budget", "", "", "", "", T.variationBudget]);
-    rows.push(["Revised Budget", "", "", "", "", T.revisedBudget]);
-    rows.push(["Allowances", "", "", "", "", T.allowancesAmt]);
-    rows.push(["Committed Total", "", "", "", "", T.committedTotal]);
-    rows.push(["Actual (combined)", "", "", "", "", T.combinedActuals]);
-    rows.push(["Forecast Cost", "", "", "", "", T.forecastCost]);
-    rows.push(["Forecast Margin", "", "", "", "", T.forecastMarginNew]);
-    rows.push(["Margin %", "", "", "", "", `${T.marginPctNew.toFixed(1)}%`]);
+    rows.push(["Contract Value", "", "", "", "", "", "", T.curr]);
+    rows.push(["Sell Price Total", "", "", "", "", T.sellPriceTotal]);
+    rows.push(["Cost Budget", "", "", "", "", "", T.costBudget]);
+    rows.push(["Original Budget", "", "", "", "", "", "", T.baselineBudget]);
+    rows.push(["Variation Budget", "", "", "", "", "", "", T.variationBudget]);
+    rows.push(["Revised Budget", "", "", "", "", "", "", T.revisedBudget]);
+    rows.push(["Allowances", "", "", "", "", "", "", T.allowancesAmt]);
+    rows.push(["Committed Total", "", "", "", "", "", "", T.committedTotal]);
+    rows.push(["Actual (combined)", "", "", "", "", "", "", T.combinedActuals]);
+    rows.push(["Forecast Cost", "", "", "", "", "", "", T.forecastCost]);
+    rows.push(["Forecast Margin", "", "", "", "", "", "", T.forecastMarginNew]);
+    rows.push(["Margin %", "", "", "", "", "", "", `${T.marginPctNew.toFixed(1)}%`]);
     const csv = rows.map(r => r.map(c => `"${String(c ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -325,6 +395,151 @@ export default function CostsPage() {
           }}>{t}</div>
         ))}
       </div>
+
+      {/* ═══ INITIALISE BUDGET CTA ═══ */}
+      {!hasBaseline && hasScope && budgetLines.length === 0 && (
+        <div style={{ padding: `${_.s6}px ${_.s5}px`, background: `${_.ac}06`, border: `1.5px dashed ${_.ac}30`, borderRadius: _.r, marginBottom: _.s6, textAlign: "center" }}>
+          <div style={{ fontSize: _.fontSize.lg, fontWeight: _.fontWeight.semi, color: _.ink, marginBottom: _.s2 }}>Initialise budget from quote</div>
+          <div style={{ fontSize: _.fontSize.base, color: _.muted, maxWidth: 460, margin: `0 auto ${_.s4}px` }}>
+            Import your accepted quote scope into the job budget to start tracking costs.
+          </div>
+          <div style={{ display: "flex", gap: _.s3, justifyContent: "center", alignItems: "center", flexWrap: "wrap", marginBottom: _.s3 }}>
+            {[
+              { value: "section", label: "Section-level", desc: "One line per category" },
+              { value: "item", label: "Item-level", desc: "One line per item" },
+            ].map(opt => (
+              <div key={opt.value} onClick={() => setInitMode(opt.value)} style={{
+                display: "flex", alignItems: "center", gap: _.s2, padding: `${_.s2}px ${_.s3}px`,
+                borderRadius: _.rSm, cursor: "pointer",
+                background: initMode === opt.value ? `${_.ac}14` : "transparent",
+                border: `1px solid ${initMode === opt.value ? _.ac : _.line}`,
+              }}>
+                <div style={{
+                  width: 14, height: 14, borderRadius: "50%", border: `2px solid ${initMode === opt.value ? _.ac : _.line2}`,
+                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                }}>
+                  {initMode === opt.value && <div style={{ width: 6, height: 6, borderRadius: "50%", background: _.ac }} />}
+                </div>
+                <div style={{ textAlign: "left" }}>
+                  <div style={{ fontSize: _.fontSize.sm, fontWeight: _.fontWeight.medium, color: _.ink }}>{opt.label}</div>
+                  <div style={{ fontSize: _.fontSize.xs, color: _.muted }}>{opt.desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <Button onClick={() => initFromQuote(initMode)} icon={Upload}>Initialise budget</Button>
+          <div style={{ marginTop: _.s3 }}>
+            <span onClick={() => { up(pr => { pr.budgetBaseline = { versionId: uid(), createdAt: new Date().toISOString(), sourceQuoteId: pr.id, marginPctAtSnapshot: pr.marginPct ?? 0, lines: [] }; return pr; }); notify("Manual budget started"); }} style={{ fontSize: _.fontSize.sm, color: _.muted, cursor: "pointer", textDecoration: "underline" }}>Start manual budget instead</span>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ JOB CONTROL ═══ */}
+      {tab === "Job Control" && (
+        <div>
+          {budgetLines.length === 0 && hasBaseline && <Empty icon={BarChart3} text="No budget lines — add lines in the Budget tab" />}
+          {budgetLines.length === 0 && !hasBaseline && !hasScope && <Empty icon={BarChart3} text="No budget data yet" />}
+          {jobControlGroups.length > 0 && (
+            <>
+              <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr auto" : "1fr 110px 110px 110px 110px", gap: _.s2, padding: `${_.s2}px 0`, borderBottom: `2px solid ${_.ink}`, fontSize: _.fontSize.xs, color: _.muted, fontWeight: _.fontWeight.semi, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase" }}>
+                <span>Section</span>
+                {!mobile && <><span style={{ textAlign: "right" }}>Budget</span><span style={{ textAlign: "right" }}>Committed</span><span style={{ textAlign: "right" }}>Actual</span></>}
+                <span style={{ textAlign: "right" }}>Variance</span>
+              </div>
+              {jobControlGroups.map(grp => {
+                const v = grp.budget - grp.actual;
+                const isExp = jcExpanded === grp.sectionName;
+                return (
+                  <div key={grp.sectionName}>
+                    <div onClick={() => setJcExpanded(isExp ? null : grp.sectionName)} style={{
+                      display: "grid", gridTemplateColumns: mobile ? "1fr auto" : "1fr 110px 110px 110px 110px", gap: _.s2,
+                      padding: `${_.s3}px 0`, borderBottom: `1px solid ${_.line}`, alignItems: "center",
+                      cursor: "pointer", transition: `background ${_.tr}`,
+                      background: grp.sectionName === "Variations" ? `${_.amber}06` : "transparent",
+                    }}
+                      onMouseEnter={e => e.currentTarget.style.background = _.well}
+                      onMouseLeave={e => e.currentTarget.style.background = grp.sectionName === "Variations" ? `${_.amber}06` : "transparent"}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: _.s2 }}>
+                        <span style={{ transform: isExp ? "rotate(90deg)" : "none", display: "inline-flex", transition: "transform 0.15s" }}><ChevronRight size={12} color={_.muted} /></span>
+                        <span style={{ fontWeight: _.fontWeight.semi, color: grp.sectionName === "Variations" ? _.amber : _.ink }}>{grp.sectionName}</span>
+                        <span style={{ fontSize: _.fontSize.xs, color: _.muted }}>({grp.lines.length})</span>
+                      </div>
+                      {!mobile && (
+                        <>
+                          <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", fontWeight: _.fontWeight.semi }}>{grp.budget > 0 ? fmt(grp.budget) : "—"}</span>
+                          <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", color: _.amber }}>{grp.committed > 0 ? fmt(grp.committed) : "—"}</span>
+                          <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{grp.actual > 0 ? fmt(grp.actual) : "—"}</span>
+                        </>
+                      )}
+                      <span style={{ textAlign: "right", fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: grp.budget > 0 ? (v >= 0 ? _.green : _.red) : _.faint }}>
+                        {grp.budget > 0 ? `${v >= 0 ? "+" : ""}${fmt(v)}` : "—"}
+                      </span>
+                    </div>
+                    {isExp && (
+                      <div style={{ padding: `${_.s3}px 0 ${_.s3}px ${_.s6}px`, borderBottom: `1px solid ${_.line}`, background: _.well }}>
+                        {grp.lines.length > 0 && (
+                          <div style={{ marginBottom: grp.commitItems.length > 0 || grp.actualItems.length > 0 ? _.s3 : 0 }}>
+                            <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s1 }}>Budget Lines</div>
+                            {grp.lines.map(b => {
+                              const lineVar = (b.budgetAmount || 0) - (b.actualAmount || 0);
+                              return (
+                                <div key={b.id} style={{ display: "grid", gridTemplateColumns: mobile ? "1fr auto" : "1fr 90px 90px", gap: _.s2, fontSize: _.fontSize.sm, padding: "3px 0", alignItems: "center" }}>
+                                  <div style={{ display: "flex", gap: _.s2, alignItems: "center" }}>
+                                    <span>{b.costCode ? `[${b.costCode}] ` : ""}{b.label || b.description}</span>
+                                    {b.source === "variation" && <span style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, padding: "0 5px", borderRadius: _.rFull, background: `${_.amber}14`, color: _.amber }}>VO</span>}
+                                  </div>
+                                  {!mobile && <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", fontWeight: _.fontWeight.semi }}>{fmt(b.budgetAmount)}</span>}
+                                  <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", fontWeight: _.fontWeight.semi, color: b.actualAmount > 0 ? (lineVar >= 0 ? _.green : _.red) : _.faint }}>
+                                    {b.actualAmount > 0 ? `${lineVar >= 0 ? "+" : ""}${fmt(lineVar)}` : fmt(b.budgetAmount)}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                        {grp.commitItems.length > 0 && (
+                          <div style={{ marginBottom: grp.actualItems.length > 0 ? _.s3 : 0 }}>
+                            <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s1 }}>Commitments</div>
+                            {grp.commitItems.map(c => (
+                              <div key={c.id} style={{ display: "flex", justifyContent: "space-between", fontSize: _.fontSize.sm, padding: "2px 0" }}>
+                                <span>{c.vendorName || c.vendor || "—"} — {c.description}</span>
+                                <span style={{ fontVariantNumeric: "tabular-nums", fontWeight: _.fontWeight.semi, color: _.amber }}>{fmt(c.amount)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {grp.actualItems.length > 0 && (
+                          <div>
+                            <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s1 }}>Actuals</div>
+                            {grp.actualItems.map(a => (
+                              <div key={a.id} style={{ display: "flex", justifyContent: "space-between", fontSize: _.fontSize.sm, padding: "2px 0" }}>
+                                <span>{a.description}</span>
+                                <span style={{ fontVariantNumeric: "tabular-nums", fontWeight: _.fontWeight.semi }}>{fmt(a.amount)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr auto" : "1fr 110px 110px 110px 110px", gap: _.s2, padding: `${_.s3}px 0`, fontSize: _.fontSize.md, fontWeight: _.fontWeight.bold }}>
+                <span>Total</span>
+                {!mobile && (
+                  <>
+                    <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmt(T.budgetTotal)}</span>
+                    <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", color: _.amber }}>{fmt(T.committedTotal)}</span>
+                    <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmt(T.combinedActuals)}</span>
+                  </>
+                )}
+                <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", color: variance >= 0 ? _.green : _.red }}>{variance >= 0 ? "+" : ""}{fmt(variance)}</span>
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       {/* ═══ TRADE BREAKDOWN ═══ */}
       {tab === "Trade Breakdown" && (
@@ -778,6 +993,15 @@ export default function CostsPage() {
               <div><label style={label}>Description *</label><input style={input} value={commitForm.description} onChange={e => setCommitForm({ ...commitForm, description: e.target.value })} placeholder="Concrete slab pour" /></div>
               <div><label style={label}>Amount *</label><input type="number" style={input} value={commitForm.amount} onChange={e => setCommitForm({ ...commitForm, amount: e.target.value })} placeholder="25000" /></div>
             </div>
+            {budgetLines.length > 0 && (
+              <div style={{ marginBottom: _.s3 }}>
+                <label style={label}>Link to budget line</label>
+                <select style={{ ...input, cursor: "pointer", maxWidth: 360 }} value={commitForm.linkedBudgetLineId} onChange={e => setCommitForm({ ...commitForm, linkedBudgetLineId: e.target.value })}>
+                  <option value="">— None —</option>
+                  {budgetLines.map(b => <option key={b.id} value={b.id}>{b.sectionName ? `${b.sectionName} — ` : ""}{b.label || b.description} ({fmt(b.budgetAmount)})</option>)}
+                </select>
+              </div>
+            )}
             <Button onClick={addCommitment} icon={Plus}>Add commitment</Button>
           </div>
           {commitments.length === 0 ? (
@@ -836,6 +1060,15 @@ export default function CostsPage() {
               <div><label style={label}>Amount *</label><input type="number" style={input} value={actualForm.amount} onChange={e => setActualForm({ ...actualForm, amount: e.target.value })} placeholder="12000" /></div>
               <div><label style={label}>Date</label><input type="date" style={{ ...input, cursor: "pointer" }} value={actualForm.date} onChange={e => setActualForm({ ...actualForm, date: e.target.value })} /></div>
             </div>
+            {budgetLines.length > 0 && (
+              <div style={{ marginBottom: _.s3 }}>
+                <label style={label}>Link to budget line</label>
+                <select style={{ ...input, cursor: "pointer", maxWidth: 360 }} value={actualForm.linkedBudgetLineId} onChange={e => setActualForm({ ...actualForm, linkedBudgetLineId: e.target.value })}>
+                  <option value="">— None —</option>
+                  {budgetLines.map(b => <option key={b.id} value={b.id}>{b.sectionName ? `${b.sectionName} — ` : ""}{b.label || b.description} ({fmt(b.budgetAmount)})</option>)}
+                </select>
+              </div>
+            )}
             <Button onClick={addActual} icon={Plus}>Add actual</Button>
           </div>
           {actuals.length === 0 ? (
@@ -875,6 +1108,8 @@ export default function CostsPage() {
             const reportVariance = T.revisedBudget - combined;
             const kpis = [
               { label: "Contract Value", value: fmt(T.curr), color: _.ink },
+              { label: "Sell Price Total", value: fmt(T.sellPriceTotal), color: T.sellPriceTotal > 0 ? _.ink : _.faint },
+              { label: "Cost Budget", value: fmt(T.costBudget), color: T.costBudget > 0 ? _.ink : _.faint },
               { label: "Original Budget", value: fmt(T.baselineBudget), color: _.ink },
               { label: "Variation Budget", value: fmt(T.variationBudget), color: T.variationBudget > 0 ? _.amber : _.faint },
               { label: "Revised Budget", value: fmt(T.revisedBudget), color: _.ink },

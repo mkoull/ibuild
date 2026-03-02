@@ -30,16 +30,20 @@ export function snapshotFromQuote(project) {
 /** Section-level import: one budget line per scope category (summed) */
 export function importSectionLevel(project) {
   const scope = project.scope || {};
+  const marginPct = project.marginPct ?? 0;
   return Object.entries(scope)
     .filter(([, items]) => items.some(i => i.on))
     .map(([sectionName, items]) => {
       const total = items.filter(i => i.on).reduce((t, i) => t + i.rate * i.qty, 0);
+      const costAllowance = marginPct > 0 ? Math.round(total * (1 - marginPct / 100) * 100) / 100 : total;
       return {
         id: uid(),
         sectionName,
         description: sectionName,
         label: sectionName,
-        budgetAmount: total,
+        sellPrice: total,
+        costAllowance,
+        budgetAmount: costAllowance,
         source: "quote_import",
         costCode: "",
         tradeId: "",
@@ -50,17 +54,19 @@ export function importSectionLevel(project) {
         allocations: [],
       };
     })
-    .filter(line => line.budgetAmount > 0);
+    .filter(line => line.sellPrice > 0);
 }
 
 /** Item-level import: one budget line per scope item */
 export function importItemLevel(project) {
   const scope = project.scope || {};
+  const marginPct = project.marginPct ?? 0;
   const lines = [];
   Object.entries(scope).forEach(([sectionName, items]) => {
     items.filter(i => i.on).forEach(i => {
       const amount = i.rate * i.qty;
       if (amount <= 0) return;
+      const costAllowance = marginPct > 0 ? Math.round(amount * (1 - marginPct / 100) * 100) / 100 : amount;
       lines.push({
         id: uid(),
         sectionName,
@@ -69,7 +75,9 @@ export function importItemLevel(project) {
         qty: i.qty,
         unit: i.unit,
         rate: i.rate,
-        budgetAmount: amount,
+        sellPrice: amount,
+        costAllowance,
+        budgetAmount: costAllowance,
         source: "quote_import",
         costCode: "",
         tradeId: "",
@@ -85,13 +93,17 @@ export function importItemLevel(project) {
 }
 
 /** Creates a budget line for an approved variation */
-export function createVariationBudgetLine(variation) {
+export function createVariationBudgetLine(variation, marginPct = 0) {
+  const amt = variation.amount || 0;
+  const costAllowance = marginPct > 0 ? Math.round(amt * (1 - marginPct / 100) * 100) / 100 : amt;
   return {
     id: uid(),
     sectionName: "Variations",
     description: variation.title || variation.description || "Variation",
     label: variation.title || variation.description || "Variation",
-    budgetAmount: variation.amount || 0,
+    sellPrice: amt,
+    costAllowance,
+    budgetAmount: costAllowance,
     source: "variation",
     costCode: "",
     tradeId: "",
@@ -181,4 +193,15 @@ export function autoSplitAllocations(line) {
   if (unlocked.length === 0) return allocs;
   const share = Math.round(((budget - lockedSum) / unlocked.length) * 100) / 100;
   return allocs.map(a => a.locked ? a : { ...a, amount: share });
+}
+
+/** Creates an immutable budget baseline snapshot from the current budget lines */
+export function createBudgetBaseline(project) {
+  return {
+    versionId: uid(),
+    createdAt: new Date().toISOString(),
+    sourceQuoteId: project.id,
+    marginPctAtSnapshot: project.marginPct ?? 0,
+    lines: JSON.parse(JSON.stringify(project.budget || [])),
+  };
 }

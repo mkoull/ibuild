@@ -147,6 +147,7 @@ export function mkProject(overrides = {}) {
     defects: [],
     sigData: null,
     quoteSnapshotBudget: null,
+    budgetBaseline: null,
     variationLedger: [],
     activity: [{ action: "Project created", time: ts(), date: ds() }],
     createdAt: now,

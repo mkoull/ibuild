@@ -7,7 +7,7 @@ import { fmt, pName, ds } from "../../theme/styles.js";
 import { getNextActions } from "../../lib/nextActions.js";
 import { getNextStepForProject } from "../../lib/nextStep.js";
 import { canTransition, isJob, isQuote, normaliseStage } from "../../lib/lifecycle.js";
-import { snapshotFromQuote, importSectionLevel, importItemLevel, recalcAllowances, baselineBudgetTotal } from "../../lib/budgetEngine.js";
+import { snapshotFromQuote, importSectionLevel, importItemLevel, recalcAllowances, baselineBudgetTotal, createBudgetBaseline } from "../../lib/budgetEngine.js";
 import StagePipeline from "../../components/ui/StagePipeline.jsx";
 import Card from "../../components/ui/Card.jsx";
 import Button from "../../components/ui/Button.jsx";
@@ -63,11 +63,22 @@ export default function OverviewPage() {
         } else {
           pr.budget = [...pr.budget, ...lines];
         }
+        // Create immutable budget baseline snapshot
+        pr.budgetBaseline = createBudgetBaseline(pr);
         // Recalc cost allowance amounts from baseline total
         if (pr.costAllowances) {
           const baseline = baselineBudgetTotal(pr.budget);
           pr.costAllowances = recalcAllowances(pr.costAllowances, baseline);
         }
+        // Log baseline creation
+        if (!Array.isArray(pr.activity)) pr.activity = [];
+        pr.activity.unshift({
+          type: "budget_baseline_created",
+          action: `Budget baseline created (${importMode}-level, ${pr.budget.length} lines)`,
+          time: new Date().toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit" }),
+          date: new Date().toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" }),
+          at: Date.now(),
+        });
         return pr;
       });
       log(`Budget imported from quote (${importMode}-level)`);

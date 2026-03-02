@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useProject } from "../../context/ProjectContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
 import { isQuote, normaliseStage } from "../../lib/lifecycle.js";
-import { snapshotFromQuote, importSectionLevel } from "../../lib/budgetEngine.js";
+import { snapshotFromQuote, importSectionLevel, createBudgetBaseline } from "../../lib/budgetEngine.js";
 import _ from "../../theme/tokens.js";
 import Button from "../ui/Button.jsx";
 import { Lock, ArrowRight } from "lucide-react";
@@ -27,6 +27,7 @@ export default function JobModuleGate({ moduleName, children }) {
       up(pr => {
         pr.quoteSnapshotBudget = snapshotFromQuote(pr);
         pr.budget = importSectionLevel(pr);
+        pr.budgetBaseline = createBudgetBaseline(pr);
         return pr;
       });
     }

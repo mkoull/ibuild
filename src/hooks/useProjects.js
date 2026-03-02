@@ -4,7 +4,7 @@ import { mkProject } from "../data/models.js";
 import { loadVersioned, saveVersioned } from "../data/store.js";
 
 const STORAGE_KEY = "ib_projects";
-const STORE_VERSION = 8;
+const STORE_VERSION = 9;
 const SAVE_DEBOUNCE_MS = 300;
 
 function hydrateProject(pr) {
@@ -127,6 +127,38 @@ function migrateProjects(data, fromVersion) {
       // Add allocations to existing budget lines
       if (Array.isArray(p.budget)) {
         p.budget.forEach(b => { if (!Array.isArray(b.allocations)) b.allocations = []; });
+      }
+    });
+    data = norm;
+  }
+  if (fromVersion <= 8) {
+    const norm = data && data.byId ? data : { byId: {}, allIds: [] };
+    Object.values(norm.byId).forEach(p => {
+      // Add budgetBaseline field
+      if (p.budgetBaseline === undefined) p.budgetBaseline = null;
+      // Backfill sellPrice and costAllowance on existing budget lines
+      const marginPct = p.marginPct ?? 0;
+      if (Array.isArray(p.budget)) {
+        p.budget.forEach(b => {
+          if (b.sellPrice === undefined) {
+            // For quote_import lines, derive sellPrice from budgetAmount (reverse the cost derivation)
+            if (b.source === "quote_import" && marginPct > 0) {
+              b.sellPrice = Math.round(b.budgetAmount / (1 - marginPct / 100) * 100) / 100;
+            } else {
+              b.sellPrice = b.budgetAmount || 0;
+            }
+          }
+          if (b.costAllowance === undefined) {
+            b.costAllowance = b.budgetAmount || 0;
+          }
+        });
+      }
+      // Add linkedBudgetLineId to commitments and actuals
+      if (Array.isArray(p.commitments)) {
+        p.commitments.forEach(c => { if (c.linkedBudgetLineId === undefined) c.linkedBudgetLineId = null; });
+      }
+      if (Array.isArray(p.actuals)) {
+        p.actuals.forEach(a => { if (a.linkedBudgetLineId === undefined) a.linkedBudgetLineId = null; });
       }
     });
     data = norm;

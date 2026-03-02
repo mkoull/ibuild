@@ -51,7 +51,7 @@ export default function VariationsPage() {
         if (!pr.variationLedger) pr.variationLedger = [];
         const alreadyLinked = pr.budget.some(b => b.linkedVariationId === v.id);
         if (!alreadyLinked) {
-          const budgetLine = createVariationBudgetLine(v);
+          const budgetLine = createVariationBudgetLine(v, pr.marginPct);
           pr.budget.push(budgetLine);
           pr.variationLedger.push(createVariationLedgerEntry(v, budgetLine.id));
         }

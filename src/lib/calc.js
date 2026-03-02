@@ -45,11 +45,15 @@ export function calc(p) {
   // Overhead costs (site + office) are added to forecast — margin/contingency are revenue markups, not costs
   const overheadAmt = ((ca.siteOverhead || {}).amount || 0) + ((ca.officeOverhead || {}).amount || 0);
 
+  const sellPriceTotal = budget.reduce((t, b) => t + (b.sellPrice || 0), 0);
+  const costBudget = budget.reduce((t, b) => t + (b.costAllowance || 0), 0);
+  const costVariance = costBudget - combinedActuals;
+
   const forecastCost = committedTotal + Math.max(0, revisedBudget - committedTotal) + overheadAmt;
   const forecastMarginNew = curr - forecastCost;
   const marginPctNew = curr > 0 ? ((curr - forecastCost) / curr) * 100 : 0;
 
-  return { sub, mar, con, gst, orig, aV, aVCount, curr, inv, paid, outstanding, act, cT, cA, cats, items, margin, contingency, budgetTotal, committedTotal, actualsTotal, budgetActualsTotal, combinedActuals, forecastMargin, marginPctCalc, billsTotal, billsPaid, baselineBudget, variationBudget, revisedBudget, allowancesAmt, overheadAmt, forecastCost, forecastMarginNew, marginPctNew };
+  return { sub, mar, con, gst, orig, aV, aVCount, curr, inv, paid, outstanding, act, cT, cA, cats, items, margin, contingency, budgetTotal, committedTotal, actualsTotal, budgetActualsTotal, combinedActuals, forecastMargin, marginPctCalc, billsTotal, billsPaid, baselineBudget, variationBudget, revisedBudget, allowancesAmt, overheadAmt, sellPriceTotal, costBudget, costVariance, forecastCost, forecastMarginNew, marginPctNew };
 }
 
 export function commitmentRemaining(commitment, supplierBills) {

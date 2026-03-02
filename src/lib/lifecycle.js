@@ -162,6 +162,7 @@ export function applyJobConversion(pr, { targetStage = "Approved" } = {}) {
   if (!Array.isArray(pr.paymentSchedule)) pr.paymentSchedule = [];
 
   if (!pr.quoteSnapshotBudget) pr.quoteSnapshotBudget = null;
+  if (!pr.budgetBaseline) pr.budgetBaseline = null;
   if (!Array.isArray(pr.variationLedger)) pr.variationLedger = [];
 
   // Seed cost allowances from quote-level margin/contingency
