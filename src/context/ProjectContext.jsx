@@ -29,8 +29,10 @@ export function ProjectProvider({ project, children }) {
   const transitionStage = (newStage) => {
     const currentStage = project.stage || "Lead";
     if (!canTransition(currentStage, newStage)) return;
-    up(pr => { pr.stage = newStage; pr.updatedAt = new Date().toISOString(); return pr; });
     up(pr => {
+      pr.stage = newStage;
+      pr.updatedAt = new Date().toISOString();
+      if (!Array.isArray(pr.activity)) pr.activity = [];
       pr.activity.unshift({ type: "stage_change", action: `Stage changed to ${newStage}`, time: ts(), date: ds(), at: Date.now() });
       if (pr.activity.length > 30) pr.activity = pr.activity.slice(0, 30);
       return pr;
@@ -40,7 +42,6 @@ export function ProjectProvider({ project, children }) {
 
   const convertToJob = (opts = {}) => {
     up(pr => applyJobConversion(pr, opts));
-    notify("Converted to Job");
   };
 
   const value = { project, update: up, T, client, log, transitionStage, convertToJob };

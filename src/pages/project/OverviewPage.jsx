@@ -6,7 +6,7 @@ import _ from "../../theme/tokens.js";
 import { fmt, pName, ds } from "../../theme/styles.js";
 import { getNextActions } from "../../lib/nextActions.js";
 import { getNextStepForProject } from "../../lib/nextStep.js";
-import { canTransition, isJob } from "../../lib/lifecycle.js";
+import { canTransition, isJob, isQuote, normaliseStage } from "../../lib/lifecycle.js";
 import { snapshotFromQuote, importSectionLevel, importItemLevel } from "../../lib/budgetEngine.js";
 import StagePipeline from "../../components/ui/StagePipeline.jsx";
 import Card from "../../components/ui/Card.jsx";
@@ -28,10 +28,14 @@ export default function OverviewPage() {
   // Open modal from URL param (e.g. from JobModuleGate redirect)
   useEffect(() => {
     if (searchParams.get("action") === "convert") {
-      setShowConvertModal(true);
       setSearchParams({}, { replace: true });
+      // Only open convert modal if project is at a quote stage
+      const s = normaliseStage(p.stage || p.status);
+      if (isQuote(s)) {
+        setShowConvertModal(true);
+      }
     }
-  }, [searchParams, setSearchParams]);
+  }, [searchParams, setSearchParams, p.stage, p.status]);
 
   const stage = p.stage || p.status;
   const stageIsJob = isJob(stage);
@@ -43,6 +47,12 @@ export default function OverviewPage() {
   const step = getNextStepForProject(p, T);
 
   const handleConvertConfirm = () => {
+    // Guard: only convert from a quote stage
+    const s = normaliseStage(p.stage || p.status);
+    if (!isQuote(s)) {
+      setShowConvertModal(false);
+      return;
+    }
     convertToJob();
     if (importMode !== "skip") {
       up(pr => {

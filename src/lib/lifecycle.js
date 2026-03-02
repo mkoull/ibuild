@@ -136,6 +136,10 @@ export function isJobOnlyModule(modulePath) {
  * @returns {object} the mutated project
  */
 export function applyJobConversion(pr, { targetStage = "Approved" } = {}) {
+  // Guard: only convert from a quote stage
+  const current = normaliseStage(pr.stage || pr.status);
+  if (!QUOTE_STAGES.has(current)) return pr;
+
   const now = new Date().toISOString();
   const ts = new Date().toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit" });
   const ds = new Date().toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" });
