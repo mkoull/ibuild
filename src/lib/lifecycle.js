@@ -24,25 +24,25 @@ const STAGE_META = {
   Approved: {
     label: "Approved",
     entityType: "job",
-    allowedModules: ["overview", "scope", "plans", "costs", "schedule", "proposals", "variations", "invoices", "documents", "site-diary", "defects", "trades"],
+    allowedModules: ["overview", "scope", "plans", "costs", "schedule", "proposals", "variations", "invoices", "bills", "documents", "site-diary", "defects", "trades"],
     primaryCTA: { id: "start_build", label: "Start Build", route: null, transition: "Active" },
   },
   Active: {
     label: "Active",
     entityType: "job",
-    allowedModules: ["overview", "scope", "plans", "costs", "schedule", "proposals", "variations", "invoices", "documents", "site-diary", "defects", "trades"],
+    allowedModules: ["overview", "scope", "plans", "costs", "schedule", "proposals", "variations", "invoices", "bills", "documents", "site-diary", "defects", "trades"],
     primaryCTA: { id: "raise_claim", label: "Raise Claim", route: "../invoices", transition: null },
   },
   Invoiced: {
     label: "Invoiced",
     entityType: "job",
-    allowedModules: ["overview", "scope", "plans", "costs", "schedule", "proposals", "variations", "invoices", "documents", "site-diary", "defects", "trades"],
+    allowedModules: ["overview", "scope", "plans", "costs", "schedule", "proposals", "variations", "invoices", "bills", "documents", "site-diary", "defects", "trades"],
     primaryCTA: { id: "complete", label: "Complete Build", route: null, transition: "Complete" },
   },
   Complete: {
     label: "Complete",
     entityType: "job",
-    allowedModules: ["overview", "scope", "plans", "costs", "schedule", "proposals", "variations", "invoices", "documents", "site-diary", "defects", "trades"],
+    allowedModules: ["overview", "scope", "plans", "costs", "schedule", "proposals", "variations", "invoices", "bills", "documents", "site-diary", "defects", "trades"],
     primaryCTA: null,
   },
 };
@@ -117,7 +117,7 @@ export function getNextStage(stage) {
 /**
  * Job-only module paths that should be gated when stage is a quote stage.
  */
-export const JOB_ONLY_MODULES = ["schedule", "costs", "invoices", "variations", "site-diary", "defects", "trades"];
+export const JOB_ONLY_MODULES = ["schedule", "costs", "invoices", "bills", "variations", "site-diary", "defects", "trades"];
 
 export function isJobOnlyModule(modulePath) {
   return JOB_ONLY_MODULES.includes(modulePath);
@@ -153,6 +153,9 @@ export function applyJobConversion(pr, { targetStage = "Approved" } = {}) {
   if (!Array.isArray(pr.actuals)) pr.actuals = [];
   if (!Array.isArray(pr.diary)) pr.diary = [];
   if (!Array.isArray(pr.defects)) pr.defects = [];
+  if (!Array.isArray(pr.supplierBills)) pr.supplierBills = [];
+  if (!Array.isArray(pr.billUploads)) pr.billUploads = [];
+  if (!Array.isArray(pr.paymentSchedule)) pr.paymentSchedule = [];
 
   if (!Array.isArray(pr.activity)) pr.activity = [];
   pr.activity.unshift({

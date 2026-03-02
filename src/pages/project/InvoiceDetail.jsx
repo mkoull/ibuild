@@ -34,7 +34,7 @@ export default function InvoiceDetail() {
     <Section>
       <div style={{ display: "flex", alignItems: "center", gap: _.s2, marginBottom: _.s7 }}>
         <button onClick={() => navigate("../invoices")} style={btnGhost}><ArrowRight size={14} style={{ transform: "rotate(180deg)" }} /> Back</button>
-        <span style={{ fontSize: 22, fontWeight: 600 }}>{invD.id}</span>
+        <span style={{ fontSize: _.fontSize["2xl"], fontWeight: _.fontWeight.semi }}>{invD.id}</span>
         <div style={{ flex: 1 }} />
         <button onClick={() => { if (editing) { setEditing(false); } else { setEditDesc(invD.desc); setEditPct(String(invD.pct)); setEditing(true); } }} style={btnGhost}>{editing ? "Cancel" : "Edit"}</button>
         <div onClick={() => { if (confirm(`Delete "${invD.id}"?`)) { up(pr => { pr.invoices.splice(idx, 1); return pr; }); navigate("../invoices"); } }}
@@ -45,12 +45,12 @@ export default function InvoiceDetail() {
         <button onClick={printEl} style={btnGhost}><Printer size={14} /> Print</button>
       </div>
 
-      {invD.proposalId && (() => { const lp = p.proposals.find(pp => pp.id === invD.proposalId); return lp ? <div style={{ padding: `${_.s3}px ${_.s4}px`, background: `${_.ac}0a`, borderRadius: _.rXs, fontSize: 13, color: _.ac, fontWeight: 500, marginBottom: _.s4 }}>Linked to {lp.name}</div> : null; })()}
+      {invD.proposalId && (() => { const lp = p.proposals.find(pp => pp.id === invD.proposalId); return lp ? <div style={{ padding: `${_.s3}px ${_.s4}px`, background: `${_.ac}0a`, borderRadius: _.rXs, fontSize: _.fontSize.base, color: _.ac, fontWeight: _.fontWeight.medium, marginBottom: _.s4 }}>Linked to {lp.name}</div> : null; })()}
 
       {editing && (
         <div style={{ padding: _.s4, background: _.well, borderRadius: _.r, marginBottom: _.s4, display: "flex", gap: _.s3, alignItems: "end", flexWrap: "wrap" }}>
           <div style={{ flex: 1, minWidth: 160 }}><label style={label}>Description</label><input style={input} value={editDesc} onChange={e => setEditDesc(e.target.value)} /></div>
-          <div style={{ width: 80 }}><label style={label}>%</label><input type="number" style={{ ...input, textAlign: "center", fontWeight: 700 }} value={editPct} onChange={e => setEditPct(e.target.value)} /></div>
+          <div style={{ width: 80 }}><label style={label}>%</label><input type="number" style={{ ...input, textAlign: "center", fontWeight: _.fontWeight.bold }} value={editPct} onChange={e => setEditPct(e.target.value)} /></div>
           <button onClick={() => {
             const pc = parseFloat(editPct); if (!pc) { notify("Enter %", "error"); return; }
             up(pr => { pr.invoices[idx].desc = editDesc; pr.invoices[idx].pct = pc; pr.invoices[idx].amount = T.curr * (pc / 100); return pr; });
@@ -61,34 +61,34 @@ export default function InvoiceDetail() {
 
       <div ref={invDocRef} style={{ background: "#fff", fontFamily: "'Inter',sans-serif", borderRadius: _.r, overflow: "hidden", boxShadow: "0 4px 24px rgba(0,0,0,0.06)", border: `1px solid ${_.line}` }}>
         <div style={{ background: _.ink, color: "#fff", padding: "18px 28px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}><div style={{ width: 22, height: 22, background: "#fff", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: _.ink }}>i</div><span style={{ fontSize: 13, fontWeight: 700 }}>iBuild National</span></div>
-          <div style={{ textAlign: "right" }}><div style={{ fontSize: 9, color: _.ac, letterSpacing: "0.1em", fontWeight: 600 }}>TAX INVOICE</div><div style={{ fontSize: 16, fontWeight: 700, color: _.ac }}>{invD.id}</div></div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}><div style={{ width: 22, height: 22, background: "#fff", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontSize: _.fontSize.sm, fontWeight: 800, color: _.ink }}>i</div><span style={{ fontSize: _.fontSize.base, fontWeight: _.fontWeight.bold }}>iBuild National</span></div>
+          <div style={{ textAlign: "right" }}><div style={{ fontSize: _.fontSize.xs, color: _.ac, letterSpacing: "0.1em", fontWeight: _.fontWeight.semi }}>TAX INVOICE</div><div style={{ fontSize: _.fontSize.lg, fontWeight: _.fontWeight.bold, color: _.ac }}>{invD.id}</div></div>
         </div>
         <div style={{ padding: "16px 28px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, borderBottom: `1px solid ${_.line}` }}>
-          <div><div style={{ fontSize: 9, color: _.muted, fontWeight: 600, textTransform: "uppercase" }}>From</div><div style={{ fontSize: 12, fontWeight: 600, marginTop: 1 }}>iBuild National Pty Ltd</div><div style={{ fontSize: 11, color: _.muted }}>ABN 12 345 678 901</div></div>
-          <div><div style={{ fontSize: 9, color: _.muted, fontWeight: 600, textTransform: "uppercase" }}>To</div><div style={{ fontSize: 12, fontWeight: 600, marginTop: 1 }}>{p.client || "Client"}</div><div style={{ fontSize: 11, color: _.muted }}>{p.address}{p.suburb ? `, ${p.suburb}` : ""}</div></div>
+          <div><div style={{ fontSize: _.fontSize.xs, color: _.muted, fontWeight: _.fontWeight.semi, textTransform: "uppercase" }}>From</div><div style={{ fontSize: _.fontSize.sm, fontWeight: _.fontWeight.semi, marginTop: 1 }}>iBuild National Pty Ltd</div><div style={{ fontSize: _.fontSize.caption, color: _.muted }}>ABN 12 345 678 901</div></div>
+          <div><div style={{ fontSize: _.fontSize.xs, color: _.muted, fontWeight: _.fontWeight.semi, textTransform: "uppercase" }}>To</div><div style={{ fontSize: _.fontSize.sm, fontWeight: _.fontWeight.semi, marginTop: 1 }}>{p.client || "Client"}</div><div style={{ fontSize: _.fontSize.caption, color: _.muted }}>{p.address}{p.suburb ? `, ${p.suburb}` : ""}</div></div>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", borderBottom: `1px solid ${_.line}` }}>
           {[["Date", invD.date], ["Project", pName(p, clients)], ["Due", "14 days"]].map(([l, v]) => (
-            <div key={l} style={{ padding: "10px 16px", borderRight: `1px solid ${_.line}` }}><div style={{ fontSize: 9, color: _.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>{l}</div><div style={{ fontSize: 12, fontWeight: 500, marginTop: 1 }}>{v}</div></div>
+            <div key={l} style={{ padding: "10px 16px", borderRight: `1px solid ${_.line}` }}><div style={{ fontSize: _.fontSize.xs, color: _.muted, fontWeight: _.fontWeight.semi, textTransform: "uppercase", letterSpacing: _.letterSpacing.wider }}>{l}</div><div style={{ fontSize: _.fontSize.sm, fontWeight: _.fontWeight.medium, marginTop: 1 }}>{v}</div></div>
           ))}
         </div>
         <div style={{ padding: "18px 28px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: `2px solid ${_.ink}`, fontSize: 10, color: _.muted, fontWeight: 600, textTransform: "uppercase" }}><span>Description</span><span>Amount</span></div>
+          <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: `2px solid ${_.ink}`, fontSize: _.fontSize.xs, color: _.muted, fontWeight: _.fontWeight.semi, textTransform: "uppercase" }}><span>Description</span><span>Amount</span></div>
           <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: `1px solid ${_.line}` }}>
-            <div><div style={{ fontSize: 13, fontWeight: 500 }}>{invD.desc}</div><div style={{ fontSize: 11, color: _.muted, marginTop: 2 }}>{invD.pct}% of {fmt(T.curr)}</div></div>
-            <span style={{ fontSize: 13, fontWeight: 600 }}>{fmt(invD.amount)}</span>
+            <div><div style={{ fontSize: _.fontSize.base, fontWeight: _.fontWeight.medium }}>{invD.desc}</div><div style={{ fontSize: _.fontSize.caption, color: _.muted, marginTop: 2 }}>{invD.pct}% of {fmt(T.curr)}</div></div>
+            <span style={{ fontSize: _.fontSize.base, fontWeight: _.fontWeight.semi }}>{fmt(invD.amount)}</span>
           </div>
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 12 }}>
             <div style={{ width: 200 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", fontSize: 11, color: _.muted }}><span>Subtotal</span><span>{fmt(invD.amount - invGst)}</span></div>
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", fontSize: 11, color: _.muted, borderBottom: `1px solid ${_.line}` }}><span>GST</span><span>{fmt(invGst)}</span></div>
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", fontSize: 16, fontWeight: 700, borderTop: `2px solid ${_.ink}`, marginTop: 2 }}><span>Total</span><span>{fmt(invD.amount)}</span></div>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", fontSize: _.fontSize.caption, color: _.muted }}><span>Subtotal</span><span>{fmt(invD.amount - invGst)}</span></div>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", fontSize: _.fontSize.caption, color: _.muted, borderBottom: `1px solid ${_.line}` }}><span>GST</span><span>{fmt(invGst)}</span></div>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", fontSize: _.fontSize.lg, fontWeight: _.fontWeight.bold, borderTop: `2px solid ${_.ink}`, marginTop: 2 }}><span>Total</span><span>{fmt(invD.amount)}</span></div>
             </div>
           </div>
-          <div style={{ marginTop: 14, padding: 10, background: _.well, borderRadius: _.r, fontSize: 11, color: _.muted }}><strong>Payment</strong> BSB: 063-000 · Acct: 1234 5678 · Ref: {invD.id}</div>
+          <div style={{ marginTop: 14, padding: 10, background: _.well, borderRadius: _.r, fontSize: _.fontSize.caption, color: _.muted }}><strong>Payment</strong> BSB: 063-000 · Acct: 1234 5678 · Ref: {invD.id}</div>
         </div>
-        <div style={{ padding: "10px 28px", background: _.ink, fontSize: 9, color: _.muted }}>iBuild National · ABN 12 345 678 901</div>
+        <div style={{ padding: "10px 28px", background: _.ink, fontSize: _.fontSize.xs, color: _.muted }}>iBuild National · ABN 12 345 678 901</div>
       </div>
     </Section>
   );

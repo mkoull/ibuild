@@ -24,23 +24,23 @@ export default function ProjectTradesPage() {
 
   return (
     <Section>
-      <h1 style={{ fontSize: 40, fontWeight: 700, letterSpacing: "-0.03em", marginBottom: _.s7 }}>Trades</h1>
+      <h1 style={{ fontSize: _.fontSize["4xl"], fontWeight: _.fontWeight.bold, letterSpacing: _.letterSpacing.tight, marginBottom: _.s7 }}>Trades</h1>
 
       {/* Assign from global trades */}
       {trades.length > 0 && (
         <div style={{ marginBottom: _.s7, paddingBottom: _.s6, borderBottom: `1px solid ${_.line}` }}>
-          <div style={{ fontSize: 11, color: _.muted, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: _.s4 }}>Assign from Trade Directory</div>
-          {unassigned.length === 0 && <div style={{ fontSize: 13, color: _.muted }}>All trades assigned</div>}
+          <div style={{ fontSize: _.fontSize.caption, color: _.muted, fontWeight: _.fontWeight.semi, letterSpacing: _.letterSpacing.wider, textTransform: "uppercase", marginBottom: _.s4 }}>Assign from Trade Directory</div>
+          {unassigned.length === 0 && <div style={{ fontSize: _.fontSize.base, color: _.muted }}>All trades assigned</div>}
           {unassigned.map(t => (
             <div key={t.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: `1px solid ${_.line}` }}>
               <div>
-                <span style={{ fontSize: 13, fontWeight: 500 }}>{t.businessName}</span>
-                <span style={{ fontSize: 12, color: _.muted, marginLeft: 8 }}>{t.category}</span>
+                <span style={{ fontSize: _.fontSize.base, fontWeight: _.fontWeight.medium }}>{t.businessName}</span>
+                <span style={{ fontSize: _.fontSize.sm, color: _.muted, marginLeft: 8 }}>{t.category}</span>
               </div>
               <button onClick={() => {
                 up(pr => { if (!pr.assignedTradeIds) pr.assignedTradeIds = []; pr.assignedTradeIds.push(t.id); return pr; });
                 log("Trade assigned: " + t.businessName); notify("Assigned");
-              }} style={{ padding: "4px 12px", background: _.well, border: "none", borderRadius: _.rSm, fontSize: 12, fontWeight: 600, cursor: "pointer", color: _.ac }}><Plus size={12} /> Assign</button>
+              }} style={{ padding: "4px 12px", background: _.well, border: "none", borderRadius: _.rSm, fontSize: _.fontSize.sm, fontWeight: _.fontWeight.semi, cursor: "pointer", color: _.ac }}><Plus size={12} /> Assign</button>
             </div>
           ))}
         </div>
@@ -49,7 +49,7 @@ export default function ProjectTradesPage() {
       {/* Assigned global trades */}
       {assignedTradeIds.length > 0 && (
         <div style={{ marginBottom: _.s7, paddingBottom: _.s6, borderBottom: `1px solid ${_.line}` }}>
-          <div style={{ fontSize: 11, color: _.muted, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: _.s4 }}>Assigned Trades</div>
+          <div style={{ fontSize: _.fontSize.caption, color: _.muted, fontWeight: _.fontWeight.semi, letterSpacing: _.letterSpacing.wider, textTransform: "uppercase", marginBottom: _.s4 }}>Assigned Trades</div>
           {assignedTradeIds.map(tid => {
             const t = trades.find(tr => tr.id === tid);
             if (!t) return null;
@@ -58,8 +58,8 @@ export default function ProjectTradesPage() {
               <div key={tid} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${_.s4}px 0`, borderBottom: `1px solid ${_.line}` }}>
                 <div>
                   <span style={badge(_.ink)}>{t.category}</span>
-                  <div style={{ fontSize: 14, fontWeight: 500, marginTop: 6 }}>{t.businessName}</div>
-                  {contact && <div style={{ fontSize: 12, color: _.muted, marginTop: 1 }}>{contact.name}{contact.phone ? ` · ${contact.phone}` : ""}</div>}
+                  <div style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.medium, marginTop: 6 }}>{t.businessName}</div>
+                  {contact && <div style={{ fontSize: _.fontSize.sm, color: _.muted, marginTop: 1 }}>{contact.name}{contact.phone ? ` · ${contact.phone}` : ""}</div>}
                 </div>
                 <div onClick={() => { up(pr => { pr.assignedTradeIds = pr.assignedTradeIds.filter(id => id !== tid); return pr; }); notify("Removed"); }}
                   style={{ cursor: "pointer", color: _.faint }}
@@ -74,7 +74,7 @@ export default function ProjectTradesPage() {
 
       {/* Legacy inline trades */}
       <div style={{ marginBottom: _.s7, paddingBottom: _.s6, borderBottom: `1px solid ${_.line}` }}>
-        <div style={{ fontSize: 11, color: _.muted, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: _.s4 }}>Quick Add</div>
+        <div style={{ fontSize: _.fontSize.caption, color: _.muted, fontWeight: _.fontWeight.semi, letterSpacing: _.letterSpacing.wider, textTransform: "uppercase", marginBottom: _.s4 }}>Quick Add</div>
         <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr", gap: _.s4 }}>
           {[["Trade", "trade", "Electrician"], ["Company", "company", "Spark Bros"], ["Contact", "contact", "Dave"], ["Phone", "phone", "0412..."]].map(([l, k, ph]) => (
             <div key={k}><label style={label}>{l}</label><input style={input} value={trForm[k]} onChange={e => setTrForm({ ...trForm, [k]: e.target.value })} placeholder={ph} /></div>
@@ -106,11 +106,11 @@ export default function ProjectTradesPage() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
                 <span style={badge(_.ink)}>{tr.trade}</span>
-                <div style={{ fontSize: 14, fontWeight: 500, marginTop: 6 }}>{tr.company}</div>
-                {tr.contact && <div style={{ fontSize: 12, color: _.muted, marginTop: 1 }}>{tr.contact}</div>}
+                <div style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.medium, marginTop: 6 }}>{tr.company}</div>
+                {tr.contact && <div style={{ fontSize: _.fontSize.sm, color: _.muted, marginTop: 1 }}>{tr.contact}</div>}
               </div>
               <div style={{ display: "flex", gap: _.s2, alignItems: "center" }}>
-                {tr.phone && <a href={`tel:${tr.phone}`} style={{ fontSize: 13, color: _.ac, textDecoration: "none", fontWeight: 500 }}>{tr.phone}</a>}
+                {tr.phone && <a href={`tel:${tr.phone}`} style={{ fontSize: _.fontSize.base, color: _.ac, textDecoration: "none", fontWeight: _.fontWeight.medium }}>{tr.phone}</a>}
                 <div onClick={() => { setEditTradeIdx(i); setEditTrade({ trade: tr.trade || "", company: tr.company || "", contact: tr.contact || "", phone: tr.phone || "" }); }}
                   style={{ cursor: "pointer", color: _.faint, transition: "color 0.15s" }}
                   onMouseEnter={e => e.currentTarget.style.color = _.ac}

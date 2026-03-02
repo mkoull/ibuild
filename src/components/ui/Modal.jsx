@@ -24,15 +24,15 @@ export default function Modal({ open, onClose, title, children, width = 480 }) {
       }}>
         <div style={{
           display: "flex", justifyContent: "space-between", alignItems: "center",
-          padding: "20px 24px", borderBottom: `1px solid ${_.line}`,
+          padding: `${_.s5}px ${_.s6}px`, borderBottom: `1px solid ${_.line}`,
         }}>
-          <div style={{ fontSize: 16, fontWeight: 600, color: _.ink }}>{title}</div>
-          <div onClick={onClose} style={{ cursor: "pointer", color: _.muted, padding: 4, display: "flex", transition: `color ${_.tr}` }}
+          <div style={{ fontSize: _.fontSize.lg, fontWeight: _.fontWeight.semi, color: _.ink }}>{title}</div>
+          <div onClick={onClose} style={{ cursor: "pointer", color: _.muted, padding: _.s1, display: "flex", transition: `color ${_.tr}` }}
             onMouseEnter={e => e.currentTarget.style.color = _.ink}
             onMouseLeave={e => e.currentTarget.style.color = _.muted}
           ><X size={16} /></div>
         </div>
-        <div style={{ padding: 24 }}>
+        <div style={{ padding: _.s6 }}>
           {children}
         </div>
       </div>

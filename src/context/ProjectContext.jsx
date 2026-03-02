@@ -1,12 +1,15 @@
 import { createContext, useContext, useMemo } from "react";
+import { useProjectsCtx } from "./AppContext.jsx";
 import { useApp } from "./AppContext.jsx";
 import { calc } from "../lib/calc.js";
 import { ts, ds } from "../theme/styles.js";
+import { canTransition, applyJobConversion } from "../lib/lifecycle.js";
 
 const ProjectCtx = createContext(null);
 
 export function ProjectProvider({ project, children }) {
-  const { update, clients, clientsHook, notify } = useApp();
+  const { update, clientsHook } = useProjectsCtx();
+  const { notify } = useApp();
 
   const T = useMemo(() => calc(project), [project]);
 
@@ -24,12 +27,23 @@ export function ProjectProvider({ project, children }) {
   });
 
   const transitionStage = (newStage) => {
-    up(pr => { pr.stage = newStage; return pr; });
-    log(`Stage → ${newStage}`);
+    const currentStage = project.stage || "Lead";
+    if (!canTransition(currentStage, newStage)) return;
+    up(pr => { pr.stage = newStage; pr.updatedAt = new Date().toISOString(); return pr; });
+    up(pr => {
+      pr.activity.unshift({ type: "stage_change", action: `Stage changed to ${newStage}`, time: ts(), date: ds(), at: Date.now() });
+      if (pr.activity.length > 30) pr.activity = pr.activity.slice(0, 30);
+      return pr;
+    });
     notify(`Stage → ${newStage}`);
   };
 
-  const value = { project, update: up, T, client, log, transitionStage };
+  const convertToJob = (opts = {}) => {
+    up(pr => applyJobConversion(pr, opts));
+    notify("Converted to Job");
+  };
+
+  const value = { project, update: up, T, client, log, transitionStage, convertToJob };
 
   return <ProjectCtx.Provider value={value}>{children}</ProjectCtx.Provider>;
 }

@@ -28,7 +28,7 @@ export default function TradesListPage() {
   return (
     <Section>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <h1 style={{ fontSize: mobile ? 28 : 40, fontWeight: 700, letterSpacing: "-0.03em" }}>Trades</h1>
+        <h1 style={{ fontSize: mobile ? _.fontSize["3xl"] : _.fontSize["4xl"], fontWeight: _.fontWeight.bold, letterSpacing: _.letterSpacing.tight }}>Trades</h1>
         <button onClick={handleNew} style={btnPrimary}><Plus size={14} /> New Trade</button>
       </div>
 
@@ -48,8 +48,8 @@ export default function TradesListPage() {
           onMouseLeave={e => e.currentTarget.style.paddingLeft = "0"}
           >
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 14, fontWeight: 500 }}>{tr.businessName}</div>
-              <div style={{ fontSize: 12, color: _.muted, marginTop: 1 }}>
+              <div style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.medium }}>{tr.businessName}</div>
+              <div style={{ fontSize: _.fontSize.sm, color: _.muted, marginTop: 1 }}>
                 {tr.category}{primaryContact?.phone ? ` · ${primaryContact.phone}` : ""}
                 {(tr.regions || []).length > 0 ? ` · ${tr.regions.join(", ")}` : ""}
               </div>

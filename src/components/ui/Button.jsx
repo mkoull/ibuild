@@ -2,9 +2,9 @@ import _ from "../../theme/tokens.js";
 
 const base = {
   padding: "9px 18px", border: "none", borderRadius: _.rSm,
-  fontSize: 13, fontWeight: 600, cursor: "pointer", transition: `all ${_.tr}`,
+  fontSize: _.fontSize.base, fontWeight: _.fontWeight.semi, cursor: "pointer", transition: `all ${_.tr}`,
   display: "inline-flex", alignItems: "center", gap: 6, fontFamily: "inherit",
-  outline: "none", lineHeight: 1.3,
+  outline: "none", lineHeight: _.lineHeight.snug,
 };
 
 const variants = {
@@ -15,7 +15,7 @@ const variants = {
 };
 
 const sizes = {
-  sm: { padding: "6px 12px", fontSize: 12 },
+  sm: { padding: "6px 12px", fontSize: _.fontSize.sm },
   md: {},
 };
 

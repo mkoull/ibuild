@@ -17,7 +17,7 @@ export default function GlobalShell() {
       {mobile && <MobileHeader />}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         {!mobile && <TopBar />}
-        <main style={{ flex: 1, overflowY: "auto", padding: mobile ? "72px 16px 88px" : "48px 64px 80px" }}>
+        <main style={{ flex: 1, overflowY: "auto", padding: mobile ? `72px ${_.s4}px 88px` : `${_.s9}px ${_.s10}px 80px` }}>
           <Outlet />
         </main>
       </div>

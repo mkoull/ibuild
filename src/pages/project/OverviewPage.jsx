@@ -9,7 +9,7 @@ import { canTransition, isJob } from "../../lib/lifecycle.js";
 import StagePipeline from "../../components/ui/StagePipeline.jsx";
 import Card from "../../components/ui/Card.jsx";
 import Button from "../../components/ui/Button.jsx";
-import { ArrowRight, Pencil, TrendingUp, Calendar, DollarSign, ChevronRight } from "lucide-react";
+import { ArrowRight, Pencil, TrendingUp, Calendar, DollarSign, ChevronRight, Receipt } from "lucide-react";
 
 export default function OverviewPage() {
   const { project: p, update: up, T, client, log, transitionStage, convertToJob } = useProject();
@@ -53,6 +53,8 @@ export default function OverviewPage() {
   const budgetVariance = T.sub > 0 ? ((T.act / T.sub) * 100).toFixed(0) : 0;
   const schedPct = milestones.length > 0 ? Math.round((msDone / milestones.length) * 100) : 0;
   const collPct = T.curr > 0 ? Math.round((T.paid / T.curr) * 100) : 0;
+
+  const nextClaim = (p.paymentSchedule || []).find(c => c.status === "Planned") || null;
 
   const recentActivity = (p.activity || []).slice(0, 8);
 
@@ -128,6 +130,31 @@ export default function OverviewPage() {
         </div>
       )}
 
+      {/* Financial Health (Jobs only) */}
+      {stageIsJob && (
+        <div style={{ marginBottom: mobile ? _.s6 : _.s8 }}>
+          <div style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.semi, color: _.ink, marginBottom: _.s3 }}>Financial Health</div>
+          <div style={{ display: "grid", gridTemplateColumns: mobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: mobile ? _.s2 : _.s3 }}>
+            <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
+              <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Budget</div>
+              <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: T.budgetTotal > 0 ? _.ink : _.faint }}>{T.budgetTotal > 0 ? fmt(T.budgetTotal) : "—"}</div>
+            </Card>
+            <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
+              <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Actual</div>
+              <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: T.actualsTotal > 0 ? _.ac : _.faint }}>{T.actualsTotal > 0 ? fmt(T.actualsTotal) : "—"}</div>
+            </Card>
+            <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
+              <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Forecast Margin</div>
+              <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: T.curr > 0 ? (T.forecastMargin >= 0 ? _.green : _.red) : _.faint }}>{T.curr > 0 ? fmt(T.forecastMargin) : "—"}</div>
+            </Card>
+            <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
+              <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Margin %</div>
+              <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: T.curr > 0 ? (T.marginPctCalc >= 0 ? _.green : _.red) : _.faint }}>{T.curr > 0 ? `${T.marginPctCalc.toFixed(1)}%` : "—"}</div>
+            </Card>
+          </div>
+        </div>
+      )}
+
       {/* Health Snapshot */}
       <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "1fr 1fr 1fr", gap: mobile ? _.s3 : _.s4, marginBottom: mobile ? _.s6 : _.s8 }}>
         <Card style={{ padding: mobile ? _.s4 : _.s5 }}>
@@ -167,18 +194,25 @@ export default function OverviewPage() {
         <Card style={{ padding: mobile ? _.s4 : _.s5 }}>
           <div style={{ display: "flex", alignItems: "center", gap: _.s2, marginBottom: _.s3 }}>
             <DollarSign size={14} color={_.ac} />
-            <span style={{ fontSize: _.fontSize.caption, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase" }}>Collections</span>
+            <span style={{ fontSize: _.fontSize.caption, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase" }}>Paid / Contract</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: _.s2 }}>
-            <span style={{ fontSize: _.fontSize["2xl"], fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: T.outstanding > 0 ? _.red : _.ink }}>{T.outstanding > 0 ? fmt(T.outstanding) : fmt(0)}</span>
-            <span style={{ fontSize: _.fontSize.sm, color: _.muted }}>outstanding</span>
+            <span style={{ fontSize: _.fontSize["2xl"], fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: _.ink }}>{fmt(T.paid)}</span>
+            <span style={{ fontSize: _.fontSize.sm, color: _.muted }}>of {fmt(T.curr)}</span>
           </div>
           <div style={{ height: 6, background: _.well, borderRadius: 3, overflow: "hidden" }}>
             <div style={{ height: "100%", width: `${collPct}%`, background: _.green, borderRadius: 3, transition: "width 0.6s ease" }} />
           </div>
-          <div style={{ fontSize: _.fontSize.caption, color: _.green, fontWeight: _.fontWeight.semi, marginTop: _.s1 }}>
-            {collPct > 0 ? `${collPct}% collected` : "No payments yet"}
+          <div style={{ fontSize: _.fontSize.caption, fontWeight: _.fontWeight.semi, marginTop: _.s1, display: "flex", justifyContent: "space-between" }}>
+            <span style={{ color: collPct > 0 ? _.green : _.faint }}>{collPct > 0 ? `${collPct}% collected` : "No payments yet"}</span>
+            {T.outstanding > 0 && <span style={{ color: _.red }}>{fmt(T.outstanding)} owing</span>}
           </div>
+          {nextClaim && (
+            <div style={{ fontSize: _.fontSize.caption, color: _.body, marginTop: _.s2, display: "flex", alignItems: "center", gap: 4 }}>
+              <Receipt size={10} color={_.muted} />
+              Next claim: {nextClaim.label}
+            </div>
+          )}
         </Card>
       </div>
 

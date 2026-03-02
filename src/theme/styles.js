@@ -13,7 +13,6 @@ export const ts = () =>
 
 export const pName = (pr, clients) => {
   if (pr.name) return pr.name;
-  // Fallback: derive from client + suburb
   let clientName = pr.client;
   if (!clientName && pr.clientId && clients) {
     const c = clients.find(cl => cl.id === pr.clientId);
@@ -24,18 +23,18 @@ export const pName = (pr, clients) => {
 
 export const input = {
   width: "100%", padding: "9px 12px", background: _.well, border: "1.5px solid transparent",
-  borderRadius: _.rSm, color: _.ink, fontSize: 14, fontFamily: "inherit", outline: "none",
+  borderRadius: _.rSm, color: _.ink, fontSize: _.fontSize.md, fontFamily: "inherit", outline: "none",
   transition: "border-color 0.15s ease",
 };
 
 export const label = {
-  fontSize: 11, color: _.muted, marginBottom: 5, display: "block", fontWeight: 600,
-  letterSpacing: "0.05em", textTransform: "uppercase",
+  fontSize: _.fontSize.caption, color: _.muted, marginBottom: 5, display: "block", fontWeight: _.fontWeight.semi,
+  letterSpacing: _.letterSpacing.wide, textTransform: "uppercase",
 };
 
 export const btnPrimary = {
   padding: "9px 18px", background: _.ac, color: "#fff", border: "none", borderRadius: _.rSm,
-  fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "background 0.15s ease",
+  fontSize: _.fontSize.base, fontWeight: _.fontWeight.semi, cursor: "pointer", transition: "background 0.15s ease",
   display: "inline-flex", alignItems: "center", gap: 6,
 };
 
@@ -48,7 +47,7 @@ export const btnGhost = {
 };
 
 export const badge = (c) => ({
-  fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: _.rFull, background: `${c}14`, color: c,
+  fontSize: _.fontSize.caption, fontWeight: _.fontWeight.semi, padding: "3px 10px", borderRadius: _.rFull, background: `${c}14`, color: c,
 });
 
 export const stCol = s =>
@@ -56,7 +55,6 @@ export const stCol = s =>
   : s === "Approved" ? _.blue
   : s === "Complete" ? _.ac
   : s === "Quoted" ? _.violet
-  // Legacy compat
   : s === "Quote" ? _.violet
   : _.amber;
 
@@ -76,5 +74,6 @@ export const card = {
   background: _.surface,
   border: `1px solid ${_.line}`,
   borderRadius: _.r,
-  padding: 24,
+  boxShadow: _.sh1,
+  padding: _.s6,
 };

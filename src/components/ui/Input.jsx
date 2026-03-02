@@ -13,7 +13,7 @@ export default function Input({ label, value, onChange, error, placeholder, type
         style={{ ...inputStyle, ...(error ? { borderColor: _.red } : {}), ...is }}
         {...rest}
       />
-      {error && <div style={{ fontSize: 11, color: _.red, marginTop: 3 }}>{error}</div>}
+      {error && <div style={{ fontSize: _.fontSize.caption, color: _.red, marginTop: 3 }}>{error}</div>}
     </div>
   );
 }

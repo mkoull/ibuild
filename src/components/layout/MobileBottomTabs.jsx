@@ -11,7 +11,7 @@ const GLOBAL_TABS = [
 
 const PROJECT_TABS = [
   { path: "overview", label: "Overview", Ic: BarChart3 },
-  { path: "scope", label: "Quote", Ic: PenLine },
+  { path: "quote", label: "Quote", Ic: PenLine },
   { path: "proposals", label: "Proposals", Ic: FileText },
   { path: "invoices", label: "Invoices", Ic: Receipt },
   { path: "site-diary", label: "Diary", Ic: BookOpen },

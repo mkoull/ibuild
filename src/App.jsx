@@ -1,5 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppProvider } from "./context/AppContext.jsx";
+
+if (import.meta.env.DEV) {
+  import("./dev/seedProjects.js");
+}
 import GlobalShell from "./components/layout/GlobalShell.jsx";
 import ProjectShell from "./components/layout/ProjectShell.jsx";
 
@@ -32,6 +36,7 @@ import DocumentsPage from "./pages/project/DocumentsPage.jsx";
 import SiteDiaryPage from "./pages/project/SiteDiaryPage.jsx";
 import DefectsPage from "./pages/project/DefectsPage.jsx";
 import ProjectTradesPage from "./pages/project/ProjectTradesPage.jsx";
+import BillsPage from "./pages/project/BillsPage.jsx";
 import JobModuleGate from "./components/guards/JobModuleGate.jsx";
 
 export default function App() {
@@ -66,6 +71,7 @@ export default function App() {
               <Route path="variations/:voIndex" element={<JobModuleGate moduleName="Variations"><VariationDetail /></JobModuleGate>} />
               <Route path="invoices" element={<JobModuleGate moduleName="Invoices"><InvoicesPage /></JobModuleGate>} />
               <Route path="invoices/:invIndex" element={<JobModuleGate moduleName="Invoices"><InvoiceDetail /></JobModuleGate>} />
+              <Route path="bills" element={<JobModuleGate moduleName="Bills"><BillsPage /></JobModuleGate>} />
               <Route path="proposals" element={<ProposalsPage />} />
               <Route path="proposals/:propIndex" element={<ProposalDetail />} />
               <Route path="documents" element={<DocumentsPage />} />

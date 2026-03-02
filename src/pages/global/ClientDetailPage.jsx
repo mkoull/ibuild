@@ -3,7 +3,7 @@ import { useApp } from "../../context/AppContext.jsx";
 import _ from "../../theme/tokens.js";
 import { input, label, btnPrimary, btnSecondary, btnGhost, fmt, pName } from "../../theme/styles.js";
 import { mkContact } from "../../data/models.js";
-import { calc } from "../../lib/calc.js";
+import { selectCalc as calc } from "../../lib/selectors.js";
 import Section from "../../components/ui/Section.jsx";
 import { ArrowLeft, Plus, X } from "lucide-react";
 
@@ -23,12 +23,12 @@ export default function ClientDetailPage() {
     <Section>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 32 }}>
         <button onClick={() => navigate("/clients")} style={btnGhost}><ArrowLeft size={14} /> Clients</button>
-        <h1 style={{ fontSize: 28, fontWeight: 700, letterSpacing: "-0.03em", flex: 1 }}>{client.displayName || "Unnamed Client"}</h1>
+        <h1 style={{ fontSize: _.fontSize["3xl"], fontWeight: _.fontWeight.bold, letterSpacing: _.letterSpacing.tight, flex: 1 }}>{client.displayName || "Unnamed Client"}</h1>
       </div>
 
       {/* Details form */}
       <div style={{ marginBottom: 32 }}>
-        <div style={{ fontSize: 18, fontWeight: 600, color: _.ink, marginBottom: 16 }}>Details</div>
+        <div style={{ fontSize: _.fontSize.unit, fontWeight: _.fontWeight.semi, color: _.ink, marginBottom: 16 }}>Details</div>
         <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "1fr 1fr", gap: `${_.s3}px ${_.s4}px` }}>
           <div><label style={label}>Display Name</label><input style={input} value={client.displayName} onChange={e => up(c => { c.displayName = e.target.value; })} /></div>
           <div><label style={label}>Company Name</label><input style={input} value={client.companyName} onChange={e => up(c => { c.companyName = e.target.value; })} /></div>
@@ -48,10 +48,10 @@ export default function ClientDetailPage() {
       {/* Contacts */}
       <div style={{ marginBottom: 32, paddingTop: 24, borderTop: `1px solid ${_.line}` }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <div style={{ fontSize: 18, fontWeight: 600, color: _.ink }}>Contacts</div>
+          <div style={{ fontSize: _.fontSize.unit, fontWeight: _.fontWeight.semi, color: _.ink }}>Contacts</div>
           <button onClick={() => up(c => { c.contacts.push(mkContact()); })} style={btnSecondary}><Plus size={13} /> Add Contact</button>
         </div>
-        {client.contacts.length === 0 && <div style={{ fontSize: 13, color: _.muted }}>No contacts</div>}
+        {client.contacts.length === 0 && <div style={{ fontSize: _.fontSize.base, color: _.muted }}>No contacts</div>}
         {client.contacts.map((ct, i) => (
           <div key={ct.id} style={{ display: "grid", gridTemplateColumns: mobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr auto", gap: _.s3, marginBottom: _.s3, padding: `${_.s3}px 0`, borderBottom: `1px solid ${_.line}` }}>
             <div><label style={label}>Name</label><input style={input} value={ct.name} onChange={e => up(c => { c.contacts[i].name = e.target.value; })} /></div>
@@ -70,15 +70,15 @@ export default function ClientDetailPage() {
 
       {/* Linked projects */}
       <div style={{ paddingTop: 24, borderTop: `1px solid ${_.line}` }}>
-        <div style={{ fontSize: 18, fontWeight: 600, color: _.ink, marginBottom: 16 }}>Linked Projects</div>
-        {linkedProjects.length === 0 && <div style={{ fontSize: 13, color: _.muted }}>No projects linked to this client</div>}
+        <div style={{ fontSize: _.fontSize.unit, fontWeight: _.fontWeight.semi, color: _.ink, marginBottom: 16 }}>Linked Projects</div>
+        {linkedProjects.length === 0 && <div style={{ fontSize: _.fontSize.base, color: _.muted }}>No projects linked to this client</div>}
         {linkedProjects.map(pr => (
           <div key={pr.id} onClick={() => navigate(`/projects/${pr.id}/overview`)} style={{
             padding: "10px 0", borderBottom: `1px solid ${_.line}`, cursor: "pointer",
             display: "flex", justifyContent: "space-between", alignItems: "center",
           }}>
-            <span style={{ fontSize: 14, fontWeight: 500 }}>{pName(pr, clients)}</span>
-            <span style={{ fontSize: 13, color: _.muted }}>{fmt(calc(pr).curr)}</span>
+            <span style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.medium }}>{pName(pr, clients)}</span>
+            <span style={{ fontSize: _.fontSize.base, color: _.muted }}>{fmt(calc(pr).curr)}</span>
           </div>
         ))}
       </div>

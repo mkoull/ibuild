@@ -3,7 +3,7 @@ import _ from "../../theme/tokens.js";
 export default function Table({ columns, data, onRowClick, emptyText = "No data" }) {
   if (!data || data.length === 0) {
     return (
-      <div style={{ padding: 32, textAlign: "center", color: _.muted, fontSize: 14, border: `1.5px dashed ${_.line2}`, borderRadius: _.r }}>
+      <div style={{ padding: _.s7, textAlign: "center", color: _.muted, fontSize: _.fontSize.md, border: `1.5px dashed ${_.line2}`, borderRadius: _.r }}>
         {emptyText}
       </div>
     );
@@ -15,9 +15,10 @@ export default function Table({ columns, data, onRowClick, emptyText = "No data"
     <div>
       {/* Header */}
       <div style={{
-        display: "grid", gridTemplateColumns: gridCols, gap: 8,
-        padding: "8px 0", borderBottom: `2px solid ${_.ink}`,
-        fontSize: 10, color: _.muted, fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase",
+        display: "grid", gridTemplateColumns: gridCols, gap: _.s2,
+        padding: `${_.s2}px 0`, borderBottom: `2px solid ${_.ink}`,
+        fontSize: _.fontSize.xs, color: _.muted, fontWeight: _.fontWeight.semi,
+        letterSpacing: _.letterSpacing.wide, textTransform: "uppercase",
       }}>
         {columns.map(c => (
           <span key={c.key} style={{ textAlign: c.align || "left" }}>{c.label}</span>
@@ -28,14 +29,14 @@ export default function Table({ columns, data, onRowClick, emptyText = "No data"
         <div key={row.id || i}
           onClick={() => onRowClick?.(row)}
           style={{
-            display: "grid", gridTemplateColumns: gridCols, gap: 8,
-            padding: "12px 0", borderBottom: `1px solid ${_.line}`,
-            alignItems: "center", fontSize: 13,
+            display: "grid", gridTemplateColumns: gridCols, gap: _.s2,
+            padding: `${_.s3}px ${_.s1}px`, borderBottom: `1px solid ${_.line}`,
+            alignItems: "center", fontSize: _.fontSize.base,
             cursor: onRowClick ? "pointer" : "default",
-            transition: "padding-left 0.12s",
+            borderRadius: _.rXs, transition: `background ${_.tr}`,
           }}
-          onMouseEnter={e => { if (onRowClick) e.currentTarget.style.paddingLeft = "4px"; }}
-          onMouseLeave={e => { if (onRowClick) e.currentTarget.style.paddingLeft = "0"; }}
+          onMouseEnter={onRowClick ? e => { e.currentTarget.style.background = _.well; } : undefined}
+          onMouseLeave={onRowClick ? e => { e.currentTarget.style.background = "transparent"; } : undefined}
         >
           {columns.map(c => (
             <span key={c.key} style={{ textAlign: c.align || "left", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>

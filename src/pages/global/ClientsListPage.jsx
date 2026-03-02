@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext.jsx";
 import _ from "../../theme/tokens.js";
 import { btnPrimary, badge, fmt } from "../../theme/styles.js";
-import { calc } from "../../lib/calc.js";
+import { selectCalc as calc } from "../../lib/selectors.js";
 import Section from "../../components/ui/Section.jsx";
 import Empty from "../../components/ui/Empty.jsx";
 import SearchInput from "../../components/ui/SearchInput.jsx";
@@ -29,7 +29,7 @@ export default function ClientsListPage() {
   return (
     <Section>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <h1 style={{ fontSize: mobile ? 28 : 40, fontWeight: 700, letterSpacing: "-0.03em" }}>Clients</h1>
+        <h1 style={{ fontSize: mobile ? _.fontSize["3xl"] : _.fontSize["4xl"], fontWeight: _.fontWeight.bold, letterSpacing: _.letterSpacing.tight }}>Clients</h1>
         <button onClick={handleNew} style={btnPrimary}><Plus size={14} /> New Client</button>
       </div>
 
@@ -51,8 +51,8 @@ export default function ClientsListPage() {
           onMouseLeave={e => e.currentTarget.style.paddingLeft = "0"}
           >
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 14, fontWeight: 500 }}>{cl.displayName || "Unnamed"}</div>
-              <div style={{ fontSize: 12, color: _.muted, marginTop: 1 }}>
+              <div style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.medium }}>{cl.displayName || "Unnamed"}</div>
+              <div style={{ fontSize: _.fontSize.sm, color: _.muted, marginTop: 1 }}>
                 {cl.companyName ? `${cl.companyName} · ` : ""}{clientProjects.length} project{clientProjects.length !== 1 ? "s" : ""}
                 {lifetime > 0 ? ` · ${fmt(lifetime)}` : ""}
               </div>

@@ -18,7 +18,7 @@ export default function SiteDiaryPage() {
 
   return (
     <Section>
-      <h1 style={{ fontSize: 40, fontWeight: 700, letterSpacing: "-0.03em", marginBottom: _.s7 }}>Site Diary</h1>
+      <h1 style={{ fontSize: _.fontSize["4xl"], fontWeight: _.fontWeight.bold, letterSpacing: _.letterSpacing.tight, marginBottom: _.s7 }}>Site Diary</h1>
       <div style={{ marginBottom: _.s7, paddingBottom: _.s6, borderBottom: `1px solid ${_.line}` }}>
         <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "1fr 1fr 1fr", gap: `${_.s3}px ${_.s4}px`, marginBottom: _.s3 }}>
           <div><label style={label}>Date</label><input type="date" style={{ ...input, cursor: "pointer" }} value={diaryForm.date} onChange={e => setDiaryForm({ ...diaryForm, date: e.target.value })} /></div>
@@ -54,11 +54,11 @@ export default function SiteDiaryPage() {
             <>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: _.s2 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: _.s2 }}>
-                  <span style={{ fontSize: 14, fontWeight: 600 }}>{d.date}</span>
+                  <span style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.semi }}>{d.date}</span>
                   <span style={badge(_.muted)}>{d.weather}</span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: _.s3 }}>
-                  <span onClick={() => { setEditIdx(i); setEditDiary({ weather: d.weather, trades: d.trades || "", notes: d.notes || "" }); }} style={{ fontSize: 12, color: _.ac, cursor: "pointer", fontWeight: 500 }}>Edit</span>
+                  <span onClick={() => { setEditIdx(i); setEditDiary({ weather: d.weather, trades: d.trades || "", notes: d.notes || "" }); }} style={{ fontSize: _.fontSize.sm, color: _.ac, cursor: "pointer", fontWeight: _.fontWeight.medium }}>Edit</span>
                   <div onClick={() => { up(pr => { pr.diary.splice(i, 1); return pr; }); notify("Removed"); }}
                     style={{ cursor: "pointer", color: _.faint, transition: "color 0.15s" }}
                     onMouseEnter={e => e.currentTarget.style.color = _.red}
@@ -66,8 +66,8 @@ export default function SiteDiaryPage() {
                   ><X size={14} /></div>
                 </div>
               </div>
-              {d.trades && <div style={{ fontSize: 13, color: _.ac, fontWeight: 500, marginBottom: 2 }}>{d.trades}</div>}
-              {d.notes && <div style={{ fontSize: 14, color: _.body, lineHeight: 1.6 }}>{d.notes}</div>}
+              {d.trades && <div style={{ fontSize: _.fontSize.base, color: _.ac, fontWeight: _.fontWeight.medium, marginBottom: 2 }}>{d.trades}</div>}
+              {d.notes && <div style={{ fontSize: _.fontSize.md, color: _.body, lineHeight: 1.6 }}>{d.notes}</div>}
             </>
           )}
         </div>

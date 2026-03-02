@@ -28,8 +28,8 @@ export default function DocumentsPage() {
     >
       <Icon size={16} color={_.muted} />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 500, color: _.ink }}>{title}</div>
-        {subtitle && <div style={{ fontSize: 12, color: _.muted, marginTop: 1 }}>{subtitle}</div>}
+        <div style={{ fontSize: _.fontSize.base, fontWeight: _.fontWeight.medium, color: _.ink }}>{title}</div>
+        {subtitle && <div style={{ fontSize: _.fontSize.sm, color: _.muted, marginTop: 1 }}>{subtitle}</div>}
       </div>
       {status && <span style={badge(statusColor || _.muted)}>{status}</span>}
       <ChevronRight size={14} color={_.faint} />
@@ -38,11 +38,11 @@ export default function DocumentsPage() {
 
   return (
     <Section>
-      <h1 style={{ fontSize: mobile ? 28 : 40, fontWeight: 700, letterSpacing: "-0.03em", marginBottom: 8 }}>Documents</h1>
-      <div style={{ fontSize: 14, color: _.muted, marginBottom: mobile ? 24 : 32 }}>{total} document{total !== 1 ? "s" : ""}</div>
+      <h1 style={{ fontSize: mobile ? _.fontSize["3xl"] : _.fontSize["4xl"], fontWeight: _.fontWeight.bold, letterSpacing: _.letterSpacing.tight, marginBottom: 8 }}>Documents</h1>
+      <div style={{ fontSize: _.fontSize.md, color: _.muted, marginBottom: mobile ? 24 : 32 }}>{total} document{total !== 1 ? "s" : ""}</div>
 
       {total === 0 && (
-        <div style={{ padding: 32, textAlign: "center", color: _.muted, fontSize: 14, border: `1.5px dashed ${_.line2}`, borderRadius: _.r }}>
+        <div style={{ padding: 32, textAlign: "center", color: _.muted, fontSize: _.fontSize.md, border: `1.5px dashed ${_.line2}`, borderRadius: _.r }}>
           No documents yet. Create proposals, invoices, or variations to see them here.
         </div>
       )}

@@ -19,8 +19,8 @@ export default function DefectsPage() {
 
   return (
     <Section>
-      <h1 style={{ fontSize: mobile ? 28 : 40, fontWeight: 700, letterSpacing: "-0.03em", marginBottom: 4 }}>Defects</h1>
-      <div style={{ fontSize: 14, color: _.muted, marginBottom: _.s7 }}>{p.defects.filter(d => d.done).length} of {p.defects.length} resolved</div>
+      <h1 style={{ fontSize: mobile ? _.fontSize["3xl"] : _.fontSize["4xl"], fontWeight: _.fontWeight.bold, letterSpacing: _.letterSpacing.tight, marginBottom: 4 }}>Defects</h1>
+      <div style={{ fontSize: _.fontSize.md, color: _.muted, marginBottom: _.s7 }}>{p.defects.filter(d => d.done).length} of {p.defects.length} resolved</div>
 
       <div style={{ marginBottom: _.s7, paddingBottom: _.s6, borderBottom: `1px solid ${_.line}` }}>
         <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "1fr 1fr 1fr", gap: _.s4, marginBottom: _.s3 }}>
@@ -68,8 +68,8 @@ export default function DefectsPage() {
           ) : (
             <>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 14, fontWeight: 500 }}>{d.desc}</div>
-                <div style={{ fontSize: 12, color: _.muted, marginTop: 1 }}>{[d.location, d.assignee && `→ ${d.assignee}`, d.date].filter(Boolean).join(" · ")}</div>
+                <div style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.medium }}>{d.desc}</div>
+                <div style={{ fontSize: _.fontSize.sm, color: _.muted, marginTop: 1 }}>{[d.location, d.assignee && `→ ${d.assignee}`, d.date].filter(Boolean).join(" · ")}</div>
               </div>
               <div onClick={() => { setEditIdx(i); setEditDefect({ location: d.location || "", desc: d.desc, assignee: d.assignee || "" }); }}
                 style={{ cursor: "pointer", color: _.faint, transition: `color ${_.tr}`, flexShrink: 0 }}
@@ -87,7 +87,7 @@ export default function DefectsPage() {
       ))}
 
       <Modal open={deleteIdx !== null} onClose={() => setDeleteIdx(null)} title="Delete Defect" width={400}>
-        <div style={{ fontSize: 14, color: _.body, marginBottom: 24 }}>
+        <div style={{ fontSize: _.fontSize.md, color: _.body, marginBottom: 24 }}>
           Delete <strong>{deleteIdx !== null && p.defects[deleteIdx] ? p.defects[deleteIdx].desc : ""}</strong>?
         </div>
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>

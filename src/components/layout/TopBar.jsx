@@ -6,7 +6,7 @@ import { pName } from "../../theme/styles.js";
 import { ChevronDown, Search, FolderOpen, Plus, Users, Building2 } from "lucide-react";
 
 export default function TopBar() {
-  const { projects, clients, create, clientsHook, tradesHook, notify } = useApp();
+  const { projects, clients, create, clientsHook, tradesHook, notify, settings } = useApp();
   const navigate = useNavigate();
   const params = useParams();
   const [showSwitcher, setShowSwitcher] = useState(false);
@@ -37,7 +37,11 @@ export default function TopBar() {
   ] : [];
 
   const handleNewProject = () => {
-    const p = create();
+    const p = create({
+      marginPct: settings.defaultMargin ?? 18,
+      contingencyPct: settings.defaultContingency ?? 5,
+      validDays: settings.defaultValidDays ?? 30,
+    });
     navigate(`/projects/${p.id}/quote?step=details`);
     notify("New project created");
     setShowCreate(false);

@@ -23,8 +23,8 @@ export default function RateLibraryPage() {
 
   return (
     <Section>
-      <h1 style={{ fontSize: mobile ? 28 : 40, fontWeight: 700, letterSpacing: "-0.03em", marginBottom: 8 }}>Rate Library</h1>
-      <div style={{ fontSize: 14, color: _.muted, marginBottom: 24 }}>{categories.length} categories · {items.length} items</div>
+      <h1 style={{ fontSize: mobile ? _.fontSize["3xl"] : _.fontSize["4xl"], fontWeight: _.fontWeight.bold, letterSpacing: _.letterSpacing.tight, marginBottom: 8 }}>Rate Library</h1>
+      <div style={{ fontSize: _.fontSize.md, color: _.muted, marginBottom: 24 }}>{categories.length} categories · {items.length} items</div>
 
       <SearchInput value={search} onChange={setSearch} placeholder="Search items..." style={{ marginBottom: 24, maxWidth: 320 }} />
 
@@ -54,11 +54,11 @@ export default function RateLibraryPage() {
                 <span style={{ transform: open ? "rotate(90deg)" : "none", display: "inline-flex", transition: "transform 0.15s" }}>
                   <ChevronRight size={13} color={catItems.length > 0 ? _.ac : _.muted} />
                 </span>
-                <span style={{ fontSize: 14, fontWeight: catItems.length > 0 ? 600 : 400, color: catItems.length > 0 ? _.ink : _.muted }}>{cat.name}</span>
-                <span style={{ fontSize: 11, fontWeight: 600, color: _.ac, marginLeft: 4 }}>{catItems.length}</span>
+                <span style={{ fontSize: _.fontSize.md, fontWeight: catItems.length > 0 ? _.fontWeight.semi : _.fontWeight.normal, color: catItems.length > 0 ? _.ink : _.muted }}>{cat.name}</span>
+                <span style={{ fontSize: _.fontSize.caption, fontWeight: _.fontWeight.semi, color: _.ac, marginLeft: 4 }}>{catItems.length}</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                {catTotal > 0 && <span style={{ fontSize: 14, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{fmt(catTotal)}</span>}
+                {catTotal > 0 && <span style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums" }}>{fmt(catTotal)}</span>}
                 <div onClick={e => { e.stopPropagation(); if (confirm(`Delete "${cat.name}" and all its items?`)) removeCategory(cat.id); }}
                   style={{ cursor: "pointer", color: _.faint, padding: 2 }}
                   onMouseEnter={e => e.currentTarget.style.color = _.red}
@@ -71,7 +71,7 @@ export default function RateLibraryPage() {
               <div style={{ paddingBottom: _.s4, paddingLeft: 24, borderLeft: `2px solid ${_.line}` }}>
                 {/* Items table header */}
                 {displayItems.length > 0 && (
-                  <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr 70px 80px 50px auto" : "1fr 70px 80px 50px 70px 80px auto", gap: 6, padding: "4px 0", fontSize: 10, color: _.muted, fontWeight: 600, textTransform: "uppercase" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr 70px 80px 50px auto" : "1fr 70px 80px 50px 70px 80px auto", gap: 6, padding: "4px 0", fontSize: _.fontSize.xs, color: _.muted, fontWeight: _.fontWeight.semi, textTransform: "uppercase" }}>
                     <span>Item</span><span>Unit</span><span>Rate</span><span>Qty</span>
                     {!mobile && <><span>Margin %</span><span>Supplier</span></>}
                     <span></span>
@@ -79,14 +79,14 @@ export default function RateLibraryPage() {
                 )}
                 {displayItems.map(item => (
                   <div key={item.id} style={{ display: "grid", gridTemplateColumns: mobile ? "1fr 70px 80px 50px auto" : "1fr 70px 80px 50px 70px 80px auto", gap: 6, padding: "5px 0", alignItems: "center", borderBottom: `1px solid ${_.line}` }}>
-                    <input style={{ ...input, padding: "4px 8px", fontSize: 13 }} value={item.name} onChange={e => updateItem(item.id, { name: e.target.value })} />
-                    <input style={{ ...input, padding: "4px 8px", fontSize: 12 }} value={item.unit} onChange={e => updateItem(item.id, { unit: e.target.value })} />
-                    <input type="number" style={{ ...input, padding: "4px 8px", fontSize: 12, textAlign: "right" }} value={item.unitRate} onChange={e => updateItem(item.id, { unitRate: parseFloat(e.target.value) || 0 })} />
-                    <input type="number" style={{ ...input, padding: "4px 8px", fontSize: 12, textAlign: "center" }} value={item.defaultQty} onChange={e => updateItem(item.id, { defaultQty: parseFloat(e.target.value) || 0 })} />
+                    <input style={{ ...input, padding: "4px 8px", fontSize: _.fontSize.base }} value={item.name} onChange={e => updateItem(item.id, { name: e.target.value })} />
+                    <input style={{ ...input, padding: "4px 8px", fontSize: _.fontSize.sm }} value={item.unit} onChange={e => updateItem(item.id, { unit: e.target.value })} />
+                    <input type="number" style={{ ...input, padding: "4px 8px", fontSize: _.fontSize.sm, textAlign: "right" }} value={item.unitRate} onChange={e => updateItem(item.id, { unitRate: parseFloat(e.target.value) || 0 })} />
+                    <input type="number" style={{ ...input, padding: "4px 8px", fontSize: _.fontSize.sm, textAlign: "center" }} value={item.defaultQty} onChange={e => updateItem(item.id, { defaultQty: parseFloat(e.target.value) || 0 })} />
                     {!mobile && (
                       <>
-                        <input type="number" style={{ ...input, padding: "4px 8px", fontSize: 12, textAlign: "center" }} value={item.margin || 0} onChange={e => updateItem(item.id, { margin: parseFloat(e.target.value) || 0 })} />
-                        <input style={{ ...input, padding: "4px 8px", fontSize: 11 }} value={item.supplierCode || ""} onChange={e => updateItem(item.id, { supplierCode: e.target.value })} placeholder="Code" />
+                        <input type="number" style={{ ...input, padding: "4px 8px", fontSize: _.fontSize.sm, textAlign: "center" }} value={item.margin || 0} onChange={e => updateItem(item.id, { margin: parseFloat(e.target.value) || 0 })} />
+                        <input style={{ ...input, padding: "4px 8px", fontSize: _.fontSize.caption }} value={item.supplierCode || ""} onChange={e => updateItem(item.id, { supplierCode: e.target.value })} placeholder="Code" />
                       </>
                     )}
                     <div onClick={() => removeItem(item.id)} style={{ cursor: "pointer", color: _.faint, padding: 2 }}
@@ -96,7 +96,7 @@ export default function RateLibraryPage() {
                   </div>
                 ))}
                 <div onClick={() => addItem(cat.id, { name: "New Item" })} style={{
-                  padding: "6px 0", cursor: "pointer", color: _.ac, fontSize: 12, fontWeight: 600,
+                  padding: "6px 0", cursor: "pointer", color: _.ac, fontSize: _.fontSize.sm, fontWeight: _.fontWeight.semi,
                   display: "flex", alignItems: "center", gap: 4,
                 }}
                 onMouseEnter={e => e.currentTarget.style.opacity = "0.7"}

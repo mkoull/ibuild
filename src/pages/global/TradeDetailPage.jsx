@@ -25,11 +25,11 @@ export default function TradeDetailPage() {
     <Section>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 32 }}>
         <button onClick={() => navigate("/trades")} style={btnGhost}><ArrowLeft size={14} /> Trades</button>
-        <h1 style={{ fontSize: 28, fontWeight: 700, letterSpacing: "-0.03em", flex: 1 }}>{trade.businessName || "Unnamed Trade"}</h1>
+        <h1 style={{ fontSize: _.fontSize["3xl"], fontWeight: _.fontWeight.bold, letterSpacing: _.letterSpacing.tight, flex: 1 }}>{trade.businessName || "Unnamed Trade"}</h1>
       </div>
 
       <div style={{ marginBottom: 32 }}>
-        <div style={{ fontSize: 18, fontWeight: 600, color: _.ink, marginBottom: 16 }}>Details</div>
+        <div style={{ fontSize: _.fontSize.unit, fontWeight: _.fontWeight.semi, color: _.ink, marginBottom: 16 }}>Details</div>
         <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "1fr 1fr", gap: `${_.s3}px ${_.s4}px` }}>
           <div><label style={label}>Business Name</label><input style={input} value={trade.businessName} onChange={e => up(t => { t.businessName = e.target.value; })} /></div>
           <div><label style={label}>Category</label><input style={input} value={trade.category} onChange={e => up(t => { t.category = e.target.value; })} placeholder="Electrician, Plumber, etc." /></div>
@@ -58,10 +58,10 @@ export default function TradeDetailPage() {
 
       {/* Default Rates */}
       <div style={{ paddingTop: 24, borderTop: `1px solid ${_.line}`, marginBottom: 32 }}>
-        <div style={{ fontSize: 18, fontWeight: 600, color: _.ink, marginBottom: 8 }}>Default Rates</div>
-        <div style={{ fontSize: 12, color: _.muted, marginBottom: 16 }}>Link rate library items this trade commonly supplies.</div>
+        <div style={{ fontSize: _.fontSize.unit, fontWeight: _.fontWeight.semi, color: _.ink, marginBottom: 8 }}>Default Rates</div>
+        <div style={{ fontSize: _.fontSize.sm, color: _.muted, marginBottom: 16 }}>Link rate library items this trade commonly supplies.</div>
         {rateLibrary.items.length === 0 ? (
-          <div style={{ fontSize: 13, color: _.faint }}>No rate library items yet. <span onClick={() => navigate("/rate-library")} style={{ color: _.ac, cursor: "pointer" }}>Add some</span>.</div>
+          <div style={{ fontSize: _.fontSize.base, color: _.faint }}>No rate library items yet. <span onClick={() => navigate("/rate-library")} style={{ color: _.ac, cursor: "pointer" }}>Add some</span>.</div>
         ) : (
           <>
             {defaultRateIds.length > 0 && (
@@ -71,7 +71,7 @@ export default function TradeDetailPage() {
                   if (!item) return null;
                   return (
                     <div key={rId} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: `1px solid ${_.line}` }}>
-                      <span style={{ fontSize: 13, color: _.ink }}>{item.name} — {item.unit} @ ${item.unitRate}</span>
+                      <span style={{ fontSize: _.fontSize.base, color: _.ink }}>{item.name} — {item.unit} @ ${item.unitRate}</span>
                       <div onClick={() => up(t => { t.defaultRateIds = (t.defaultRateIds || []).filter(id => id !== rId); })}
                         style={{ cursor: "pointer", color: _.faint, padding: 2 }}
                         onMouseEnter={e => e.currentTarget.style.color = _.red}
@@ -97,10 +97,10 @@ export default function TradeDetailPage() {
       {/* Contacts */}
       <div style={{ paddingTop: 24, borderTop: `1px solid ${_.line}` }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <div style={{ fontSize: 18, fontWeight: 600, color: _.ink }}>Contacts</div>
+          <div style={{ fontSize: _.fontSize.unit, fontWeight: _.fontWeight.semi, color: _.ink }}>Contacts</div>
           <button onClick={() => up(t => { t.contacts.push(mkContact()); })} style={btnSecondary}><Plus size={13} /> Add Contact</button>
         </div>
-        {trade.contacts.length === 0 && <div style={{ fontSize: 13, color: _.muted }}>No contacts</div>}
+        {trade.contacts.length === 0 && <div style={{ fontSize: _.fontSize.base, color: _.muted }}>No contacts</div>}
         {trade.contacts.map((ct, i) => (
           <div key={ct.id} style={{ display: "grid", gridTemplateColumns: mobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr auto", gap: _.s3, marginBottom: _.s3, padding: `${_.s3}px 0`, borderBottom: `1px solid ${_.line}` }}>
             <div><label style={label}>Name</label><input style={input} value={ct.name} onChange={e => up(t => { t.contacts[i].name = e.target.value; })} /></div>

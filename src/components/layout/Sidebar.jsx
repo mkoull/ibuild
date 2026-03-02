@@ -1,7 +1,8 @@
+import { memo } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { BarChart3, PenLine, Ruler, DollarSign, ClipboardList, FileText, ArrowUpRight, Receipt, BookOpen, AlertTriangle, Wrench, FolderOpen, Users, Building2, Library, Settings, LayoutDashboard, ArrowLeft, Calendar, PieChart, Hammer } from "lucide-react";
 import _ from "../../theme/tokens.js";
-import { useApp } from "../../context/AppContext.jsx";
+import { useProjectsCtx } from "../../context/AppContext.jsx";
 import { pName } from "../../theme/styles.js";
 
 const GLOBAL_NAV = [
@@ -29,10 +30,11 @@ const PROJECT_NAV = [
     { path: "costs", label: "Costs", Ic: DollarSign },
     { path: "schedule", label: "Schedule", Ic: ClipboardList },
   ]},
-  { group: "DOCUMENTS", items: [
+  { group: "FINANCIALS", items: [
     { path: "proposals", label: "Proposals", Ic: FileText },
     { path: "variations", label: "Variations", Ic: ArrowUpRight },
     { path: "invoices", label: "Invoices", Ic: Receipt },
+    { path: "bills", label: "Bills", Ic: PieChart },
     { path: "documents", label: "Documents", Ic: FolderOpen },
   ]},
   { group: "SITE", items: [
@@ -42,15 +44,15 @@ const PROJECT_NAV = [
   ]},
 ];
 
-export default function Sidebar() {
+function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const params = useParams();
-  const { projects, clients, saveStatus } = useApp();
+  const { find, clients, saveStatus } = useProjectsCtx();
 
   const isProjectMode = !!params.id;
 
-  const project = isProjectMode ? projects.find(p => p.id === params.id) : null;
+  const project = isProjectMode ? find(params.id) : null;
 
   const nav = isProjectMode ? PROJECT_NAV : GLOBAL_NAV;
 
@@ -152,3 +154,5 @@ export default function Sidebar() {
     </aside>
   );
 }
+
+export default memo(Sidebar);
