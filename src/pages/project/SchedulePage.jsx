@@ -373,11 +373,19 @@ export default function SchedulePage() {
   const ResizeHandle = ({ col }) => (
     <div
       onMouseDown={e => handleResizeStart(e, col)}
+      onMouseEnter={e => { e.currentTarget.firstChild.style.background = _.ac; }}
+      onMouseLeave={e => { if (!resizing) e.currentTarget.firstChild.style.background = _.line2; }}
       style={{
-        position: "absolute", right: -2, top: 0, bottom: 0, width: 5,
+        position: "absolute", right: -3, top: 2, bottom: 2, width: 7,
         cursor: "col-resize", zIndex: 2,
+        display: "flex", alignItems: "center", justifyContent: "center",
       }}
-    />
+    >
+      <div style={{
+        width: 1.5, height: "60%", borderRadius: 1, background: _.line2,
+        transition: `background ${_.tr}`,
+      }} />
+    </div>
   );
 
   // Helper: get trade display name for a milestone
