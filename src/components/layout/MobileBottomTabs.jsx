@@ -146,7 +146,7 @@ export default function MobileBottomTabs() {
       {/* ─── Create Sheet ─── */}
       {showCreate && (
         <div style={{
-          position: "fixed", bottom: TAB_H + 16, left: 16, right: 16, zIndex: 52,
+          position: "fixed", bottom: "calc(var(--mobile-bottom-total) + 16px)", left: 16, right: 16, zIndex: 52,
           background: _.surface, borderRadius: _.r, boxShadow: _.sh3,
           padding: `${_.s4}px`, animation: "fadeUp 0.18s ease",
         }}>
@@ -176,7 +176,7 @@ export default function MobileBottomTabs() {
       {/* ─── More Sheet ─── */}
       {showMore && (
         <div style={{
-          position: "fixed", bottom: TAB_H + 16, left: 16, right: 16, zIndex: 52,
+          position: "fixed", bottom: "calc(var(--mobile-bottom-total) + 16px)", left: 16, right: 16, zIndex: 52,
           background: _.surface, borderRadius: _.r, boxShadow: _.sh3,
           padding: `${_.s3}px`, animation: "fadeUp 0.18s ease",
           maxHeight: "60vh", overflowY: "auto",
@@ -209,8 +209,9 @@ export default function MobileBottomTabs() {
         position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 51,
         background: _.surface, borderTop: `1px solid ${_.line}`,
         display: "flex", alignItems: "flex-end", justifyContent: "space-around",
-        height: TAB_H,
-        paddingBottom: "env(safe-area-inset-bottom, 0px)",
+        height: "var(--mobile-tab-h)",
+        paddingBottom: "var(--safe-bottom)",
+        boxSizing: "content-box",
       }}>
         {tabs.map((item, i) => {
           // Center FAB

@@ -178,7 +178,7 @@ export default function QuotePage() {
   };
 
   return (
-    <div style={{ animation: "fadeUp 0.2s ease", maxWidth: 1200 }}>
+    <div style={{ animation: "fadeUp 0.2s ease", maxWidth: 1200, paddingBottom: mobile && T.curr > 0 ? 56 : 0 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: _.s2 }}>
         <h1 style={{ fontSize: mobile ? _.fontSize["3xl"] : _.fontSize["4xl"], fontWeight: _.fontWeight.bold, letterSpacing: _.letterSpacing.tight }}>Quote</h1>
         {mobile && T.curr > 0 && <span style={{ fontSize: _.fontSize["2xl"], fontWeight: _.fontWeight.bold, color: _.ink, letterSpacing: _.letterSpacing.tight, fontVariantNumeric: "tabular-nums" }}>{fmt(T.curr)}</span>}
@@ -378,7 +378,38 @@ export default function QuotePage() {
                     </div>
                     {open && (
                       <div style={{ paddingBottom: _.s4, paddingLeft: 24, borderLeft: `2px solid ${_.line}`, marginLeft: 0 }}>
-                        {items.map((item, idx) => (
+                        {items.map((item, idx) => mobile ? (
+                          /* ── Mobile: stacked card layout ── */
+                          <div key={item._id} style={{ padding: `${_.s2}px 0`, borderBottom: `1px solid ${_.line}08` }}>
+                            {/* Row 1: checkbox + name + delete */}
+                            <div style={{ display: "flex", gap: _.s2, alignItems: "center" }}>
+                              <div onClick={() => uI(cat, idx, "on", !item.on)} style={{
+                                width: 20, height: 20, borderRadius: 5, border: `1.5px solid ${item.on ? _.ac : _.line2}`,
+                                background: item.on ? _.ac : "transparent", cursor: "pointer",
+                                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                              }}>{item.on && <Check size={11} strokeWidth={3} color="#fff" />}</div>
+                              <input style={{ flex: 1, fontSize: _.fontSize.md, color: item.on ? _.ink : _.muted, background: "transparent", border: "none", outline: "none", fontFamily: "inherit", padding: "4px 0", minWidth: 0 }}
+                                value={item.item} onChange={e => uI(cat, idx, "item", e.target.value)} />
+                              <div onClick={() => delI(cat, idx)} style={{ cursor: "pointer", color: _.faint, flexShrink: 0, padding: 4 }}>
+                                <X size={14} />
+                              </div>
+                            </div>
+                            {/* Row 2: qty / unit / rate / total — only when enabled */}
+                            {item.on && (
+                              <div style={{ display: "flex", gap: _.s2, alignItems: "center", marginTop: 4, paddingLeft: 28 }}>
+                                <input type="number" style={{ width: 52, height: 36, padding: "0 6px", background: _.well, border: `1px solid ${_.line}`, borderRadius: _.rXs, color: _.ink, fontSize: _.fontSize.base, textAlign: "center", outline: "none", fontWeight: _.fontWeight.semi, fontFamily: "inherit" }}
+                                  value={item.qty} onChange={e => uI(cat, idx, "qty", parseFloat(e.target.value) || 0)} />
+                                <input style={{ width: 44, height: 36, padding: "0 4px", background: "transparent", border: `1px solid ${_.line}`, borderRadius: _.rXs, outline: "none", fontSize: _.fontSize.sm, color: _.muted, fontFamily: "inherit", textAlign: "center" }}
+                                  value={item.unit} onChange={e => uI(cat, idx, "unit", e.target.value)} />
+                                <span style={{ fontSize: _.fontSize.sm, color: _.faint }}>@</span>
+                                <input type="number" style={{ width: 72, height: 36, padding: "0 6px", background: _.well, border: `1px solid ${_.line}`, borderRadius: _.rXs, color: _.ink, fontSize: _.fontSize.base, textAlign: "right", outline: "none", fontWeight: _.fontWeight.semi, fontFamily: "inherit" }}
+                                  value={item.rate} onChange={e => uI(cat, idx, "rate", parseFloat(e.target.value) || 0)} />
+                                <span style={{ flex: 1, fontSize: _.fontSize.md, fontWeight: _.fontWeight.bold, textAlign: "right", fontVariantNumeric: "tabular-nums", color: _.ink }}>{fmt(item.rate * item.qty)}</span>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          /* ── Desktop: inline row (unchanged) ── */
                           <div key={item._id} style={{ display: "flex", gap: _.s2, alignItems: "center", padding: "5px 0" }}>
                             <div onClick={() => uI(cat, idx, "on", !item.on)} style={{
                               width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${item.on ? _.ac : _.line2}`,
@@ -556,17 +587,17 @@ export default function QuotePage() {
         )}
       </div>
 
-      {/* Mobile: floating summary bar */}
+      {/* Mobile: floating summary bar — sits above bottom tabs + safe area */}
       {mobile && T.curr > 0 && (
         <div style={{
-          position: "fixed", bottom: 72, left: 0, right: 0,
+          position: "fixed", bottom: "var(--mobile-bottom-total)", left: 0, right: 0,
           background: _.surface, borderTop: `1px solid ${_.line}`,
-          padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center",
-          boxShadow: "0 -2px 8px rgba(0,0,0,0.06)", zIndex: 50,
+          padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center",
+          boxShadow: "0 -2px 8px rgba(0,0,0,0.06)", zIndex: 45,
         }}>
           <div>
             <div style={{ fontSize: _.fontSize.caption, color: _.muted, fontWeight: _.fontWeight.semi }}>{T.items} items</div>
-            <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums" }}>{fmt(T.curr)}</div>
+            <div style={{ fontSize: _.fontSize.lg, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums" }}>{fmt(T.curr)}</div>
           </div>
           {currentStep !== "review" && <Button size="sm" onClick={() => setStep("review")} icon={ArrowRight}>Review</Button>}
         </div>

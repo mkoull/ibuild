@@ -1,3 +1,10 @@
+:root {
+  --mobile-header-h: 52px;
+  --mobile-tab-h: 56px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --mobile-bottom-total: calc(var(--mobile-tab-h) + var(--safe-bottom));
+}
+
 html, body {
   margin: 0;
   height: auto;

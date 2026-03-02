@@ -17,7 +17,14 @@ export default function GlobalShell() {
       {mobile && <MobileHeader />}
       <div style={{ marginLeft: mobile ? 0 : 240, display: "flex", flexDirection: "column", minHeight: "100svh" }}>
         {!mobile && <TopBar />}
-        <main style={{ flex: 1, padding: mobile ? `72px ${_.s4}px 96px` : `${_.s9}px ${_.s10}px 80px` }}>
+        <main style={{
+          flex: 1,
+          paddingTop: mobile ? "var(--mobile-header-h)" : `${_.s9}px`,
+          paddingLeft: mobile ? `${_.s4}px` : `${_.s10}px`,
+          paddingRight: mobile ? `${_.s4}px` : `${_.s10}px`,
+          paddingBottom: mobile ? "calc(var(--mobile-bottom-total) + 20px)" : "80px",
+          WebkitOverflowScrolling: "touch",
+        }}>
           <Outlet />
         </main>
       </div>
