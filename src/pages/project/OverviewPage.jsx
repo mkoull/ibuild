@@ -8,6 +8,7 @@ import { getNextActions } from "../../lib/nextActions.js";
 import { getNextStepForProject } from "../../lib/nextStep.js";
 import { canTransition, isJob, isQuote, normaliseStage } from "../../lib/lifecycle.js";
 import { snapshotFromQuote, importSectionLevel, importItemLevel, recalcAllowances, baselineBudgetTotal, createBudgetBaseline } from "../../lib/budgetEngine.js";
+import { applyConvertToJobBaseline } from "../../lib/costEngine.js";
 import StagePipeline from "../../components/ui/StagePipeline.jsx";
 import Card from "../../components/ui/Card.jsx";
 import Button from "../../components/ui/Button.jsx";
@@ -16,7 +17,7 @@ import PageHero from "../../components/ui/PageHero.jsx";
 import { ArrowRight, Pencil, TrendingUp, Calendar, DollarSign, ChevronRight, Receipt } from "lucide-react";
 
 export default function OverviewPage() {
-  const { project: p, update: up, T, log, transitionStage, convertToJob } = useProject();
+  const { project: p, update: up, T, log, transitionStage } = useProject();
   const { clients, mobile, notify } = useApp();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -61,7 +62,16 @@ export default function OverviewPage() {
       setPendingReturnPath("");
       return;
     }
-    convertToJob();
+    let converted = false;
+    up(pr => {
+      converted = applyConvertToJobBaseline(pr);
+      return pr;
+    });
+    if (!converted) {
+      notify("Already converted to job.");
+      setShowConvertModal(false);
+      return;
+    }
     up(pr => {
       pr.lockedQuote = lockQuoteOnConvert && !allowQuoteEditsAfterConvert;
       pr.allowQuoteEditsAfterConversion = !!allowQuoteEditsAfterConvert;
@@ -176,6 +186,10 @@ export default function OverviewPage() {
   const nextClaim = (p.paymentSchedule || []).find(c => c.status === "Planned") || null;
 
   const recentActivity = (p.activity || []).slice(0, 8);
+  const baselineDate = p?.job?.baseline?.createdAt || p?.convertedAt || null;
+  const contractDisplay = stageIsJob
+    ? (p?.job?.contract?.currentContractValue ?? T.curr)
+    : T.curr;
 
   return (
     <div style={{ animation: "fadeUp 0.2s ease", maxWidth: 1200 }}>
@@ -197,8 +211,13 @@ export default function OverviewPage() {
         <div style={{ marginBottom: _.s7 }}>
           <div style={{ fontSize: _.fontSize.caption, color: _.body, fontWeight: _.fontWeight.semi, letterSpacing: _.letterSpacing.wider, textTransform: "uppercase", marginBottom: _.s3 }}>Contract Value</div>
           <div style={{ fontSize: mobile ? _.fontSize.stat : _.fontSize.display, fontWeight: _.fontWeight.bold, letterSpacing: _.letterSpacing.tight, lineHeight: 1, fontVariantNumeric: "tabular-nums", color: T.curr > 0 ? _.ink : _.faint }}>
-            {fmt(T.curr)}
+            {fmt(contractDisplay)}
           </div>
+          {stageIsJob && baselineDate && (
+            <div style={{ fontSize: _.fontSize.sm, color: _.muted, marginTop: _.s2 }}>
+              Baseline locked on {new Date(baselineDate).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}
+            </div>
+          )}
           {stageIsJob && T.aV !== 0 && (
             <div style={{ fontSize: _.fontSize.sm, color: _.muted, marginTop: _.s2 }}>
               Base {fmt(T.orig)} + {T.aVCount} variation{T.aVCount !== 1 ? "s" : ""} {fmt(T.aV)}

@@ -173,6 +173,12 @@ export function mkProject(overrides = {}) {
     notes: "",
     scope: mkScope(),
     costCategories: [],
+    convertedAt: null,
+    estimate: {
+      categories: [],
+      totals: { totalCost: 0, totalSell: 0, marginValue: 0, marginPercent: 0 },
+    },
+    job: null,
     variations: [],
     invoices: [],
     proposals: [],

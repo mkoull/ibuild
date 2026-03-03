@@ -4,6 +4,7 @@ import { useProject } from "../../context/ProjectContext.jsx";
 import { uid } from "../../theme/styles.js";
 import _ from "../../theme/tokens.js";
 import Button from "../../components/ui/Button.jsx";
+import { calculateTotals, normalizeCategories } from "../../lib/costEngine.js";
 
 const BOX = {
   background: _.surface,
@@ -11,76 +12,61 @@ const BOX = {
   borderRadius: _.r,
 };
 
-function toNum(v) {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : 0;
-}
-
-function calcLine(item) {
-  const quantity = toNum(item.quantity);
-  const unitRate = toNum(item.unitRate);
-  const marginPercent = toNum(item.marginPercent);
-  const costTotal = quantity * unitRate;
-  const sellTotal = costTotal + (costTotal * (marginPercent / 100));
-  return {
-    ...item,
-    quantity,
-    unitRate,
-    marginPercent,
-    costTotal: Math.round(costTotal * 100) / 100,
-    sellTotal: Math.round(sellTotal * 100) / 100,
-  };
-}
-
 function money(n) {
+  const safe = Number.isFinite(Number(n)) ? Number(n) : 0;
   return new Intl.NumberFormat("en-AU", {
     style: "currency",
     currency: "AUD",
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(toNum(n));
+  }).format(safe);
 }
 
 export default function ScopePage() {
   const { project, update } = useProject();
-  const categories = Array.isArray(project.costCategories) ? project.costCategories : [];
+  const isActive = String(project.stage || project.status || "").toLowerCase() === "active";
+  const estimateCategories = normalizeCategories(project?.estimate?.categories || project.costCategories || []);
+  const budgetCategories = normalizeCategories(project?.job?.budget?.categories || []);
+  const categories = isActive ? budgetCategories : estimateCategories;
 
-  const totals = useMemo(() => {
-    let totalCost = 0;
-    let totalSell = 0;
-    categories.forEach((cat) => {
-      (cat.items || []).forEach((item) => {
-        totalCost += toNum(item.costTotal);
-        totalSell += toNum(item.sellTotal);
-      });
-    });
-    const marginValue = totalSell - totalCost;
-    const marginPercent = totalSell > 0 ? (marginValue / totalSell) * 100 : 0;
-    return { totalCost, totalSell, marginValue, marginPercent };
-  }, [categories]);
+  const totals = useMemo(() => calculateTotals(categories), [categories]);
+  const baselineSell = Number(project?.job?.baseline?.totals?.totalSell) || 0;
+  const contractValue = Number(project?.job?.contract?.currentContractValue) || totals.totalSell;
+  const baselineDate = project?.job?.baseline?.createdAt || project?.convertedAt || null;
 
   const addCategory = () => {
+    if (isActive) return;
     update((pr) => {
       if (!Array.isArray(pr.costCategories)) pr.costCategories = [];
       pr.costCategories.push({ id: uid(), name: `Category ${pr.costCategories.length + 1}`, items: [] });
+      pr.estimate = {
+        categories: normalizeCategories(pr.costCategories),
+        totals: calculateTotals(pr.costCategories),
+      };
       return pr;
     });
   };
 
   const renameCategory = (categoryId, name) => {
+    if (isActive) return;
     update((pr) => {
       const cat = (pr.costCategories || []).find((c) => c.id === categoryId);
       if (cat) cat.name = name;
+      pr.estimate = {
+        categories: normalizeCategories(pr.costCategories),
+        totals: calculateTotals(pr.costCategories),
+      };
       return pr;
     });
   };
 
   const addLineItem = (categoryId) => {
+    if (isActive) return;
     update((pr) => {
       const cat = (pr.costCategories || []).find((c) => c.id === categoryId);
       if (!cat) return pr;
       if (!Array.isArray(cat.items)) cat.items = [];
-      cat.items.push(calcLine({
+      cat.items.push({
         id: uid(),
         description: "",
         quantity: 1,
@@ -89,12 +75,18 @@ export default function ScopePage() {
         costTotal: 0,
         marginPercent: 20,
         sellTotal: 0,
-      }));
+      });
+      cat.items = normalizeCategories([{ id: cat.id, name: cat.name, items: cat.items }])[0].items;
+      pr.estimate = {
+        categories: normalizeCategories(pr.costCategories),
+        totals: calculateTotals(pr.costCategories),
+      };
       return pr;
     });
   };
 
   const updateLineItem = (categoryId, itemId, field, value) => {
+    if (isActive) return;
     update((pr) => {
       const cat = (pr.costCategories || []).find((c) => c.id === categoryId);
       if (!cat) return pr;
@@ -103,17 +95,27 @@ export default function ScopePage() {
       const base = cat.items[idx];
       const next = field === "description" || field === "unit"
         ? { ...base, [field]: value }
-        : { ...base, [field]: toNum(value) };
-      cat.items[idx] = calcLine(next);
+        : { ...base, [field]: Number(value) };
+      const normalized = normalizeCategories([{ id: cat.id, name: cat.name, items: [next] }])[0].items[0];
+      cat.items[idx] = normalized;
+      pr.estimate = {
+        categories: normalizeCategories(pr.costCategories),
+        totals: calculateTotals(pr.costCategories),
+      };
       return pr;
     });
   };
 
   const removeLineItem = (categoryId, itemId) => {
+    if (isActive) return;
     update((pr) => {
       const cat = (pr.costCategories || []).find((c) => c.id === categoryId);
       if (!cat) return pr;
       cat.items = (cat.items || []).filter((i) => i.id !== itemId);
+      pr.estimate = {
+        categories: normalizeCategories(pr.costCategories),
+        totals: calculateTotals(pr.costCategories),
+      };
       return pr;
     });
   };
@@ -122,9 +124,16 @@ export default function ScopePage() {
     <div style={{ display: "grid", gridTemplateColumns: "1fr minmax(260px, 320px)", gap: 16, alignItems: "start" }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <h2 style={{ fontSize: 18, margin: 0, color: _.ink }}>Estimate Cost Engine</h2>
-          <Button size="sm" icon={Plus} onClick={addCategory}>Add Category</Button>
+          <h2 style={{ fontSize: 18, margin: 0, color: _.ink }}>
+            {isActive ? "Job Budget (from baseline)" : "Estimate Cost Engine"}
+          </h2>
+          {!isActive && <Button size="sm" icon={Plus} onClick={addCategory}>Add Category</Button>}
         </div>
+        {isActive && (
+          <div style={{ ...BOX, padding: 12, fontSize: 13, color: _.muted }}>
+            {baselineDate ? `Baseline locked on ${new Date(baselineDate).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}` : "Baseline locked"}
+          </div>
+        )}
 
         {categories.length === 0 && (
           <div style={{ ...BOX, padding: 20, color: _.muted }}>
@@ -149,7 +158,7 @@ export default function ScopePage() {
                   color: _.ink,
                 }}
               />
-              <Button size="sm" variant="secondary" icon={Plus} onClick={() => addLineItem(cat.id)}>Add Line Item</Button>
+              {!isActive && <Button size="sm" variant="secondary" icon={Plus} onClick={() => addLineItem(cat.id)}>Add Line Item</Button>}
             </div>
 
             <div style={{ overflowX: "auto" }}>
@@ -172,6 +181,7 @@ export default function ScopePage() {
                       <td style={{ padding: "8px 12px", borderBottom: `1px solid ${_.line}` }}>
                         <input
                           value={item.description || ""}
+                          readOnly={isActive}
                           onChange={(e) => updateLineItem(cat.id, item.id, "description", e.target.value)}
                           style={cellInput}
                         />
@@ -179,6 +189,7 @@ export default function ScopePage() {
                       <td style={{ padding: "8px 12px", borderBottom: `1px solid ${_.line}` }}>
                         <input
                           type="number"
+                          readOnly={isActive}
                           value={item.quantity ?? 0}
                           onChange={(e) => updateLineItem(cat.id, item.id, "quantity", e.target.value)}
                           style={cellInput}
@@ -187,6 +198,7 @@ export default function ScopePage() {
                       <td style={{ padding: "8px 12px", borderBottom: `1px solid ${_.line}` }}>
                         <input
                           value={item.unit || ""}
+                          readOnly={isActive}
                           onChange={(e) => updateLineItem(cat.id, item.id, "unit", e.target.value)}
                           style={cellInput}
                         />
@@ -194,6 +206,7 @@ export default function ScopePage() {
                       <td style={{ padding: "8px 12px", borderBottom: `1px solid ${_.line}` }}>
                         <input
                           type="number"
+                          readOnly={isActive}
                           value={item.unitRate ?? 0}
                           onChange={(e) => updateLineItem(cat.id, item.id, "unitRate", e.target.value)}
                           style={cellInput}
@@ -205,6 +218,7 @@ export default function ScopePage() {
                       <td style={{ padding: "8px 12px", borderBottom: `1px solid ${_.line}` }}>
                         <input
                           type="number"
+                          readOnly={isActive}
                           value={item.marginPercent ?? 0}
                           onChange={(e) => updateLineItem(cat.id, item.id, "marginPercent", e.target.value)}
                           style={cellInput}
@@ -214,14 +228,16 @@ export default function ScopePage() {
                         {money(item.sellTotal)}
                       </td>
                       <td style={{ padding: "8px 12px", borderBottom: `1px solid ${_.line}` }}>
-                        <button
-                          type="button"
-                          onClick={() => removeLineItem(cat.id, item.id)}
-                          style={{ border: "none", background: "transparent", color: _.muted, cursor: "pointer" }}
-                          title="Delete line item"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        {!isActive && (
+                          <button
+                            type="button"
+                            onClick={() => removeLineItem(cat.id, item.id)}
+                            style={{ border: "none", background: "transparent", color: _.muted, cursor: "pointer" }}
+                            title="Delete line item"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -240,6 +256,12 @@ export default function ScopePage() {
         <SummaryRow label="Total Sell" value={money(totals.totalSell)} strong />
         <SummaryRow label="Margin %" value={`${totals.marginPercent.toFixed(2)}%`} />
         <SummaryRow label="Margin $" value={money(totals.marginValue)} strong />
+        {isActive && (
+          <>
+            <SummaryRow label="Baseline Total Sell" value={money(baselineSell)} />
+            <SummaryRow label="Current Contract Value" value={money(contractValue)} strong />
+          </>
+        )}
       </aside>
     </div>
   );

@@ -6,6 +6,7 @@ import { useApp } from "../../context/AppContext.jsx";
 import { ProjectProvider } from "../../context/ProjectContext.jsx";
 import { calc } from "../../lib/calc.js";
 import { JOB_TABS, displayStage } from "../../config/workspaceTabs.js";
+import { applyConvertToJobBaseline, calculateTotals } from "../../lib/costEngine.js";
 import _ from "../../theme/tokens.js";
 import { fmt, pName, stCol, badge as badgeStyle } from "../../theme/styles.js";
 import Button from "../ui/Button.jsx";
@@ -49,8 +50,10 @@ export default function WorkspaceShell({ workspaceType }) {
   const statusColor = stCol(stage);
 
   // Quote / contract total
-  const costingsTotal = Number(project?.costingsTotals?.quoteTotal) || 0;
-  const total = isEstimate ? (costingsTotal > 0 ? costingsTotal : (totals ? totals.curr : 0)) : (totals ? totals.curr : 0);
+  const estimateTotals = calculateTotals(project?.estimate?.categories || project?.costCategories || []);
+  const activeContract = Number(project?.job?.contract?.currentContractValue) || 0;
+  const total = isActiveStage ? activeContract : estimateTotals.totalSell;
+  const baselineSell = Number(project?.job?.baseline?.totals?.totalSell) || 0;
   const marginPct = Number(totals?.marginPctNew ?? totals?.marginPctCalc ?? 0);
   const outstanding = Number(totals?.outstanding || 0);
   const marginValue = Number(totals?.forecastMarginNew ?? totals?.forecastMargin ?? 0);
@@ -71,19 +74,15 @@ export default function WorkspaceShell({ workspaceType }) {
   const showConvertPrimary = !isActiveStage;
 
   const convertToJob = () => {
+    let converted = false;
     update(project.id, (pr) => {
-      pr.stage = "Active";
-      pr.status = "Active";
-      pr.updatedAt = new Date().toISOString();
-      if (!Array.isArray(pr.activity)) pr.activity = [];
-      pr.activity.unshift({
-        action: "Converted to Job",
-        date: new Date().toLocaleDateString("en-AU"),
-        time: new Date().toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit" }),
-      });
-      if (pr.activity.length > 30) pr.activity = pr.activity.slice(0, 30);
+      converted = applyConvertToJobBaseline(pr);
       return pr;
     });
+    if (!converted) {
+      notify("Already converted to job.");
+      return;
+    }
     notify("Project converted to job");
     navigate("overview");
   };
@@ -144,11 +143,16 @@ export default function WorkspaceShell({ workspaceType }) {
           {total > 0 && (
             <div style={{ textAlign: "right", flexShrink: 0, minWidth: 170 }}>
               <div style={{ fontSize: 11, color: _.muted, fontWeight: 500, letterSpacing: "0.04em", textTransform: "uppercase" }}>
-                {isEstimate ? "Quote Total" : "Contract Total"}
+                {isActiveStage ? "Contract Value" : "Estimate Total"}
               </div>
               <div style={{ fontSize: 24, fontWeight: 700, color: _.ink, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}>
                 {fmt(total)}
               </div>
+              {isActiveStage && baselineSell > 0 && (
+                <div style={{ fontSize: 11, color: _.muted, marginTop: 4 }}>
+                  Baseline: {fmt(baselineSell)}
+                </div>
+              )}
             </div>
           )}
           {!isEstimate && (

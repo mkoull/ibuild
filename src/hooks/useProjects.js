@@ -6,7 +6,7 @@ import { shadowWriter } from "../lib/shadowWrite.js";
 import { getNextEstimateNumber } from "../config/workspaceTabs.js";
 
 const STORAGE_KEY = "ib_projects";
-const STORE_VERSION = 15;
+const STORE_VERSION = 16;
 const SAVE_DEBOUNCE_MS = 300;
 
 function hydrateProject(pr) {
@@ -280,6 +280,25 @@ function migrateProjects(data, fromVersion) {
           item.sellTotal = Math.round(sellTotal * 100) / 100;
         });
       });
+    });
+    data = norm;
+  }
+  if (fromVersion <= 15) {
+    const norm = data && data.byId ? data : { byId: {}, allIds: [] };
+    Object.values(norm.byId).forEach((p) => {
+      if (p.convertedAt === undefined) p.convertedAt = null;
+      if (!p.estimate || typeof p.estimate !== "object") {
+        p.estimate = { categories: [], totals: { totalCost: 0, totalSell: 0, marginValue: 0, marginPercent: 0 } };
+      }
+      if (!Array.isArray(p.estimate.categories)) p.estimate.categories = Array.isArray(p.costCategories) ? p.costCategories : [];
+      if (!p.estimate.totals || typeof p.estimate.totals !== "object") {
+        p.estimate.totals = { totalCost: 0, totalSell: 0, marginValue: 0, marginPercent: 0 };
+      }
+      if (p.job === undefined) p.job = null;
+      if (p.job && !p.job.contract) {
+        const base = Number(p.job?.baseline?.totals?.totalSell) || 0;
+        p.job.contract = { baseContractValue: base, approvedVariationsValue: 0, currentContractValue: base };
+      }
     });
     data = norm;
   }
