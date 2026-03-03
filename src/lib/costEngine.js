@@ -109,3 +109,61 @@ export function applyConvertToJobBaseline(pr) {
   if (pr.activity.length > 30) pr.activity = pr.activity.slice(0, 30);
   return true;
 }
+
+export function applyApprovedVariation(pr, variation) {
+  if (!pr?.job?.contract || !pr?.job?.budget) return;
+  if (variation?._appliedToJob) return;
+
+  const costImpact = toNum(variation.costImpact);
+  const sellImpact = toNum(variation.sellImpact);
+
+  if (!pr.job.contract) {
+    const base = toNum(pr.job?.baseline?.totals?.totalSell);
+    pr.job.contract = {
+      baseContractValue: base,
+      approvedVariationsValue: 0,
+      currentContractValue: base,
+    };
+  }
+
+  pr.job.contract.approvedVariationsValue = round2(
+    toNum(pr.job.contract.approvedVariationsValue) + sellImpact,
+  );
+  pr.job.contract.currentContractValue = round2(
+    toNum(pr.job.contract.baseContractValue) + toNum(pr.job.contract.approvedVariationsValue),
+  );
+
+  const budgetCategories = normalizeCategories(pr.job.budget.categories || []);
+  const variationCategoryName = "Variations";
+  let category = budgetCategories.find((c) => c.name === variationCategoryName);
+  if (!category) {
+    category = { id: `VAR-${Date.now()}`, name: variationCategoryName, items: [] };
+    budgetCategories.push(category);
+  }
+  category.items.push({
+    id: variation.id,
+    description: variation.title || variation.description || variation.number || "Variation",
+    quantity: 1,
+    unit: "sum",
+    unitRate: costImpact,
+    costTotal: round2(costImpact),
+    marginPercent: 0,
+    sellTotal: round2(sellImpact),
+    source: "variation",
+    variationId: variation.id,
+  });
+
+  const budgetTotals = calculateTotals(budgetCategories);
+  budgetTotals.totalCost = round2(toNum(budgetTotals.totalCost));
+  budgetTotals.totalSell = round2(toNum(budgetTotals.totalSell));
+  budgetTotals.marginValue = round2(toNum(budgetTotals.totalSell) - toNum(budgetTotals.totalCost));
+  budgetTotals.marginPercent = budgetTotals.totalSell > 0 ? budgetTotals.marginValue / budgetTotals.totalSell : 0;
+
+  pr.job.budget = {
+    categories: deepCopy(budgetCategories),
+    totals: budgetTotals,
+  };
+
+  variation._appliedToJob = true;
+  variation.approvedAt = variation.approvedAt || new Date().toISOString();
+}
