@@ -18,6 +18,12 @@ const SettingsPage = lazy(() => import("./pages/global/SettingsPage.jsx"));
 const DataPage = lazy(() => import("./pages/global/DataPage.jsx"));
 const QuotesListPage = lazy(() => import("./pages/global/QuotesListPage.jsx"));
 const JobsListPage = lazy(() => import("./pages/global/JobsListPage.jsx"));
+const InvoicesListPage = lazy(() => import("./pages/global/InvoicesListPage.jsx"));
+const BillsListPage = lazy(() => import("./pages/global/BillsListPage.jsx"));
+const PaymentsListPage = lazy(() => import("./pages/global/PaymentsListPage.jsx"));
+const DocumentsListPage = lazy(() => import("./pages/global/DocumentsListPage.jsx"));
+const SiteDiaryListPage = lazy(() => import("./pages/global/SiteDiaryListPage.jsx"));
+const DefectsListPage = lazy(() => import("./pages/global/DefectsListPage.jsx"));
 
 // Lazy-loaded project pages
 const OverviewPage = lazy(() => import("./pages/project/OverviewPage.jsx"));
@@ -59,6 +65,12 @@ export default function App() {
                 <Route path="jobs" element={<JobsListPage />} />
                 <Route path="clients" element={<ClientsListPage />} />
                 <Route path="clients/:clientId" element={<ClientDetailPage />} />
+                <Route path="invoices" element={<InvoicesListPage />} />
+                <Route path="bills" element={<BillsListPage />} />
+                <Route path="payments" element={<PaymentsListPage />} />
+                <Route path="documents" element={<DocumentsListPage />} />
+                <Route path="site-diary" element={<SiteDiaryListPage />} />
+                <Route path="defects" element={<DefectsListPage />} />
                 <Route path="trades" element={<TradesListPage />} />
                 <Route path="trades/:tradeId" element={<TradeDetailPage />} />
                 <Route path="rate-library" element={<RateLibraryPage />} />

@@ -22,7 +22,23 @@ export const NAV_STRUCTURE = {
       ],
     },
     { id: "projects", label: "Projects", type: "link", Ic: FolderOpen, to: "/projects", match: "/projects" },
-    { id: "trades", label: "Trades", type: "link", Ic: HardHat, to: "/trades", match: "/trades" },
+    {
+      id: "financials", label: "Financials", type: "group", Ic: Landmark,
+      children: [
+        { id: "invoices", label: "Invoices", to: "/invoices", match: "/invoices" },
+        { id: "bills", label: "Bills", to: "/bills", match: "/bills" },
+        { id: "payments", label: "Payments", to: "/payments", match: "/payments" },
+      ],
+    },
+    {
+      id: "site", label: "Site", type: "group", Ic: HardHat,
+      children: [
+        { id: "documents", label: "Documents", to: "/documents", match: "/documents" },
+        { id: "diary", label: "Diary", to: "/site-diary", match: "/site-diary" },
+        { id: "defects", label: "Defects", to: "/defects", match: "/defects" },
+        { id: "trades", label: "Trades", to: "/trades", match: "/trades" },
+      ],
+    },
     {
       id: "admin", label: "Admin", type: "group", Ic: Settings,
       children: [
