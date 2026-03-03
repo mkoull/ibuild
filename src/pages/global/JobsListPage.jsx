@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext.jsx";
 import _ from "../../theme/tokens.js";
 import { fmt, pName, stCol, badge } from "../../theme/styles.js";
@@ -18,9 +18,21 @@ const JOB_TABS = ["All", "Approved", "Active", "Invoiced", "Complete"];
 export default function JobsListPage() {
   const { projects, clients, remove, mobile, notify } = useApp();
   const navigate = useNavigate();
+  const location = useLocation();
   const [filter, setFilter] = useState("All");
   const [search, setSearch] = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);
+
+  useEffect(() => {
+    const hash = (location.hash || "").replace("#", "").toLowerCase();
+    if (hash === "invoices") {
+      navigate("/finance/invoices", { replace: true });
+      return;
+    }
+    if (hash === "documents") {
+      navigate("/site/documents", { replace: true });
+    }
+  }, [location.hash, navigate]);
 
   const jobs = projects.filter(pr => isJob(pr.stage || pr.status));
 
