@@ -46,6 +46,7 @@ export const config = {
   port: parseInt(optional("PORT", "3001"), 10),
   databaseUrl: required("DATABASE_URL"),
   encryptionKey: required("ENCRYPTION_KEY"),
+  jwtSecret: required("JWT_SECRET"),
   anthropicApiKey: optional("ANTHROPIC_API_KEY"),
   nodeEnv: optional("NODE_ENV", "development"),
   isProd,

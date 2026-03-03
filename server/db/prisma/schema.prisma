@@ -7,11 +7,43 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  users        User[]
+  projects     Project[]
+  estimates    Estimate[]
+  invoices     Invoice[]
+  observations Observation[]
+  bills        Bill[]
+  documents    Document[]
+  purchaseOrders PurchaseOrder[]
+  dailyLogs DailyLog[]
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  role      String   @default("Admin")
+  tenantId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
 model Project {
   id        String    @id @default(cuid())
   name      String    @default("")
   stage     String    @default("Lead")
   clientId  String?
+  tenantId  String?
   data      Json      @default("{}")
   createdAt DateTime  @default(now())
   updatedAt DateTime  @default(now()) @updatedAt
@@ -24,9 +56,14 @@ model Project {
   documents   Document[]
   commitments Commitment[]
   actuals     Actual[]
+  observations Observation[]
+  purchaseOrders PurchaseOrder[]
+  dailyLogs DailyLog[]
+  tenant Tenant? @relation(fields: [tenantId], references: [id])
 
   @@index([stage])
   @@index([clientId])
+  @@index([tenantId])
   @@index([deletedAt])
 }
 
@@ -70,6 +107,7 @@ model Trade {
 model Estimate {
   id        String         @id @default(cuid())
   projectId String
+  tenantId  String?
   version   Int            @default(1)
   data      Json           @default("{}")
   createdAt DateTime       @default(now())
@@ -77,8 +115,10 @@ model Estimate {
 
   project   Project        @relation(fields: [projectId], references: [id])
   lines     EstimateLine[]
+  tenant    Tenant?        @relation(fields: [tenantId], references: [id])
 
   @@index([projectId])
+  @@index([tenantId])
 }
 
 model EstimateLine {
@@ -116,6 +156,7 @@ model Variation {
 model Invoice {
   id        String    @id @default(cuid())
   projectId String
+  tenantId  String?
   number    String    @default("")
   amount    Float     @default(0)
   status    String    @default("draft")
@@ -127,14 +168,17 @@ model Invoice {
   updatedAt DateTime  @default(now()) @updatedAt
 
   project Project @relation(fields: [projectId], references: [id])
+  tenant  Tenant? @relation(fields: [tenantId], references: [id])
 
   @@index([projectId])
+  @@index([tenantId])
   @@index([status])
 }
 
 model Bill {
   id        String   @id @default(cuid())
   projectId String
+  tenantId  String?
   vendor    String   @default("")
   total     Float    @default(0)
   status    String   @default("draft")
@@ -143,13 +187,16 @@ model Bill {
   updatedAt DateTime @default(now()) @updatedAt
 
   project Project @relation(fields: [projectId], references: [id])
+  tenant  Tenant? @relation(fields: [tenantId], references: [id])
 
   @@index([projectId])
+  @@index([tenantId])
 }
 
 model Document {
   id        String   @id @default(cuid())
   projectId String
+  tenantId  String?
   name      String   @default("")
   mimeType  String   @default("")
   size      Int      @default(0)
@@ -160,9 +207,59 @@ model Document {
   updatedAt DateTime @default(now()) @updatedAt
 
   project Project @relation(fields: [projectId], references: [id])
+  tenant  Tenant? @relation(fields: [tenantId], references: [id])
 
   @@index([projectId])
+  @@index([tenantId])
   @@index([category])
+}
+
+model Observation {
+  id          String   @id @default(cuid())
+  projectId   String
+  tenantId    String?
+  description String   @default("")
+  status      String   @default("open")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id])
+  tenant  Tenant? @relation(fields: [tenantId], references: [id])
+
+  @@index([projectId])
+  @@index([tenantId])
+  @@index([status])
+}
+
+model PurchaseOrder {
+  id        String   @id @default(cuid())
+  projectId String
+  tenantId  String?
+  details   Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id])
+  tenant  Tenant? @relation(fields: [tenantId], references: [id])
+
+  @@index([projectId])
+  @@index([tenantId])
+}
+
+model DailyLog {
+  id        String   @id @default(cuid())
+  projectId String
+  tenantId  String?
+  notes     String   @default("")
+  data      Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id])
+  tenant  Tenant? @relation(fields: [tenantId], references: [id])
+
+  @@index([projectId])
+  @@index([tenantId])
 }
 
 model Commitment {
