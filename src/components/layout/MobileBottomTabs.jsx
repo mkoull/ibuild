@@ -6,7 +6,8 @@ import _ from "../../theme/tokens.js";
 import {
   LayoutDashboard, FolderOpen, Users, MoreHorizontal, BarChart3, PenLine,
   DollarSign, Calendar, Plus, X, FileText, Building2, ClipboardList,
-  Wrench, Library, Settings, ReceiptText, NotebookText, Bug,
+  Wrench, Library, Settings, ReceiptText, NotebookText, Bug, ShoppingCart,
+  FileQuestion, TrendingUp,
 } from "lucide-react";
 
 const GLOBAL_TABS = [
@@ -26,20 +27,31 @@ const PROJECT_TABS = [
 ];
 
 const GLOBAL_MORE = [
-  { path: "/trades", label: "Trades", Ic: Building2 },
-  { path: "/rate-library", label: "Rate Library", Ic: Library },
+  { type: "header", label: "Pipeline" },
+  { path: "/leads", label: "Leads", Ic: TrendingUp },
   { path: "/quotes", label: "Quotes", Ic: FileText },
   { path: "/jobs", label: "Jobs", Ic: Wrench },
+  { type: "header", label: "Site" },
+  { path: "/trades", label: "Trades", Ic: Building2 },
+  { type: "header", label: "Admin" },
+  { path: "/rate-library", label: "Rate Library", Ic: Library },
   { path: "/settings", label: "Settings", Ic: Settings },
 ];
 
 const PROJECT_MORE = [
+  { type: "header", label: "Pre-Construction" },
   { path: "scope", label: "Scope", Ic: ClipboardList },
   { path: "schedule", label: "Schedule", Ic: Calendar },
+  { type: "header", label: "Procurement" },
+  { path: "rfq", label: "RFQ", Ic: FileQuestion },
+  { path: "purchase-orders", label: "Purchase Orders", Ic: ShoppingCart },
+  { path: "work-orders", label: "Work Orders", Ic: Wrench },
+  { type: "header", label: "Financials" },
   { path: "variations", label: "Variations", Ic: ClipboardList },
   { path: "invoices", label: "Invoices", Ic: ReceiptText },
   { path: "bills", label: "Bills", Ic: DollarSign },
   { path: "payments", label: "Payments", Ic: ReceiptText },
+  { type: "header", label: "Documents & Site" },
   { path: "proposals", label: "Proposals", Ic: FileText },
   { path: "documents", label: "Documents", Ic: FolderOpen },
   { path: "site-diary", label: "Site Diary", Ic: NotebookText },
@@ -185,7 +197,21 @@ export default function MobileBottomTabs() {
           <div style={{ fontSize: _.fontSize.caption, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wider, textTransform: "uppercase", padding: `${_.s1}px ${_.s2}px`, marginBottom: _.s1 }}>
             {isProject ? "Project" : "Menu"}
           </div>
-          {moreItems.map(item => {
+          {moreItems.map((item, idx) => {
+            // Section header
+            if (item.type === "header") {
+              return (
+                <div key={`hdr-${idx}`} style={{
+                  fontSize: _.fontSize.xs, fontWeight: _.fontWeight.bold, color: _.muted,
+                  letterSpacing: _.letterSpacing.wider, textTransform: "uppercase",
+                  padding: `${_.s3}px ${_.s2}px ${_.s1}px`,
+                  marginTop: idx > 0 ? _.s1 : 0,
+                }}>
+                  {item.label}
+                </div>
+              );
+            }
+
             const active = isActive(item.path);
             return (
               <div key={item.path} onClick={() => navTo(item.path)} style={{
