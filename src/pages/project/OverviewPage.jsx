@@ -198,11 +198,31 @@ export default function OverviewPage() {
   const pendingVariationValue = (p.variations || [])
     .filter((v) => String(v.status) === "Pending")
     .reduce((t, v) => t + (Number(v.sellImpact) || 0), 0);
-  const totalClaimed = Number(T.totalClaimed || 0);
-  const totalPaid = Number(T.totalPaid || 0);
-  const outstandingReceivables = Number(T.outstandingReceivables || 0);
-  const remainingToClaim = Number(T.remainingToClaim || 0);
+  const budgetFromJobCategories = (p?.job?.budget?.categories || []).reduce((sum, cat) => {
+    return sum + (cat.items || []).reduce((s, item) => s + (Number(item.costTotal) || 0), 0);
+  }, 0);
+  const budgetValue = budgetFromJobCategories > 0
+    ? budgetFromJobCategories
+    : Number(p?.job?.budget?.totals?.totalCost || T.budgetTotal || 0);
+  const actualCostValue = (p.workingBudget || p.budget || []).reduce((sum, line) => {
+    return sum + (Number(line.actualCost ?? line.actualAmount) || 0);
+  }, 0);
+  const remainingBudgetValue = budgetValue - actualCostValue;
+  const projectedMarginValue = contractDisplay - actualCostValue;
+  const totalClaimed = Number((p.claims || []).reduce((sum, c) => sum + (Number(c.amount) || 0), 0));
+  const totalPaid = Number((p.invoices || [])
+    .filter((inv) => String(inv.status || "").toLowerCase() === "paid")
+    .reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0));
+  const outstandingReceivables = totalClaimed - totalPaid;
+  const remainingToClaim = contractDisplay - totalClaimed;
   const claimProgressPct = contractDisplay > 0 ? Math.min(100, Math.max(0, (totalClaimed / contractDisplay) * 100)) : 0;
+  const budgetProgressPct = budgetValue > 0 ? Math.min(100, Math.max(0, (actualCostValue / budgetValue) * 100)) : 0;
+  const budgetHealth = (() => {
+    if (budgetValue <= 0) return { label: "No budget", color: _.muted };
+    if (actualCostValue > budgetValue) return { label: "Over budget", color: _.red };
+    if (actualCostValue >= budgetValue * 0.95) return { label: "Within 5%", color: _.amber };
+    return { label: "Under budget", color: _.green };
+  })();
 
   return (
     <div style={{ animation: "fadeUp 0.2s ease", maxWidth: 1200 }}>
@@ -253,7 +273,89 @@ export default function OverviewPage() {
         {stage === "Complete" && !step && <div style={{ marginTop: _.s6, fontSize: _.fontSize.base, color: _.green, fontWeight: _.fontWeight.medium }}>Project complete</div>}
       </div>
 
-      {/* ─── Commercial Snapshot (Jobs only) ─── */}
+      {/* ─── Financial Command Centre ─── */}
+      {stageIsJob && (
+        <div style={{ marginBottom: _.s8 }}>
+          <div style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.semi, color: _.ink, marginBottom: _.s3 }}>Financial Command Centre</div>
+          <div style={{ display: "grid", gridTemplateColumns: mobile ? "repeat(2, 1fr)" : "repeat(5, 1fr)", gap: mobile ? _.s2 : _.s3, marginBottom: _.s3 }}>
+            <Card style={{ padding: mobile ? _.s3 : _.s4 }} icon={DollarSign} subtitle="Contract Value" accent>
+              <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Contract Value</div>
+              <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: _.ink }}>{contractDisplay > 0 ? fmt(contractDisplay) : "—"}</div>
+            </Card>
+            <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
+              <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Budget</div>
+              <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: budgetValue > 0 ? _.ink : _.faint }}>{budgetValue > 0 ? fmt(budgetValue) : "—"}</div>
+            </Card>
+            <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
+              <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Actual Cost</div>
+              <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: actualCostValue > 0 ? _.ac : _.faint }}>{actualCostValue > 0 ? fmt(actualCostValue) : "—"}</div>
+            </Card>
+            <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
+              <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Remaining Budget</div>
+              <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: budgetValue > 0 ? (remainingBudgetValue >= 0 ? _.green : _.red) : _.faint }}>
+                {budgetValue > 0 ? fmt(remainingBudgetValue) : "—"}
+              </div>
+            </Card>
+            <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
+              <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Projected Margin</div>
+              <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: projectedMarginValue >= 0 ? _.green : _.red }}>
+                {fmt(projectedMarginValue)}
+              </div>
+            </Card>
+          </div>
+
+          <div style={{ padding: `${_.s3}px ${_.s4}px`, borderRadius: _.rSm, border: `1px solid ${budgetHealth.color}33`, background: `${budgetHealth.color}10`, display: "flex", justifyContent: "space-between", alignItems: "center", gap: _.s3, flexWrap: "wrap", marginBottom: _.s3 }}>
+            <div style={{ fontSize: _.fontSize.sm, color: _.body }}>
+              <strong style={{ color: budgetHealth.color }}>Project Health:</strong> {budgetHealth.label}
+            </div>
+            <div style={{ fontSize: _.fontSize.sm, color: _.muted }}>
+              {budgetValue > 0 ? `${budgetProgressPct.toFixed(1)}% of budget used` : "Set budget to track health"}
+            </div>
+          </div>
+
+          <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
+            <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>
+              Budget vs Actual
+            </div>
+            <div style={{ height: 8, background: _.well, borderRadius: 4, overflow: "hidden", marginBottom: _.s2 }}>
+              <div style={{ height: "100%", width: `${budgetProgressPct}%`, background: budgetHealth.color, borderRadius: 4, transition: "width 0.5s ease" }} />
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: _.fontSize.sm, color: _.muted }}>
+              <span>Budget {fmt(budgetValue)}</span>
+              <span>Actual {fmt(actualCostValue)}</span>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* ─── Revenue Command Section ─── */}
+      {stageIsJob && (
+        <div style={{ marginBottom: _.s8 }}>
+          <div style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.semi, color: _.ink, marginBottom: _.s3 }}>Revenue</div>
+          <div style={{ display: "grid", gridTemplateColumns: mobile ? "repeat(2, 1fr)" : "repeat(3, 1fr)", gap: mobile ? _.s2 : _.s3, marginBottom: _.s3 }}>
+            <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
+              <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Total Claimed</div>
+              <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: totalClaimed > 0 ? _.ac : _.faint }}>{totalClaimed > 0 ? fmt(totalClaimed) : "—"}</div>
+            </Card>
+            <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
+              <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Total Paid</div>
+              <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: totalPaid > 0 ? _.green : _.faint }}>{totalPaid > 0 ? fmt(totalPaid) : "—"}</div>
+            </Card>
+            <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
+              <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Outstanding</div>
+              <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: outstandingReceivables > 0 ? _.red : _.green }}>{fmt(outstandingReceivables)}</div>
+            </Card>
+          </div>
+          <div style={{ height: 6, background: _.well, borderRadius: 3, overflow: "hidden" }}>
+            <div style={{ height: "100%", width: `${claimProgressPct}%`, background: _.ac, borderRadius: 3, transition: "width 0.5s ease" }} />
+          </div>
+          <div style={{ fontSize: _.fontSize.caption, color: _.muted, marginTop: _.s1 }}>
+            Claimed {claimProgressPct.toFixed(1)}% of contract • Remaining to claim {fmt(remainingToClaim)}
+          </div>
+        </div>
+      )}
+
+      {/* ─── Commercial Snapshot (secondary) ─── */}
       {stageIsJob && (
         <div style={{ display: "grid", gridTemplateColumns: mobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: mobile ? _.s2 : _.s3, marginBottom: mobile ? _.s6 : _.s8 }}>
           <Card style={{ padding: mobile ? _.s3 : _.s4 }} icon={DollarSign} subtitle="Contract Value" accent>
@@ -288,39 +390,6 @@ export default function OverviewPage() {
               <div style={{ fontSize: _.fontSize.base, color: _.ink }}>Pending: <strong>{fmt(pendingVariationValue)}</strong></div>
             </div>
           </Card>
-        </div>
-      )}
-      {stageIsJob && (
-        <div style={{ marginBottom: _.s8 }}>
-          <div style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.semi, color: _.ink, marginBottom: _.s3 }}>Claims & Receivables</div>
-          <div style={{ display: "grid", gridTemplateColumns: mobile ? "repeat(2, 1fr)" : "repeat(5, 1fr)", gap: mobile ? _.s2 : _.s3, marginBottom: _.s3 }}>
-            <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
-              <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Contract Value</div>
-              <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums" }}>{fmt(contractDisplay)}</div>
-            </Card>
-            <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
-              <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Total Claimed</div>
-              <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: totalClaimed > 0 ? _.ac : _.faint }}>{totalClaimed > 0 ? fmt(totalClaimed) : "—"}</div>
-            </Card>
-            <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
-              <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Total Paid</div>
-              <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: totalPaid > 0 ? _.green : _.faint }}>{totalPaid > 0 ? fmt(totalPaid) : "—"}</div>
-            </Card>
-            <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
-              <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Outstanding</div>
-              <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: outstandingReceivables > 0 ? _.red : _.green }}>{fmt(outstandingReceivables)}</div>
-            </Card>
-            <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
-              <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Remaining to Claim</div>
-              <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: remainingToClaim >= 0 ? _.ink : _.red }}>{fmt(remainingToClaim)}</div>
-            </Card>
-          </div>
-          <div style={{ height: 6, background: _.well, borderRadius: 3, overflow: "hidden" }}>
-            <div style={{ height: "100%", width: `${claimProgressPct}%`, background: _.ac, borderRadius: 3, transition: "width 0.5s ease" }} />
-          </div>
-          <div style={{ fontSize: _.fontSize.caption, color: _.muted, marginTop: _.s1 }}>
-            Claimed {claimProgressPct.toFixed(1)}% of contract
-          </div>
         </div>
       )}
 
