@@ -198,6 +198,11 @@ export default function OverviewPage() {
   const pendingVariationValue = (p.variations || [])
     .filter((v) => String(v.status) === "Pending")
     .reduce((t, v) => t + (Number(v.sellImpact) || 0), 0);
+  const totalClaimed = Number(T.totalClaimed || 0);
+  const totalPaid = Number(T.totalPaid || 0);
+  const outstandingReceivables = Number(T.outstandingReceivables || 0);
+  const remainingToClaim = Number(T.remainingToClaim || 0);
+  const claimProgressPct = contractDisplay > 0 ? Math.min(100, Math.max(0, (totalClaimed / contractDisplay) * 100)) : 0;
 
   return (
     <div style={{ animation: "fadeUp 0.2s ease", maxWidth: 1200 }}>
@@ -283,6 +288,39 @@ export default function OverviewPage() {
               <div style={{ fontSize: _.fontSize.base, color: _.ink }}>Pending: <strong>{fmt(pendingVariationValue)}</strong></div>
             </div>
           </Card>
+        </div>
+      )}
+      {stageIsJob && (
+        <div style={{ marginBottom: _.s8 }}>
+          <div style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.semi, color: _.ink, marginBottom: _.s3 }}>Claims & Receivables</div>
+          <div style={{ display: "grid", gridTemplateColumns: mobile ? "repeat(2, 1fr)" : "repeat(5, 1fr)", gap: mobile ? _.s2 : _.s3, marginBottom: _.s3 }}>
+            <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
+              <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Contract Value</div>
+              <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums" }}>{fmt(contractDisplay)}</div>
+            </Card>
+            <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
+              <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Total Claimed</div>
+              <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: totalClaimed > 0 ? _.ac : _.faint }}>{totalClaimed > 0 ? fmt(totalClaimed) : "—"}</div>
+            </Card>
+            <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
+              <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Total Paid</div>
+              <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: totalPaid > 0 ? _.green : _.faint }}>{totalPaid > 0 ? fmt(totalPaid) : "—"}</div>
+            </Card>
+            <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
+              <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Outstanding</div>
+              <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: outstandingReceivables > 0 ? _.red : _.green }}>{fmt(outstandingReceivables)}</div>
+            </Card>
+            <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
+              <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Remaining to Claim</div>
+              <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: remainingToClaim >= 0 ? _.ink : _.red }}>{fmt(remainingToClaim)}</div>
+            </Card>
+          </div>
+          <div style={{ height: 6, background: _.well, borderRadius: 3, overflow: "hidden" }}>
+            <div style={{ height: "100%", width: `${claimProgressPct}%`, background: _.ac, borderRadius: 3, transition: "width 0.5s ease" }} />
+          </div>
+          <div style={{ fontSize: _.fontSize.caption, color: _.muted, marginTop: _.s1 }}>
+            Claimed {claimProgressPct.toFixed(1)}% of contract
+          </div>
         </div>
       )}
 

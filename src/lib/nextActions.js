@@ -15,7 +15,10 @@ export function getNextActions({ project: p, totals: T, primaryRoute, primaryRea
   const stage = p.stage || p.status;
   const milestones = p.schedule || [];
   const nextMs = milestones.find(m => m.status ? m.status !== "complete" : !m.done);
-  const pendingInvoices = (p.invoices || []).filter(i => i.status === "pending" || i.status === "sent");
+  const pendingInvoices = (p.invoices || []).filter((i) => {
+    const s = String(i.status || "").toLowerCase();
+    return s === "pending" || s === "sent" || s === "unpaid" || s === "issued";
+  });
   const pendingAmount = pendingInvoices.reduce((s, i) => s + (i.amount || 0), 0);
   const openDefects = (p.defects || []).filter(d => !d.done);
   const unsignedVars = (p.variations || []).filter(v => v.status === "draft" || v.status === "pending" || v.status === "sent");

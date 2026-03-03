@@ -12,11 +12,12 @@ import PageHero from "../../components/ui/PageHero.jsx";
 import Card from "../../components/ui/Card.jsx";
 import { ReceiptText, AlertCircle, CheckCircle2, Clock } from "lucide-react";
 
-const STATUS_TABS = ["All", "Draft", "Sent", "Pending", "Paid", "Overdue", "Void"];
-const STATUS_COLORS = { draft: _.muted, sent: _.blue, pending: _.amber, paid: _.green, void: _.faint, overdue: _.red };
+const STATUS_TABS = ["All", "Draft", "Sent", "Pending", "Unpaid", "Paid", "Overdue", "Void"];
+const STATUS_COLORS = { draft: _.muted, sent: _.blue, pending: _.amber, unpaid: _.amber, paid: _.green, void: _.faint, overdue: _.red };
 
 function isOverdue(inv) {
-  if (!inv.dueAt || inv.status === "paid" || inv.status === "void") return false;
+  const status = String(inv.status || "").toLowerCase();
+  if (!inv.dueAt || status === "paid" || status === "void") return false;
   return new Date(inv.dueAt) < new Date();
 }
 

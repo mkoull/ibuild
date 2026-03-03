@@ -179,6 +179,7 @@ export function mkProject(overrides = {}) {
       totals: { totalCost: 0, totalSell: 0, marginValue: 0, marginPercent: 0 },
     },
     job: null,
+    claims: [],
     variations: [],
     invoices: [],
     proposals: [],

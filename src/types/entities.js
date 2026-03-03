@@ -116,14 +116,28 @@
 /**
  * @typedef {Object} Invoice
  * @property {string} id
+ * @property {string} claimId
+ * @property {string} number
  * @property {string} title
  * @property {number} amount
  * @property {string} type - "Progress" | "Final" | "Retention"
- * @property {string} status - "draft" | "sent" | "paid" | "void"
+ * @property {string} status - "Unpaid" | "Paid" | "Void" | "draft" | "sent" | "paid" | "void"
  * @property {string} date
+ * @property {string} issuedDate
+ * @property {string} paidDate
  * @property {string} issuedAt
  * @property {string} dueAt
  * @property {InvoiceLineItem[]} lineItems
+ */
+
+/**
+ * @typedef {Object} Claim
+ * @property {string} id
+ * @property {string} number
+ * @property {string} title
+ * @property {number} amount
+ * @property {string} status - "Draft" | "Issued" | "Paid"
+ * @property {string} createdAt
  */
 
 /**
@@ -262,6 +276,7 @@
  * @property {Milestone[]} schedule
  * @property {Variation[]} variations
  * @property {Invoice[]} invoices
+ * @property {Claim[]} claims
  * @property {BudgetLine[]} budget
  * @property {BudgetLine[]} workingBudget
  * @property {Commitment[]} commitments

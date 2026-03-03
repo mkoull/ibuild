@@ -6,7 +6,7 @@ import { shadowWriter } from "../lib/shadowWrite.js";
 import { getNextEstimateNumber } from "../config/workspaceTabs.js";
 
 const STORAGE_KEY = "ib_projects";
-const STORE_VERSION = 18;
+const STORE_VERSION = 19;
 const SAVE_DEBOUNCE_MS = 300;
 
 function hydrateProject(pr) {
@@ -366,6 +366,32 @@ function migrateProjects(data, fromVersion) {
     });
     data = norm;
   }
+  if (fromVersion <= 18) {
+    const norm = data && data.byId ? data : { byId: {}, allIds: [] };
+    Object.values(norm.byId).forEach((p) => {
+      if (!Array.isArray(p.claims)) p.claims = [];
+      p.claims = p.claims.map((c, idx) => ({
+        id: c.id || uid(),
+        number: c.number || `CLM-${String(idx + 1).padStart(3, "0")}`,
+        title: c.title || c.label || `Claim ${idx + 1}`,
+        amount: Number(c.amount) || 0,
+        status: normalizeClaimStatus(c.status),
+        createdAt: c.createdAt || new Date().toISOString(),
+      }));
+      if (!Array.isArray(p.invoices)) p.invoices = [];
+      p.invoices = p.invoices.map((inv, idx) => ({
+        ...inv,
+        id: inv.id || uid(),
+        claimId: inv.claimId || inv.claimStageId || null,
+        number: inv.number || inv.id || `INV-${String(idx + 1).padStart(3, "0")}`,
+        amount: Number(inv.amount) || 0,
+        issuedDate: inv.issuedDate || inv.issuedAt || inv.date || ds(),
+        paidDate: inv.paidDate || inv.paidAt || "",
+        status: normalizeInvoiceStatus(inv.status),
+      }));
+    });
+    data = norm;
+  }
   return data;
 }
 
@@ -375,6 +401,20 @@ function normalizeProcurementPoStatus(status) {
   if (s === "received" || s === "accepted") return "Received";
   if (s === "billed") return "Billed";
   return "Draft";
+}
+
+function normalizeClaimStatus(status) {
+  const s = String(status || "Draft").toLowerCase();
+  if (s === "issued" || s === "invoiced") return "Issued";
+  if (s === "paid") return "Paid";
+  return "Draft";
+}
+
+function normalizeInvoiceStatus(status) {
+  const s = String(status || "Unpaid").toLowerCase();
+  if (s === "paid") return "Paid";
+  if (s === "void") return "Void";
+  return "Unpaid";
 }
 
 function normalizeVariationStatus(status) {

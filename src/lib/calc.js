@@ -51,10 +51,17 @@ export function calcVariations(variations) {
  */
 export function calcInvoicing(invoices) {
   const list = invoices || [];
+  const norm = (status) => String(status || "").toLowerCase();
   return {
-    inv: list.filter(x => x.status !== "draft" && x.status !== "void").reduce((t, x) => t + (x.amount || 0), 0),
-    paid: list.filter(x => x.status === "paid").reduce((t, x) => t + (x.amount || 0), 0),
-    outstanding: list.filter(x => x.status === "sent" || x.status === "pending").reduce((t, x) => t + (x.amount || 0), 0),
+    inv: list.filter(x => {
+      const s = norm(x.status);
+      return s !== "draft" && s !== "void";
+    }).reduce((t, x) => t + (x.amount || 0), 0),
+    paid: list.filter(x => norm(x.status) === "paid").reduce((t, x) => t + (x.amount || 0), 0),
+    outstanding: list.filter(x => {
+      const s = norm(x.status);
+      return s === "sent" || s === "pending" || s === "unpaid" || s === "issued";
+    }).reduce((t, x) => t + (x.amount || 0), 0),
   };
 }
 
@@ -130,9 +137,17 @@ export function calc(p) {
 
   const scopeResult = calcScope(scope, margin, contingency);
   const varResult = calcVariations(p.variations);
-  const curr = scopeResult.orig + varResult.aV;
+  const contractValue = Number(p?.job?.contract?.currentContractValue);
+  const curr = Number.isFinite(contractValue) && contractValue > 0 ? contractValue : (scopeResult.orig + varResult.aV);
   const invResult = calcInvoicing(p.invoices);
   const budgetResult = calcBudget(p.budget, p.commitments, p.actuals, p.costAllowances, p.supplierBills, p.procurement, curr);
+  const claims = p.claims || [];
+  const totalClaimed = claims.reduce((t, c) => t + (Number(c.amount) || 0), 0);
+  const totalPaid = (p.invoices || [])
+    .filter((inv) => String(inv.status || "").toLowerCase() === "paid")
+    .reduce((t, inv) => t + (Number(inv.amount) || 0), 0);
+  const remainingToClaim = curr - totalClaimed;
+  const outstandingReceivables = totalClaimed - totalPaid;
 
   return {
     ...scopeResult,
@@ -141,6 +156,10 @@ export function calc(p) {
     ...invResult,
     margin,
     contingency,
+    totalClaimed,
+    totalPaid,
+    remainingToClaim,
+    outstandingReceivables,
     ...budgetResult,
   };
 }
