@@ -5,16 +5,16 @@ import { isJob } from "../../lib/lifecycle.js";
 import _ from "../../theme/tokens.js";
 import {
   LayoutDashboard, FolderOpen, Users, MoreHorizontal, BarChart3, PenLine,
-  DollarSign, Calendar, Plus, X, FileText, Building2, ClipboardList,
-  Wrench, Library, Settings, ReceiptText, NotebookText, Bug, ShoppingCart,
-  FileQuestion, TrendingUp,
+  DollarSign, Calendar, Plus, X, Building2, ClipboardList,
+  Wrench, Settings, ReceiptText, NotebookText, Bug, ShoppingCart,
+  FileQuestion, TrendingUp, Landmark, HardHat, Library, FileText, HandCoins,
 } from "lucide-react";
 
 const GLOBAL_TABS = [
   { path: "/dashboard", label: "Home", Ic: LayoutDashboard },
   { path: "/projects", label: "Projects", Ic: FolderOpen },
   null, // FAB slot
-  { path: "/clients", label: "Clients", Ic: Users },
+  { path: "/clients", label: "Pipeline", Ic: TrendingUp },
   { id: "more", label: "More", Ic: MoreHorizontal },
 ];
 
@@ -28,36 +28,36 @@ const PROJECT_TABS = [
 
 const GLOBAL_MORE = [
   { type: "header", label: "Pipeline" },
-  { path: "/quotes", label: "Quotes", Ic: FileText },
-  { path: "/jobs", label: "Jobs", Ic: Wrench },
-  { type: "header", label: "Financials" },
+  { path: "/clients", label: "Clients", Ic: Users },
+  { path: "/quotes", label: "Quotes", Ic: TrendingUp },
+  { path: "/jobs", label: "Jobs", Ic: HardHat },
+  { type: "header", label: "Finance" },
   { path: "/invoices", label: "Invoices", Ic: ReceiptText },
   { path: "/bills", label: "Bills", Ic: FileText },
-  { path: "/payments", label: "Payments", Ic: DollarSign },
+  { path: "/payments", label: "Payments", Ic: HandCoins },
   { type: "header", label: "Site" },
   { path: "/documents", label: "Documents", Ic: FolderOpen },
   { path: "/site-diary", label: "Site Diary", Ic: NotebookText },
   { path: "/defects", label: "Defects", Ic: Bug },
   { path: "/trades", label: "Trades", Ic: Building2 },
-  { type: "header", label: "Admin" },
+  { type: "header", label: "Settings" },
   { path: "/rate-library", label: "Rate Library", Ic: Library },
   { path: "/settings", label: "Settings", Ic: Settings },
 ];
 
 const PROJECT_MORE = [
-  { type: "header", label: "Pre-Construction" },
+  { type: "header", label: "Build" },
   { path: "scope", label: "Scope", Ic: ClipboardList },
   { path: "schedule", label: "Schedule", Ic: Calendar },
+  { path: "variations", label: "Variations", Ic: ClipboardList },
   { type: "header", label: "Procurement" },
   { path: "rfq", label: "RFQ", Ic: FileQuestion },
   { path: "purchase-orders", label: "Purchase Orders", Ic: ShoppingCart },
   { path: "work-orders", label: "Work Orders", Ic: Wrench },
-  { type: "header", label: "Financials" },
-  { path: "variations", label: "Variations", Ic: ClipboardList },
+  { type: "header", label: "Finance & Docs" },
   { path: "invoices", label: "Invoices", Ic: ReceiptText },
   { path: "bills", label: "Bills", Ic: DollarSign },
   { path: "payments", label: "Payments", Ic: ReceiptText },
-  { type: "header", label: "Documents & Site" },
   { path: "proposals", label: "Proposals", Ic: FileText },
   { path: "documents", label: "Documents", Ic: FolderOpen },
   { path: "site-diary", label: "Site Diary", Ic: NotebookText },
@@ -85,7 +85,6 @@ export default function MobileBottomTabs() {
     return location.pathname.startsWith(path);
   };
 
-  // ─── Create actions ───
   const handleNewQuote = () => {
     const p = create({
       marginPct: settings.defaultMargin ?? 18,
@@ -146,14 +145,12 @@ export default function MobileBottomTabs() {
     navTo(item.path);
   };
 
-  // Close sheets on overlay tap
   const closeAll = () => { setShowCreate(false); setShowMore(false); };
 
   const FAB_SIZE = 52;
 
   return (
     <>
-      {/* Backdrop */}
       {(showCreate || showMore) && (
         <div onClick={closeAll} style={{
           position: "fixed", inset: 0, zIndex: 49,
@@ -162,67 +159,61 @@ export default function MobileBottomTabs() {
         }} />
       )}
 
-      {/* ─── Create Sheet ─── */}
       {showCreate && (
         <div style={{
           position: "fixed", bottom: "calc(var(--mobile-bottom-total) + 16px)", left: 16, right: 16, zIndex: 52,
-          background: _.surface, borderRadius: _.r, boxShadow: _.sh3,
-          padding: `${_.s4}px`, animation: "fadeUp 0.18s ease",
+          background: _.surface, borderRadius: 10, boxShadow: _.sh3,
+          padding: 16, animation: "fadeUp 0.18s ease",
         }}>
-          <div style={{ fontSize: _.fontSize.caption, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wider, textTransform: "uppercase", marginBottom: _.s3 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: _.muted, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 12 }}>
             Create
           </div>
           {createActions.map(a => (
             <div key={a.label} onClick={a.action} style={{
-              display: "flex", alignItems: "center", gap: _.s3, padding: `${_.s3}px ${_.s2}px`,
-              borderRadius: _.rSm, cursor: "pointer", transition: `background ${_.tr}`,
+              display: "flex", alignItems: "center", gap: 12, padding: "10px 8px",
+              borderRadius: 6, cursor: "pointer", transition: `background ${_.tr}`,
             }}
               onTouchStart={e => e.currentTarget.style.background = _.well}
               onTouchEnd={e => e.currentTarget.style.background = "transparent"}
             >
               <div style={{
-                width: 36, height: 36, borderRadius: _.rMd, background: `${a.color}14`,
+                width: 36, height: 36, borderRadius: 8, background: `${a.color}14`,
                 display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
               }}>
                 <a.Ic size={18} color={a.color} strokeWidth={2} />
               </div>
-              <span style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.medium, color: _.ink }}>{a.label}</span>
+              <span style={{ fontSize: 14, fontWeight: 500, color: _.ink }}>{a.label}</span>
             </div>
           ))}
         </div>
       )}
 
-      {/* ─── More Sheet ─── */}
       {showMore && (
         <div style={{
           position: "fixed", bottom: "calc(var(--mobile-bottom-total) + 16px)", left: 16, right: 16, zIndex: 52,
-          background: _.surface, borderRadius: _.r, boxShadow: _.sh3,
-          padding: `${_.s3}px`, animation: "fadeUp 0.18s ease",
+          background: _.surface, borderRadius: 10, boxShadow: _.sh3,
+          padding: 12, animation: "fadeUp 0.18s ease",
           maxHeight: "60vh", overflowY: "auto",
         }}>
-          <div style={{ fontSize: _.fontSize.caption, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wider, textTransform: "uppercase", padding: `${_.s1}px ${_.s2}px`, marginBottom: _.s1 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: _.muted, letterSpacing: "0.06em", textTransform: "uppercase", padding: "4px 8px", marginBottom: 4 }}>
             {isProject ? "Project" : "Menu"}
           </div>
           {moreItems.map((item, idx) => {
-            // Section header
             if (item.type === "header") {
               return (
                 <div key={`hdr-${idx}`} style={{
-                  fontSize: _.fontSize.xs, fontWeight: _.fontWeight.bold, color: _.muted,
-                  letterSpacing: _.letterSpacing.wider, textTransform: "uppercase",
-                  padding: `${_.s3}px ${_.s2}px ${_.s1}px`,
-                  marginTop: idx > 0 ? _.s1 : 0,
-                }}>
-                  {item.label}
-                </div>
+                  fontSize: 10, fontWeight: 700, color: _.muted,
+                  letterSpacing: "0.06em", textTransform: "uppercase",
+                  padding: "12px 8px 4px",
+                  marginTop: idx > 0 ? 4 : 0,
+                }}>{item.label}</div>
               );
             }
-
             const active = isActive(item.path);
             return (
               <div key={item.path} onClick={() => navTo(item.path)} style={{
-                display: "flex", alignItems: "center", gap: _.s3, padding: `${_.s3}px ${_.s2}px`,
-                borderRadius: _.rSm, cursor: "pointer",
+                display: "flex", alignItems: "center", gap: 12, padding: "10px 8px",
+                borderRadius: 6, cursor: "pointer",
                 background: active ? `${_.ac}08` : "transparent",
                 transition: `background ${_.tr}`,
               }}
@@ -230,24 +221,22 @@ export default function MobileBottomTabs() {
                 onTouchEnd={e => e.currentTarget.style.background = active ? `${_.ac}08` : "transparent"}
               >
                 <item.Ic size={18} color={active ? _.ac : _.body} strokeWidth={active ? 2 : 1.5} />
-                <span style={{ fontSize: _.fontSize.md, fontWeight: active ? _.fontWeight.semi : _.fontWeight.normal, color: active ? _.ac : _.ink }}>{item.label}</span>
+                <span style={{ fontSize: 14, fontWeight: active ? 600 : 400, color: active ? _.ac : _.ink }}>{item.label}</span>
               </div>
             );
           })}
         </div>
       )}
 
-      {/* ─── Bottom Nav Bar ─── */}
       <nav style={{
         position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 51,
-        background: _.surface, borderTop: `1px solid ${_.line}`,
+        background: _.surface, borderTop: "1px solid rgba(0,0,0,0.06)",
         display: "flex", alignItems: "flex-end", justifyContent: "space-around",
         height: "calc(var(--mobile-tab-h) + var(--safe-bottom))",
         paddingBottom: "var(--safe-bottom)",
         boxSizing: "border-box",
       }}>
         {tabs.map((item) => {
-          // Center FAB
           if (item === null) {
             return (
               <div key="fab" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", minWidth: 56, position: "relative" }}>

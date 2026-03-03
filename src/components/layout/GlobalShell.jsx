@@ -5,6 +5,7 @@ import Sidebar from "./Sidebar.jsx";
 import TopBar from "./TopBar.jsx";
 import MobileHeader from "./MobileHeader.jsx";
 import MobileBottomTabs from "./MobileBottomTabs.jsx";
+import CommandBar from "./CommandBar.jsx";
 import Toast from "../ui/Toast.jsx";
 
 export default function GlobalShell() {
@@ -20,24 +21,36 @@ export default function GlobalShell() {
       fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,sans-serif",
     }}>
       <Toast toast={toast} />
+      <CommandBar />
+
       {!mobile && <Sidebar />}
       {mobile && <MobileHeader />}
-      <div style={{ marginLeft: mobile ? 0 : "var(--sidebar-w, 250px)", display: "flex", flexDirection: "column", height: "100%", minHeight: "100svh", overflow: "hidden" }}>
+
+      <div style={{
+        marginLeft: mobile ? 0 : "var(--sidebar-w, 240px)",
+        display: "flex", flexDirection: "column",
+        height: "100%", minHeight: "100svh", overflow: "hidden",
+      }}>
         {!mobile && <TopBar />}
         <main style={{
-          flex: 1,
-          minHeight: 0,
+          flex: 1, minHeight: 0,
           overflowY: "auto",
           WebkitOverflowScrolling: "touch",
-          paddingTop: mobile ? "var(--mobile-header-h)" : `${_.s9}px`,
-          paddingLeft: mobile ? `${_.s4}px` : `${_.s10}px`,
-          paddingRight: mobile ? `${_.s4}px` : `${_.s10}px`,
-          paddingBottom: mobile ? "var(--app-bottom-pad)" : "80px",
         }}>
-          <Outlet />
+          <div style={{
+            maxWidth: 1440, margin: "0 auto",
+            paddingTop: mobile ? "var(--mobile-header-h)" : 32,
+            paddingLeft: mobile ? 16 : 40,
+            paddingRight: mobile ? 16 : 40,
+            paddingBottom: mobile ? "var(--app-bottom-pad)" : 80,
+          }}>
+            <Outlet />
+          </div>
         </main>
       </div>
+
       {mobile && <MobileBottomTabs />}
+
       <style>{`
         *{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;box-sizing:border-box}
         ::selection{background:${_.ac}20;color:${_.ac}}

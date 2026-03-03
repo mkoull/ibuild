@@ -1,83 +1,48 @@
 import {
-  LayoutDashboard, Users, ClipboardList, FileText, BriefcaseBusiness,
-  CalendarClock, Landmark, GitCompareArrows, ShoppingCart, Wrench, ReceiptText,
-  HandCoins, FolderOpen, NotebookText, Bug, HardHat, Database, FileQuestion,
-  Settings, Library, TrendingUp,
+  LayoutDashboard, FolderOpen, TrendingUp, Landmark, HardHat, Settings,
 } from "lucide-react";
 
 /**
- * Global sidebar: 5 top-level items.
- * type "link"  → direct nav link
- * type "group" → expandable accordion with children[]
+ * Global sidebar — 6 flat items, no groups or nesting.
  */
 export const NAV_STRUCTURE = {
   global: [
-    { id: "dashboard", label: "Dashboard", type: "link", Ic: LayoutDashboard, to: "/dashboard", match: "/dashboard" },
-    {
-      id: "pipeline", label: "Pipeline", type: "group", Ic: TrendingUp,
-      children: [
-        { id: "clients", label: "Clients", to: "/clients", match: "/clients" },
-        { id: "quotes", label: "Quotes", to: "/quotes", match: "/quotes" },
-        { id: "jobs", label: "Jobs", to: "/jobs", match: "/jobs" },
-      ],
-    },
-    { id: "projects", label: "Projects", type: "link", Ic: FolderOpen, to: "/projects", match: "/projects" },
-    {
-      id: "financials", label: "Financials", type: "group", Ic: Landmark,
-      children: [
-        { id: "invoices", label: "Invoices", to: "/invoices", match: "/invoices" },
-        { id: "bills", label: "Bills", to: "/bills", match: "/bills" },
-        { id: "payments", label: "Payments", to: "/payments", match: "/payments" },
-      ],
-    },
-    {
-      id: "site", label: "Site", type: "group", Ic: HardHat,
-      children: [
-        { id: "documents", label: "Documents", to: "/documents", match: "/documents" },
-        { id: "diary", label: "Diary", to: "/site-diary", match: "/site-diary" },
-        { id: "defects", label: "Defects", to: "/defects", match: "/defects" },
-        { id: "trades", label: "Trades", to: "/trades", match: "/trades" },
-      ],
-    },
-    {
-      id: "admin", label: "Admin", type: "group", Ic: Settings,
-      children: [
-        { id: "rate-library", label: "Rate Library", to: "/rate-library", match: "/rate-library" },
-        { id: "settings", label: "Settings", to: "/settings", match: "/settings" },
-        { id: "data", label: "Data", to: "/settings/data", match: "/settings/data" },
-      ],
-    },
+    { id: "dashboard", label: "Dashboard", Ic: LayoutDashboard, to: "/dashboard" },
+    { id: "pipeline",  label: "Pipeline",  Ic: TrendingUp,      to: "/clients" },
+    { id: "projects",  label: "Projects",  Ic: FolderOpen,      to: "/projects" },
+    { id: "finance",   label: "Finance",   Ic: Landmark,        to: "/invoices" },
+    { id: "site",      label: "Site",      Ic: HardHat,         to: "/documents" },
+    { id: "settings",  label: "Settings",  Ic: Settings,        to: "/settings" },
   ],
 
   /**
-   * Project-level navigation consumed by ProjectShell tab bar.
+   * Mapping: sidebar item id → routes that should highlight it.
+   */
+  activeMap: {
+    dashboard: ["/dashboard"],
+    pipeline:  ["/clients", "/quotes", "/jobs", "/leads"],
+    projects:  ["/projects"],
+    finance:   ["/invoices", "/bills", "/payments"],
+    site:      ["/documents", "/site-diary", "/defects", "/trades"],
+    settings:  ["/settings", "/rate-library"],
+  },
+
+  /**
+   * Project-level horizontal tab bar — flat, no dropdowns.
    */
   project: {
     tabs: [
-      { label: "Details", path: "overview" },
-      { label: "Scope", path: "scope" },
-      { label: "Quote", path: "quote" },
-      { label: "Schedule", path: "schedule" },
-      { label: "Costs", path: "costs" },
-      { label: "Variations", path: "variations" },
-    ],
-    procurement: {
-      label: "Procurement",
-      children: [
-        { label: "RFQ", path: "rfq" },
-        { label: "Purchase Orders", path: "purchase-orders" },
-        { label: "Work Orders", path: "work-orders" },
-      ],
-    },
-    moreTabs: [
-      { label: "Invoices", path: "invoices" },
-      { label: "Bills", path: "bills" },
-      { label: "Payments", path: "payments" },
-      { label: "Proposals", path: "proposals" },
-      { label: "Documents", path: "documents" },
-      { label: "Site Diary", path: "site-diary" },
-      { label: "Defects", path: "defects" },
-      { label: "Trades", path: "trades" },
+      { label: "Overview",     path: "overview" },
+      { label: "Quote",        path: "quote" },
+      { label: "Scope",        path: "scope" },
+      { label: "Schedule",     path: "schedule" },
+      { label: "Cost",         path: "costs" },
+      { label: "Variations",   path: "variations" },
+      { label: "Procurement",  path: "purchase-orders" },
+      { label: "Invoices",     path: "invoices" },
+      { label: "Documents",    path: "documents" },
+      { label: "Diary",        path: "site-diary" },
+      { label: "Defects",      path: "defects" },
     ],
   },
 };
