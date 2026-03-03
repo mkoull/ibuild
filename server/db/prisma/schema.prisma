@@ -1,0 +1,248 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Project {
+  id        String    @id @default(cuid())
+  name      String    @default("")
+  stage     String    @default("Lead")
+  clientId  String?
+  data      Json      @default("{}")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+  deletedAt DateTime?
+
+  estimates   Estimate[]
+  variations  Variation[]
+  invoices    Invoice[]
+  bills       Bill[]
+  documents   Document[]
+  commitments Commitment[]
+  actuals     Actual[]
+
+  @@index([stage])
+  @@index([clientId])
+  @@index([deletedAt])
+}
+
+model Contact {
+  id          String    @id @default(cuid())
+  displayName String    @default("")
+  companyName String    @default("")
+  email       String    @default("")
+  phone       String    @default("")
+  address     String    @default("")
+  suburb      String    @default("")
+  state       String    @default("")
+  postcode    String    @default("")
+  status      String    @default("active")
+  data        Json      @default("{}")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now()) @updatedAt
+  deletedAt   DateTime?
+
+  @@index([status])
+  @@index([deletedAt])
+}
+
+model Trade {
+  id           String    @id @default(cuid())
+  businessName String    @default("")
+  category     String    @default("")
+  status       String    @default("active")
+  data         Json      @default("{}")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @default(now()) @updatedAt
+  deletedAt    DateTime?
+
+  commitments Commitment[]
+
+  @@index([category])
+  @@index([status])
+  @@index([deletedAt])
+}
+
+model Estimate {
+  id        String         @id @default(cuid())
+  projectId String
+  version   Int            @default(1)
+  data      Json           @default("{}")
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @default(now()) @updatedAt
+
+  project   Project        @relation(fields: [projectId], references: [id])
+  lines     EstimateLine[]
+
+  @@index([projectId])
+}
+
+model EstimateLine {
+  id          String   @id @default(cuid())
+  estimateId  String
+  section     String   @default("")
+  description String   @default("")
+  qty         Float    @default(0)
+  unit        String   @default("")
+  rate        Float    @default(0)
+  amount      Float    @default(0)
+  createdAt   DateTime @default(now())
+
+  estimate Estimate @relation(fields: [estimateId], references: [id])
+
+  @@index([estimateId])
+}
+
+model Variation {
+  id        String   @id @default(cuid())
+  projectId String
+  title     String   @default("")
+  amount    Float    @default(0)
+  status    String   @default("draft")
+  data      Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id])
+
+  @@index([projectId])
+  @@index([status])
+}
+
+model Invoice {
+  id        String    @id @default(cuid())
+  projectId String
+  number    String    @default("")
+  amount    Float     @default(0)
+  status    String    @default("draft")
+  issuedAt  DateTime?
+  dueAt     DateTime?
+  paidAt    DateTime?
+  data      Json      @default("{}")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id])
+
+  @@index([projectId])
+  @@index([status])
+}
+
+model Bill {
+  id        String   @id @default(cuid())
+  projectId String
+  vendor    String   @default("")
+  total     Float    @default(0)
+  status    String   @default("draft")
+  data      Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id])
+
+  @@index([projectId])
+}
+
+model Document {
+  id        String   @id @default(cuid())
+  projectId String
+  name      String   @default("")
+  mimeType  String   @default("")
+  size      Int      @default(0)
+  url       String   @default("")
+  category  String   @default("")
+  data      Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id])
+
+  @@index([projectId])
+  @@index([category])
+}
+
+model Commitment {
+  id          String    @id @default(cuid())
+  projectId   String
+  tradeId     String?
+  type        String    @default("commitment")
+  description String    @default("")
+  amount      Float     @default(0)
+  status      String    @default("draft")
+  data        Json      @default("{}")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now()) @updatedAt
+  deletedAt   DateTime?
+
+  project Project  @relation(fields: [projectId], references: [id])
+  trade   Trade?   @relation(fields: [tradeId], references: [id])
+  actuals Actual[]
+
+  @@index([projectId])
+  @@index([tradeId])
+  @@index([type])
+  @@index([status])
+  @@index([deletedAt])
+}
+
+model Actual {
+  id           String   @id @default(cuid())
+  projectId    String
+  commitmentId String?
+  description  String   @default("")
+  amount       Float    @default(0)
+  date         DateTime @default(now())
+  data         Json     @default("{}")
+  createdAt    DateTime @default(now())
+
+  project    Project     @relation(fields: [projectId], references: [id])
+  commitment Commitment? @relation(fields: [commitmentId], references: [id])
+
+  @@index([projectId])
+  @@index([commitmentId])
+}
+
+model Settings {
+  id        String   @id @default("app_settings")
+  data      Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+model RateCategory {
+  id        String     @id @default(cuid())
+  name      String     @default("")
+  createdAt DateTime   @default(now())
+
+  items RateItem[]
+}
+
+model RateItem {
+  id          String   @id @default(cuid())
+  categoryId  String
+  description String   @default("")
+  unit        String   @default("")
+  rate        Float    @default(0)
+  createdAt   DateTime @default(now())
+
+  category RateCategory @relation(fields: [categoryId], references: [id])
+
+  @@index([categoryId])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  action     String
+  entityType String
+  entityId   String
+  before     Json?
+  after      Json?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}

@@ -1,6 +1,7 @@
 import { useStore } from "./useStore.js";
 import { mkClient } from "../data/models.js";
 import { findById, upsert, removeById } from "../data/store.js";
+import { shadowWriter } from "../lib/shadowWrite.js";
 
 export function useClients() {
   const [clients, setClients] = useStore("ib_clients", []);
@@ -11,6 +12,7 @@ export function useClients() {
     create: (overrides) => {
       const c = mkClient(overrides);
       setClients(prev => [...prev, c]);
+      shadowWriter.onClientSave(c);
       return c;
     },
     update: (id, fn) => {
@@ -18,10 +20,15 @@ export function useClients() {
         if (c.id !== id) return c;
         const copy = JSON.parse(JSON.stringify(c));
         const result = fn(copy);
-        return result || copy;
+        const updated = result || copy;
+        shadowWriter.onClientSave(updated);
+        return updated;
       }));
     },
-    upsert: (client) => setClients(prev => upsert(prev, client)),
+    upsert: (client) => {
+      setClients(prev => upsert(prev, client));
+      shadowWriter.onClientSave(client);
+    },
     remove: (id) => setClients(prev => removeById(prev, id)),
     setClients,
   };

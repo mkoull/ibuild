@@ -88,6 +88,50 @@ export function mkCostAllowances(overrides = {}) {
   };
 }
 
+export function mkPurchaseOrder(overrides = {}) {
+  return {
+    id: uid(),
+    tradeId: "",
+    items: [],
+    status: "draft",
+    totalAmount: 0,
+    issueDate: new Date().toISOString().split("T")[0],
+    expectedDelivery: "",
+    linkedBudgetLineId: null,
+    notes: "",
+    ...overrides,
+  };
+}
+
+export function mkWorkOrder(overrides = {}) {
+  return {
+    id: uid(),
+    tradeId: "",
+    description: "",
+    scheduledDate: "",
+    completedDate: "",
+    status: "draft",
+    amount: 0,
+    milestoneId: "",
+    notes: "",
+    ...overrides,
+  };
+}
+
+export function mkRFQ(overrides = {}) {
+  return {
+    id: uid(),
+    tradeIds: [],
+    scopeItems: [],
+    dueDate: "",
+    status: "draft",
+    responses: [],
+    notes: "",
+    createdAt: ds(),
+    ...overrides,
+  };
+}
+
 export function mkProject(overrides = {}) {
   const now = new Date().toISOString();
   return {
@@ -148,6 +192,10 @@ export function mkProject(overrides = {}) {
     depositPct: 5,
     paymentDays: 14,
     defectsWeeks: 13,
+    purchaseOrders: [],
+    workOrders: [],
+    rfqs: [],
+    documents: [],
     assignedTradeIds: [],
     diary: [],
     defects: [],

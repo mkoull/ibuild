@@ -16,6 +16,7 @@ import TradesListPage from "./pages/global/TradesListPage.jsx";
 import TradeDetailPage from "./pages/global/TradeDetailPage.jsx";
 import RateLibraryPage from "./pages/global/RateLibraryPage.jsx";
 import SettingsPage from "./pages/global/SettingsPage.jsx";
+import DataPage from "./pages/global/DataPage.jsx";
 import QuotesListPage from "./pages/global/QuotesListPage.jsx";
 import JobsListPage from "./pages/global/JobsListPage.jsx";
 
@@ -40,6 +41,7 @@ import BillsPage from "./pages/project/BillsPage.jsx";
 import PaymentsPage from "./pages/project/PaymentsPage.jsx";
 import WorkOrdersPage from "./pages/project/WorkOrdersPage.jsx";
 import PurchaseOrdersPage from "./pages/project/PurchaseOrdersPage.jsx";
+import RFQPage from "./pages/project/RFQPage.jsx";
 
 export default function App() {
   return (
@@ -60,6 +62,7 @@ export default function App() {
             <Route path="trades/:tradeId" element={<TradeDetailPage />} />
             <Route path="rate-library" element={<RateLibraryPage />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="settings/data" element={<DataPage />} />
 
             {/* Project routes */}
             <Route path="projects/:id" element={<ProjectShell />}>
@@ -85,6 +88,7 @@ export default function App() {
               <Route path="trades" element={<ProjectTradesPage />} />
               <Route path="work-orders" element={<WorkOrdersPage />} />
               <Route path="purchase-orders" element={<PurchaseOrdersPage />} />
+              <Route path="rfq" element={<RFQPage />} />
               <Route path="modules" element={<Navigate to="overview" replace />} />
             </Route>
             <Route path="modules/:moduleId" element={<Navigate to="/projects" replace />} />

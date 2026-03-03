@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { shadowWriter } from "../lib/shadowWrite.js";
 
 const DEFAULTS = {
   companyName: "",
@@ -27,6 +28,7 @@ export function useSettings() {
     const merged = typeof next === "function" ? next(load()) : { ...load(), ...next };
     localStorage.setItem("ib_settings", JSON.stringify(merged));
     setSettings(merged);
+    shadowWriter.onSettingsSave(merged);
   }, []);
 
   const refresh = useCallback(() => setSettings(load()), []);

@@ -2,9 +2,10 @@ import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { uid, ds } from "../theme/styles.js";
 import { mkProject } from "../data/models.js";
 import { loadVersioned, saveVersioned } from "../data/store.js";
+import { shadowWriter } from "../lib/shadowWrite.js";
 
 const STORAGE_KEY = "ib_projects";
-const STORE_VERSION = 10;
+const STORE_VERSION = 11;
 const SAVE_DEBOUNCE_MS = 300;
 
 function hydrateProject(pr) {
@@ -197,6 +198,16 @@ function migrateProjects(data, fromVersion) {
     });
     data = norm;
   }
+  if (fromVersion <= 10) {
+    const norm = data && data.byId ? data : { byId: {}, allIds: [] };
+    Object.values(norm.byId).forEach(p => {
+      if (!Array.isArray(p.purchaseOrders)) p.purchaseOrders = [];
+      if (!Array.isArray(p.workOrders)) p.workOrders = [];
+      if (!Array.isArray(p.rfqs)) p.rfqs = [];
+      if (!Array.isArray(p.documents)) p.documents = [];
+    });
+    data = norm;
+  }
   return data;
 }
 
@@ -228,6 +239,8 @@ export function useProjects() {
     setSaveStatus("saving");
     timer.current = setTimeout(() => {
       saveVersioned(STORAGE_KEY, state, STORE_VERSION);
+      // Shadow write each project to backend
+      Object.values(state.byId).forEach(p => shadowWriter.onProjectSave(p));
       setSaveStatus(new Date().toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit" }));
     }, SAVE_DEBOUNCE_MS);
     return () => { if (timer.current) clearTimeout(timer.current); };

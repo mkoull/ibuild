@@ -5,12 +5,16 @@ import Section from "../../components/ui/Section.jsx";
 import Card from "../../components/ui/Card.jsx";
 import Button from "../../components/ui/Button.jsx";
 import { useApp } from "../../context/AppContext.jsx";
-import { Save, Upload, X } from "lucide-react";
+import { Save, Upload, X, Database, RefreshCw, ArrowUpFromLine, ArrowDownToLine } from "lucide-react";
 
 export default function SettingsPage() {
-  const { mobile, notify, settingsHook } = useApp();
+  const { mobile, notify, settingsHook, featureFlags, api } = useApp();
   const [settings, setLocal] = useState(() => ({ ...settingsHook.settings }));
   const fileRef = useRef(null);
+  const [syncing, setSyncing] = useState(false);
+
+  const flags = featureFlags?.flags || {};
+  const setFlag = featureFlags?.setFlag;
 
   const set = (k, v) => setLocal(prev => ({ ...prev, [k]: v }));
 
@@ -26,6 +30,115 @@ export default function SettingsPage() {
     const reader = new FileReader();
     reader.onload = (ev) => set("logo", ev.target.result);
     reader.readAsDataURL(file);
+  };
+
+  const exportToServer = async () => {
+    if (!api) return;
+    setSyncing(true);
+    try {
+      // Push all localStorage data to backend
+      const data = {};
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key.startsWith("ib_")) {
+          try { data[key] = JSON.parse(localStorage.getItem(key)); } catch { /* ignore */ }
+        }
+      }
+
+      // Push projects
+      const projects = data.ib_projects?.byId || {};
+      for (const p of Object.values(projects)) {
+        try {
+          await api.put(`/projects/${p.id}`, { name: p.name, stage: p.stage, clientId: p.clientId, data: p });
+        } catch {
+          try { await api.post("/projects", { id: p.id, name: p.name, stage: p.stage, clientId: p.clientId, data: p }); } catch { /* ignore */ }
+        }
+      }
+
+      // Push clients
+      const clients = data.ib_clients || [];
+      for (const c of clients) {
+        try {
+          await api.put(`/clients/${c.id}`, { ...c, data: c });
+        } catch {
+          try { await api.post("/clients", { ...c, data: c }); } catch { /* ignore */ }
+        }
+      }
+
+      // Push trades
+      const trades = data.ib_trades || [];
+      for (const t of trades) {
+        try {
+          await api.put(`/trades/${t.id}`, { ...t, data: t });
+        } catch {
+          try { await api.post("/trades", { ...t, data: t }); } catch { /* ignore */ }
+        }
+      }
+
+      // Push settings
+      if (data.ib_settings) {
+        try { await api.put("/settings", data.ib_settings); } catch { /* ignore */ }
+      }
+
+      notify("Data exported to server");
+    } catch (err) {
+      notify("Export failed: " + err.message, "error");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const importFromServer = async () => {
+    if (!api) return;
+    setSyncing(true);
+    try {
+      // Pull projects
+      const projects = await api.get("/projects");
+      if (Array.isArray(projects) && projects.length > 0) {
+        // Fetch full data for each project
+        const byId = {};
+        const allIds = [];
+        for (const summary of projects) {
+          try {
+            const full = await api.get(`/projects/${summary.id}`);
+            if (full && full.data) {
+              byId[summary.id] = full.data;
+              allIds.push(summary.id);
+            }
+          } catch { /* ignore */ }
+        }
+        if (allIds.length > 0) {
+          localStorage.setItem("ib_projects", JSON.stringify({ version: 11, data: { byId, allIds } }));
+        }
+      }
+
+      // Pull clients
+      const clients = await api.get("/clients");
+      if (Array.isArray(clients)) {
+        const clientData = clients.map(c => c.data || c);
+        localStorage.setItem("ib_clients", JSON.stringify(clientData));
+      }
+
+      // Pull trades
+      const trades = await api.get("/trades");
+      if (Array.isArray(trades)) {
+        const tradeData = trades.map(t => t.data || t);
+        localStorage.setItem("ib_trades", JSON.stringify(tradeData));
+      }
+
+      // Pull settings
+      const serverSettings = await api.get("/settings");
+      if (serverSettings && typeof serverSettings === "object") {
+        localStorage.setItem("ib_settings", JSON.stringify(serverSettings));
+        settingsHook.refresh();
+      }
+
+      notify("Data imported from server — refresh to see changes");
+    } catch (err) {
+      notify("Import failed: " + err.message, "error");
+    } finally {
+      setSyncing(false);
+    }
   };
 
   return (
@@ -99,9 +212,42 @@ export default function SettingsPage() {
         </div>
       </Card>
 
-      <Card title="Data" style={{ marginBottom: 24 }}>
-        <div style={{ fontSize: _.fontSize.base, color: _.body, marginBottom: 12 }}>All data is stored locally in your browser. No cloud sync.</div>
-        <div style={{ display: "flex", gap: _.s3 }}>
+      <Card title="Data & Sync" style={{ marginBottom: 24 }}>
+        <div style={{ fontSize: _.fontSize.base, color: _.body, marginBottom: 16 }}>
+          Manage how data is stored and synchronised between browser and server.
+        </div>
+
+        {/* Feature flag toggles */}
+        {setFlag && (
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: _.s3, marginBottom: _.s3 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: _.fontSize.base }}>
+                <input type="checkbox" checked={flags.shadow_write_enabled || false} onChange={e => setFlag("shadow_write_enabled", e.target.checked)} />
+                Shadow write to server
+              </label>
+              <span style={{ fontSize: _.fontSize.xs, color: _.muted }}>Writes data to Postgres in background (fire-and-forget)</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: _.s3 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: _.fontSize.base }}>
+                <input type="checkbox" checked={flags.backend_source_of_truth || false} onChange={e => setFlag("backend_source_of_truth", e.target.checked)} />
+                Backend as source of truth
+              </label>
+              <span style={{ fontSize: _.fontSize.xs, color: _.muted }}>Read from server instead of localStorage</span>
+            </div>
+          </div>
+        )}
+
+        {/* Sync buttons */}
+        <div style={{ display: "flex", gap: _.s3, marginBottom: 16 }}>
+          <Button variant="secondary" size="sm" icon={ArrowUpFromLine} onClick={exportToServer} disabled={syncing}>
+            {syncing ? "Syncing..." : "Export to Server"}
+          </Button>
+          <Button variant="secondary" size="sm" icon={ArrowDownToLine} onClick={importFromServer} disabled={syncing}>
+            {syncing ? "Syncing..." : "Import from Server"}
+          </Button>
+        </div>
+
+        <div style={{ borderTop: `1px solid ${_.line}`, paddingTop: 16, display: "flex", gap: _.s3 }}>
           <Button variant="secondary" size="sm" onClick={() => {
             const data = {};
             for (let i = 0; i < localStorage.length; i++) {
@@ -114,7 +260,7 @@ export default function SettingsPage() {
             a.download = `ibuild-backup-${new Date().toISOString().split("T")[0]}.json`;
             a.click();
             notify("Backup exported");
-          }}>Export Backup</Button>
+          }}>Export Backup (JSON)</Button>
           <Button variant="secondary" size="sm" onClick={() => {
             const inp = document.createElement("input");
             inp.type = "file";
@@ -134,7 +280,7 @@ export default function SettingsPage() {
               reader.readAsText(file);
             };
             inp.click();
-          }}>Import Backup</Button>
+          }}>Import Backup (JSON)</Button>
         </div>
       </Card>
     </Section>

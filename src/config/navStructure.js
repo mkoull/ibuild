@@ -1,7 +1,7 @@
 import {
   Users, ClipboardList, ListChecks, FileCheck, FileText, BriefcaseBusiness,
   CalendarClock, Landmark, GitCompareArrows, ShoppingCart, Wrench, ReceiptText,
-  HandCoins, FolderOpen, NotebookText, Bug, HardHat,
+  HandCoins, FolderOpen, NotebookText, Bug, HardHat, Database, FileQuestion,
 } from "lucide-react";
 
 export const NAV_STRUCTURE = {
@@ -33,6 +33,7 @@ export const NAV_STRUCTURE = {
         { id: "variations", label: "Variations", Ic: GitCompareArrows, to: "/jobs#variations", match: "/jobs" },
         { id: "purchase-orders", label: "Purchase Orders", Ic: ShoppingCart, to: "/jobs#purchase-orders", match: "/jobs" },
         { id: "work-orders", label: "Work Orders", Ic: Wrench, to: "/jobs#work-orders", match: "/jobs" },
+        { id: "rfq", label: "RFQ", Ic: FileQuestion, to: "/jobs#rfq", match: "/jobs" },
       ],
     },
     {
@@ -52,6 +53,7 @@ export const NAV_STRUCTURE = {
         { id: "site-diary", label: "Site Diary", Ic: NotebookText, to: "/jobs#site-diary", match: "/jobs" },
         { id: "defects", label: "Defects", Ic: Bug, to: "/jobs#defects", match: "/jobs" },
         { id: "trades", label: "Trades", Ic: HardHat, to: "/trades", match: "/trades" },
+        { id: "data", label: "Data", Ic: Database, to: "/settings/data", match: "/settings/data" },
       ],
     },
   ],
@@ -83,6 +85,7 @@ export const NAV_STRUCTURE = {
         { id: "variations", label: "Variations", Ic: GitCompareArrows, to: "variations", match: "variations" },
         { id: "purchase-orders", label: "Purchase Orders", Ic: ShoppingCart, to: "purchase-orders", match: "purchase-orders" },
         { id: "work-orders", label: "Work Orders", Ic: Wrench, to: "work-orders", match: "work-orders" },
+        { id: "rfq", label: "RFQ", Ic: FileQuestion, to: "rfq", match: "rfq" },
       ],
     },
     {

@@ -14,3 +14,8 @@ test("quotes list page opens", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Quotes" })).toBeVisible();
 });
 
+test("settings data page opens", async ({ page }) => {
+  await page.goto("/settings/data");
+  await expect(page.getByRole("heading", { name: "Data Admin" })).toBeVisible();
+});
+
