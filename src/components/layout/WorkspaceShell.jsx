@@ -186,35 +186,27 @@ export default function WorkspaceShell({ workspaceType }) {
       }}>
         {tabs.map(t => {
           const active = resolvedActive === t.path;
-          const locked = !!t.isLocked?.(project);
 
           return (
             <div
               key={t.label}
-              onClick={() => {
-                if (locked) {
-                  navigate(t.path);
-                } else {
-                  navigate(t.path);
-                }
-              }}
+              onClick={() => navigate(t.path)}
               style={{
                 padding: "10px 16px",
                 cursor: "pointer",
                 fontSize: 13,
                 fontWeight: active ? 600 : 400,
-                color: locked ? _.faint : active ? _.ink : _.muted,
+                color: active ? _.ink : _.muted,
                 borderBottom: active ? `2px solid ${_.ac}` : "2px solid transparent",
                 marginBottom: -1,
                 whiteSpace: "nowrap",
                 transition: "all 0.1s ease",
-                opacity: locked ? 0.5 : 1,
               }}
               onMouseEnter={e => {
-                if (!active && !locked) e.currentTarget.style.color = _.body;
+                if (!active) e.currentTarget.style.color = _.body;
               }}
               onMouseLeave={e => {
-                if (!active && !locked) e.currentTarget.style.color = _.muted;
+                if (!active) e.currentTarget.style.color = _.muted;
               }}
             >
               {t.label}
