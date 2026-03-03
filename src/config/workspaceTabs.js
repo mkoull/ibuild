@@ -15,6 +15,20 @@ export function displayStage(stage) {
 }
 
 export const DEFAULT_LOCKED_MESSAGE = "Convert this quote to a job to unlock this area";
+const ACTIVE_STAGE = "Active";
+const LOCKED_UNTIL_ACTIVE = new Set([
+  "schedule",
+  "costs",
+  "variations",
+  "procurement",
+  "invoices",
+  "site-diary",
+  "defects",
+]);
+
+function isActiveStage(project) {
+  return String(project?.stage || project?.status || "").toLowerCase() === ACTIVE_STAGE.toLowerCase();
+}
 export function isEstimateConverted(estimate) {
   return !!estimate?.jobId || String(estimate?.status || "").toLowerCase() === "converted";
 }
@@ -128,16 +142,23 @@ export const ESTIMATE_TABS = [
 
 /** Job workspace tabs */
 export const JOB_TABS = [
-  { label: "Overview", path: "overview" },
-  { label: "Schedule", path: "schedule" },
-  { label: "Budget/Cost Tracker", path: "costs" },
-  { label: "Procurement", path: "procurement" },
-  { label: "Variations", path: "variations" },
-  { label: "Invoices", path: "invoices" },
-  { label: "Docs", path: "documents" },
-  { label: "Diary", path: "site-diary" },
-  { label: "Defects", path: "defects" },
+  { label: "Overview", path: "overview", isLocked: () => false },
+  { label: "Scope", path: "scope", isLocked: () => false },
+  { label: "Quote", path: "quote", isLocked: () => false },
+  { label: "Schedule", path: "schedule", isLocked: (project) => !isActiveStage(project) },
+  { label: "Costs", path: "costs", isLocked: (project) => !isActiveStage(project) },
+  { label: "Variations", path: "variations", isLocked: (project) => !isActiveStage(project) },
+  { label: "Procurement", path: "procurement", isLocked: (project) => !isActiveStage(project) },
+  { label: "Invoices", path: "invoices", isLocked: (project) => !isActiveStage(project) },
+  { label: "Documents", path: "documents", isLocked: () => false },
+  { label: "Diary", path: "site-diary", isLocked: (project) => !isActiveStage(project) },
+  { label: "Defects", path: "defects", isLocked: (project) => !isActiveStage(project) },
 ];
+
+export function isLifecycleTabLocked(path, project) {
+  if (!LOCKED_UNTIL_ACTIVE.has(path)) return false;
+  return !isActiveStage(project);
+}
 
 /** Build the workspace URL for a project */
 export function getWorkspaceUrl(project) {

@@ -5,21 +5,19 @@ import { useProjectsCtx } from "../../context/AppContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
 import { ProjectProvider } from "../../context/ProjectContext.jsx";
 import { calc } from "../../lib/calc.js";
-import { isQuote } from "../../lib/lifecycle.js";
-import { ESTIMATE_TABS, JOB_TABS, displayStage, isEstimateConverted } from "../../config/workspaceTabs.js";
-import { getNextJobNumber } from "../../config/workspaceTabs.js";
+import { JOB_TABS, displayStage } from "../../config/workspaceTabs.js";
 import _ from "../../theme/tokens.js";
 import { fmt, pName, stCol, badge as badgeStyle } from "../../theme/styles.js";
 import Button from "../ui/Button.jsx";
-import { uid } from "../../theme/styles.js";
 
 export default function WorkspaceShell({ workspaceType }) {
   const { id, estimateId, jobId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const { find, clients, projects, create, update } = useProjectsCtx();
+  const { find, clients, update } = useProjectsCtx();
   const { notify } = useApp();
   const entityId = estimateId || jobId || id;
+  const isEstimate = workspaceType === "estimate";
 
   const project = find(entityId);
   const totals = useMemo(() => project ? calc(project) : null, [project]);
@@ -27,8 +25,8 @@ export default function WorkspaceShell({ workspaceType }) {
   if (!project) return <Navigate to={isEstimate ? "/estimates" : "/jobs"} replace />;
 
   const stage = project.stage || project.status || "Lead";
-  const isEstimate = workspaceType === "estimate" || isQuote(stage);
-  const tabs = isEstimate ? ESTIMATE_TABS : JOB_TABS;
+  const tabs = JOB_TABS;
+  const isActiveStage = String(stage).toLowerCase() === "active";
 
   const breadcrumbLabel = isEstimate ? "Estimates" : "Jobs";
   const breadcrumbTo = isEstimate ? "/estimates" : "/jobs";
@@ -56,85 +54,24 @@ export default function WorkspaceShell({ workspaceType }) {
   const resolvedActive = tabs.find(t => t.path === activeTabPath)?.path
     || tabs.find(t => !(t.isLocked?.(project)))?.path
     || "overview";
-  const showConvertPrimary = isEstimate && !isEstimateConverted(project);
-
-  const toBudgetLine = (line, index) => {
-    const qty = Number(line.qty) || 0;
-    const unitCost = Number(line.unitCost) || 0;
-    const markupPct = Number(line.markupPct) || 0;
-    const budgetAmount = Math.round((qty * unitCost * (1 + markupPct / 100)) * 100) / 100;
-    return {
-      id: uid(),
-      category: line.category || "General",
-      trade: line.category || "General",
-      item: line.description || `Line ${index + 1}`,
-      description: line.description || "",
-      unit: line.uom || "ea",
-      qty,
-      rate: unitCost,
-      markupPct,
-      tax: line.tax || "GST",
-      budgetAmount,
-      source: "estimate_costings_snapshot",
-      version: 1,
-    };
-  };
+  const showConvertPrimary = !isActiveStage;
 
   const convertToJob = () => {
-    if (!isEstimate || isEstimateConverted(project)) return;
-
-    const allProjects = Array.isArray(projects) ? projects : [];
-    const jobNumber = getNextJobNumber(allProjects);
-    const lineItems = project?.costings?.lineItems || [];
-    const baselineLines = lineItems.map(toBudgetLine);
-    const baseline = {
-      version: 1,
-      createdAt: Date.now(),
-      sourceEstimateId: project.id,
-      budgetLines: baselineLines,
-    };
-
-    const job = create({
-      name: project.name || "New Job",
-      clientId: project.clientId || "",
-      client: project.client || "",
-      email: project.email || "",
-      phone: project.phone || "",
-      address: project.address || "",
-      suburb: project.suburb || "",
-      buildType: project.buildType || project.type || "New Build",
-      storeys: project.storeys || "Single Storey",
-      floorArea: project.floorArea || "",
-      stage: "Approved",
-      status: "Approved",
-      estimateNumber: project.estimateNumber || null,
-      jobNumber,
-      scope: JSON.parse(JSON.stringify(project.scope || {})),
-      costings: JSON.parse(JSON.stringify(project.costings || { lineItems })),
-      costingsTotals: JSON.parse(JSON.stringify(project.costingsTotals || { quoteTotal: total })),
-      workingBudget: JSON.parse(JSON.stringify(baselineLines)),
-      budget: JSON.parse(JSON.stringify(baselineLines)),
-      budgetBaseline: baseline,
-      sourceEstimateId: project.id,
-      linkedEstimateId: project.id,
-      quoteSnapshotBudget: baseline,
-      conversion: { fromEstimateId: project.id, convertedAt: Date.now() },
-    });
-
     update(project.id, (pr) => {
-      pr.status = "Converted";
-      pr.jobId = job.id;
-      pr.convertedAt = Date.now();
-      if (!pr.jobConversion) pr.jobConversion = {};
-      pr.jobConversion = { jobId: job.id, convertedAt: pr.convertedAt };
+      pr.stage = "Active";
+      pr.status = "Active";
+      pr.updatedAt = new Date().toISOString();
       if (!Array.isArray(pr.activity)) pr.activity = [];
-      pr.activity.unshift({ action: `Converted to Job ${job.jobNumber || ""}`.trim(), date: new Date().toLocaleDateString("en-AU"), time: new Date().toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit" }) });
+      pr.activity.unshift({
+        action: "Converted to Job",
+        date: new Date().toLocaleDateString("en-AU"),
+        time: new Date().toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit" }),
+      });
       if (pr.activity.length > 30) pr.activity = pr.activity.slice(0, 30);
       return pr;
     });
-
-    notify("Converted to Job");
-    navigate("job-overview");
+    notify("Project converted to job");
+    navigate("overview");
   };
 
   return (
@@ -173,6 +110,9 @@ export default function WorkspaceShell({ workspaceType }) {
           overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
           maxWidth: 340,
         }}>{displayName}</span>
+        <span style={{ fontSize: 12, color: _.muted }}>
+          {project.type || project.buildType || "Project"}
+        </span>
 
         {/* Status pill */}
         <span style={badgeStyle(statusColor)}>{displayStatus}</span>
@@ -213,9 +153,9 @@ export default function WorkspaceShell({ workspaceType }) {
             </>
           )}
         </div>
-        {showConvertPrimary && (
-          <Button size="sm" onClick={convertToJob}>Convert to Job</Button>
-        )}
+        <Button size="sm" onClick={showConvertPrimary ? convertToJob : () => navigate("variations")}>
+          {showConvertPrimary ? "Convert to Job" : "Add Variation"}
+        </Button>
       </div>
 
       {/* ─── Tab bar ─── */}

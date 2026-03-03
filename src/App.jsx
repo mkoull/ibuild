@@ -111,20 +111,26 @@ export default function App() {
                 }>
                   <Route index element={<Navigate to="overview" replace />} />
                   <Route path="overview" element={<EstimateDetailsTab />} />
-                  <Route path="plans" element={<PlansAIPage />} />
+                  <Route path="scope" element={<ScopePage />} />
                   <Route path="quote" element={<EstimateCostingsWrapper />} />
+                  <Route path="schedule" element={<LockedTabGate><SchedulePage /></LockedTabGate>} />
+                  <Route path="costs" element={<LockedTabGate><CostsPage /></LockedTabGate>} />
+                  <Route path="variations" element={<LockedTabGate><VariationsPage /></LockedTabGate>} />
+                  <Route path="procurement" element={<LockedTabGate><PurchaseOrdersPage /></LockedTabGate>} />
+                  <Route path="invoices" element={<LockedTabGate><InvoicesPage /></LockedTabGate>} />
+                  <Route path="documents" element={<DocumentsPage />} />
+                  <Route path="site-diary" element={<LockedTabGate><SiteDiaryPage /></LockedTabGate>} />
+                  <Route path="defects" element={<LockedTabGate><DefectsPage /></LockedTabGate>} />
+                  {/* Legacy estimate routes kept for compatibility */}
+                  <Route path="plans" element={<PlansAIPage />} />
                   <Route path="quote-review" element={<QuotePage />} />
                   <Route path="costings" element={<Navigate to="../quote" replace />} />
                   <Route path="rfq" element={<RFQPage />} />
                   <Route path="proposals" element={<ProposalsPage />} />
                   <Route path="proposals/:propIndex" element={<ProposalDetail />} />
-                  <Route path="scope" element={<ScopePage />} />
-                  {/* Job tabs unlock once quote is converted */}
-                  <Route path="job-overview" element={<LockedTabGate><OverviewPage /></LockedTabGate>} />
-                  <Route path="schedule" element={<LockedTabGate><SchedulePage /></LockedTabGate>} />
-                  <Route path="purchase-orders" element={<LockedTabGate><PurchaseOrdersPage /></LockedTabGate>} />
-                  <Route path="work-orders" element={<LockedTabGate><WorkOrdersPage /></LockedTabGate>} />
-                  <Route path="costs" element={<LockedTabGate><CostsPage /></LockedTabGate>} />
+                  <Route path="job-overview" element={<Navigate to="../overview" replace />} />
+                  <Route path="purchase-orders" element={<Navigate to="../procurement" replace />} />
+                  <Route path="work-orders" element={<Navigate to="../procurement" replace />} />
                 </Route>
 
                 {/* ─── Job workspace ─── */}
@@ -135,25 +141,26 @@ export default function App() {
                 }>
                   <Route index element={<Navigate to="overview" replace />} />
                   <Route path="overview" element={<OverviewPage />} />
-                  <Route path="schedule" element={<SchedulePage />} />
-                  <Route path="procurement" element={<PurchaseOrdersPage />} />
+                  <Route path="scope" element={<ScopePage />} />
+                  <Route path="quote" element={<QuotePage />} />
+                  <Route path="schedule" element={<LockedTabGate><SchedulePage /></LockedTabGate>} />
+                  <Route path="costs" element={<LockedTabGate><CostsPage /></LockedTabGate>} />
+                  <Route path="variations" element={<LockedTabGate><VariationsPage /></LockedTabGate>} />
+                  <Route path="procurement" element={<LockedTabGate><PurchaseOrdersPage /></LockedTabGate>} />
+                  <Route path="invoices" element={<LockedTabGate><InvoicesPage /></LockedTabGate>} />
+                  <Route path="documents" element={<DocumentsPage />} />
+                  <Route path="site-diary" element={<LockedTabGate><SiteDiaryPage /></LockedTabGate>} />
+                  <Route path="defects" element={<LockedTabGate><DefectsPage /></LockedTabGate>} />
+                  {/* Legacy job routes kept for compatibility */}
                   <Route path="purchase-orders" element={<Navigate to="../procurement" replace />} />
                   <Route path="work-orders" element={<Navigate to="../procurement" replace />} />
-                  <Route path="costs" element={<CostsPage />} />
-                  <Route path="documents" element={<DocumentsPage />} />
-                  <Route path="site-diary" element={<SiteDiaryPage />} />
-                  <Route path="defects" element={<DefectsPage />} />
-                  <Route path="variations" element={<VariationsPage />} />
                   <Route path="variations/:voIndex" element={<VariationDetail />} />
-                  <Route path="invoices" element={<InvoicesPage />} />
                   <Route path="invoices/:invIndex" element={<InvoiceDetail />} />
                   <Route path="bills" element={<BillsPage />} />
                   <Route path="payments" element={<PaymentsPage />} />
                   <Route path="rfq" element={<RFQPage />} />
                   <Route path="proposals" element={<ProposalsPage />} />
                   <Route path="proposals/:propIndex" element={<ProposalDetail />} />
-                  <Route path="scope" element={<ScopePage />} />
-                  <Route path="quote" element={<QuotePage />} />
                   <Route path="trades" element={<ProjectTradesPage />} />
                   <Route path="plans" element={<PlansAIPage />} />
                 </Route>

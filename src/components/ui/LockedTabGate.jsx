@@ -6,9 +6,26 @@ import { useProject } from "../../context/ProjectContext.jsx";
 
 export default function LockedTabGate({ children }) {
   const navigate = useNavigate();
-  const { project } = useProject();
-  const unlocked = !!project?.jobId || String(project?.status || "").toLowerCase() === "converted";
+  const { project, update } = useProject();
+  const unlocked = String(project?.stage || project?.status || "").toLowerCase() === "active";
   if (unlocked) return children || null;
+
+  const onConvert = () => {
+    update((pr) => {
+      pr.stage = "Active";
+      pr.status = "Active";
+      pr.updatedAt = new Date().toISOString();
+      if (!Array.isArray(pr.activity)) pr.activity = [];
+      pr.activity.unshift({
+        action: "Converted to Job",
+        date: new Date().toLocaleDateString("en-AU"),
+        time: new Date().toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit" }),
+      });
+      if (pr.activity.length > 30) pr.activity = pr.activity.slice(0, 30);
+      return pr;
+    });
+    navigate("../overview");
+  };
 
   return (
     <div style={{
@@ -23,12 +40,12 @@ export default function LockedTabGate({ children }) {
         <Lock size={24} color={_.muted} />
       </div>
       <div style={{ fontSize: 16, fontWeight: 600, color: _.ink, marginBottom: 8 }}>
-        This feature is available for jobs
+        Convert to Job to unlock
       </div>
       <div style={{ fontSize: 14, color: _.muted, maxWidth: 380, lineHeight: 1.5, marginBottom: 24 }}>
-        Convert this quote to a job to unlock this area.
+        This area becomes available once the project is converted into an active job.
       </div>
-      <Button onClick={() => navigate("../overview?action=convert")}>Convert to Job</Button>
+      <Button onClick={onConvert}>Convert to Job</Button>
     </div>
   );
 }
