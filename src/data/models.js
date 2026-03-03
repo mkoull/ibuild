@@ -172,6 +172,7 @@ export function mkProject(overrides = {}) {
     assignedTo: "",
     notes: "",
     scope: mkScope(),
+    costCategories: [],
     variations: [],
     invoices: [],
     proposals: [],

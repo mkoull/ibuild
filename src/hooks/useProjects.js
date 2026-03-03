@@ -6,7 +6,7 @@ import { shadowWriter } from "../lib/shadowWrite.js";
 import { getNextEstimateNumber } from "../config/workspaceTabs.js";
 
 const STORAGE_KEY = "ib_projects";
-const STORE_VERSION = 14;
+const STORE_VERSION = 15;
 const SAVE_DEBOUNCE_MS = 300;
 
 function hydrateProject(pr) {
@@ -256,6 +256,30 @@ function migrateProjects(data, fromVersion) {
       if (!p.jobConversion && p.jobId) {
         p.jobConversion = { jobId: p.jobId, convertedAt: p.convertedAt || Date.now() };
       }
+    });
+    data = norm;
+  }
+  if (fromVersion <= 14) {
+    const norm = data && data.byId ? data : { byId: {}, allIds: [] };
+    Object.values(norm.byId).forEach((p) => {
+      if (!Array.isArray(p.costCategories)) p.costCategories = [];
+      p.costCategories.forEach((cat) => {
+        if (!cat.id) cat.id = uid();
+        if (typeof cat.name !== "string") cat.name = "Category";
+        if (!Array.isArray(cat.items)) cat.items = [];
+        cat.items.forEach((item) => {
+          if (!item.id) item.id = uid();
+          if (item.description === undefined) item.description = "";
+          if (item.quantity === undefined) item.quantity = 0;
+          if (item.unit === undefined) item.unit = "ea";
+          if (item.unitRate === undefined) item.unitRate = 0;
+          if (item.marginPercent === undefined) item.marginPercent = 0;
+          const costTotal = (Number(item.quantity) || 0) * (Number(item.unitRate) || 0);
+          const sellTotal = costTotal + (costTotal * ((Number(item.marginPercent) || 0) / 100));
+          item.costTotal = Math.round(costTotal * 100) / 100;
+          item.sellTotal = Math.round(sellTotal * 100) / 100;
+        });
+      });
     });
     data = norm;
   }
