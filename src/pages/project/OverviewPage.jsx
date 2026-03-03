@@ -190,6 +190,14 @@ export default function OverviewPage() {
   const contractDisplay = stageIsJob
     ? (p?.job?.contract?.currentContractValue ?? T.curr)
     : T.curr;
+  const baseContract = Number(p?.job?.contract?.baseContractValue || 0);
+  const approvedVariationValue = Number(p?.job?.contract?.approvedVariationsValue || 0);
+  const budgetCost = Number(p?.job?.budget?.totals?.totalCost || T.budgetTotal || 0);
+  const contractMarginValue = stageIsJob ? (contractDisplay - budgetCost) : (T.curr - T.sub);
+  const contractMarginPct = contractDisplay > 0 ? (contractMarginValue / contractDisplay) * 100 : 0;
+  const pendingVariationValue = (p.variations || [])
+    .filter((v) => String(v.status) === "Pending")
+    .reduce((t, v) => t + (Number(v.sellImpact) || 0), 0);
 
   return (
     <div style={{ animation: "fadeUp 0.2s ease", maxWidth: 1200 }}>
@@ -245,20 +253,34 @@ export default function OverviewPage() {
         <div style={{ display: "grid", gridTemplateColumns: mobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: mobile ? _.s2 : _.s3, marginBottom: mobile ? _.s6 : _.s8 }}>
           <Card style={{ padding: mobile ? _.s3 : _.s4 }} icon={DollarSign} subtitle="Contract Value" accent>
             <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Contract Value</div>
-            <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: _.ink }}>{T.curr > 0 ? fmt(T.curr) : "—"}</div>
+            <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: _.ink }}>{contractDisplay > 0 ? fmt(contractDisplay) : "—"}</div>
           </Card>
           <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
-            <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Invoiced</div>
-            <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: T.inv > 0 ? _.ac : _.faint }}>{T.inv > 0 ? fmt(T.inv) : "—"}</div>
+            <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Base Contract</div>
+            <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: baseContract > 0 ? _.ink : _.faint }}>{baseContract > 0 ? fmt(baseContract) : "—"}</div>
           </Card>
           <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
-            <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Outstanding</div>
-            <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: T.outstanding > 0 ? _.red : _.faint }}>{T.outstanding > 0 ? fmt(T.outstanding) : "—"}</div>
+            <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Approved Variations</div>
+            <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: approvedVariationValue !== 0 ? _.ac : _.faint }}>{approvedVariationValue !== 0 ? fmt(approvedVariationValue) : "—"}</div>
           </Card>
+          <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
+            <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Margin</div>
+            <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: contractMarginValue >= 0 ? _.green : _.red }}>
+              {fmt(contractMarginValue)}
+            </div>
+            <div style={{ fontSize: _.fontSize.caption, color: _.muted, marginTop: 2 }}>
+              {contractMarginPct.toFixed(1)}%
+            </div>
+          </Card>
+        </div>
+      )}
+      {stageIsJob && (
+        <div style={{ marginTop: -(_.s5), marginBottom: _.s8 }}>
           <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
             <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Variations</div>
-            <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: T.aVCount > 0 ? _.ink : _.faint }}>
-              {T.aVCount > 0 ? `${T.aVCount} · ${fmt(T.aV)}` : "—"}
+            <div style={{ display: "flex", gap: _.s5, flexWrap: "wrap" }}>
+              <div style={{ fontSize: _.fontSize.base, color: _.ink }}>Approved: <strong>{fmt(approvedVariationValue)}</strong></div>
+              <div style={{ fontSize: _.fontSize.base, color: _.ink }}>Pending: <strong>{fmt(pendingVariationValue)}</strong></div>
             </div>
           </Card>
         </div>
@@ -274,16 +296,20 @@ export default function OverviewPage() {
               <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: T.budgetTotal > 0 ? _.ink : _.faint }}>{T.budgetTotal > 0 ? fmt(T.budgetTotal) : "—"}</div>
             </Card>
             <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
-              <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Actual</div>
-              <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: T.actualsTotal > 0 ? _.ac : _.faint }}>{T.actualsTotal > 0 ? fmt(T.actualsTotal) : "—"}</div>
+              <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Actual Cost</div>
+              <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: T.combinedActuals > 0 ? _.ac : _.faint }}>{T.combinedActuals > 0 ? fmt(T.combinedActuals) : "—"}</div>
             </Card>
             <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
-              <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Forecast Margin</div>
-              <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: T.curr > 0 ? (T.forecastMargin >= 0 ? _.green : _.red) : _.faint }}>{T.curr > 0 ? fmt(T.forecastMargin) : "—"}</div>
+              <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Remaining Budget</div>
+              <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: T.budgetTotal > 0 ? (T.budgetTotal - T.combinedActuals >= 0 ? _.green : _.red) : _.faint }}>
+                {T.budgetTotal > 0 ? fmt(T.budgetTotal - T.combinedActuals) : "—"}
+              </div>
             </Card>
             <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
-              <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Margin %</div>
-              <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: T.curr > 0 ? (T.marginPctCalc >= 0 ? _.green : _.red) : _.faint }}>{T.curr > 0 ? `${T.marginPctCalc.toFixed(1)}%` : "—"}</div>
+              <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Variance</div>
+              <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: T.budgetTotal > 0 ? (T.combinedActuals - T.budgetTotal <= 0 ? _.green : _.red) : _.faint }}>
+                {T.budgetTotal > 0 ? fmt(T.combinedActuals - T.budgetTotal) : "—"}
+              </div>
             </Card>
           </div>
         </div>

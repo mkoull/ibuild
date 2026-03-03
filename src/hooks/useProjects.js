@@ -6,7 +6,7 @@ import { shadowWriter } from "../lib/shadowWrite.js";
 import { getNextEstimateNumber } from "../config/workspaceTabs.js";
 
 const STORAGE_KEY = "ib_projects";
-const STORE_VERSION = 16;
+const STORE_VERSION = 18;
 const SAVE_DEBOUNCE_MS = 300;
 
 function hydrateProject(pr) {
@@ -302,7 +302,87 @@ function migrateProjects(data, fromVersion) {
     });
     data = norm;
   }
+  if (fromVersion <= 16) {
+    const norm = data && data.byId ? data : { byId: {}, allIds: [] };
+    Object.values(norm.byId).forEach((p) => {
+      if (!Array.isArray(p.variations)) p.variations = [];
+      p.variations = p.variations.map((v, idx) => ({
+        id: v.id || uid(),
+        number: v.number || `VO-${String(idx + 1).padStart(3, "0")}`,
+        title: v.title || v.description || "Variation",
+        description: v.description || "",
+        costImpact: v.costImpact !== undefined ? Number(v.costImpact) || 0 : (Number(v.amount) || 0),
+        sellImpact: v.sellImpact !== undefined ? Number(v.sellImpact) || 0 : (Number(v.amount) || 0),
+        status: normalizeVariationStatus(v.status),
+        createdAt: v.createdAt || v.date || new Date().toISOString(),
+        ...v,
+      }));
+    });
+    data = norm;
+  }
+  if (fromVersion <= 17) {
+    const norm = data && data.byId ? data : { byId: {}, allIds: [] };
+    Object.values(norm.byId).forEach((p) => {
+      if (!p.procurement || typeof p.procurement !== "object") {
+        p.procurement = { purchaseOrders: [], bills: [] };
+      }
+      if (!Array.isArray(p.procurement.purchaseOrders)) p.procurement.purchaseOrders = [];
+      if (!Array.isArray(p.procurement.bills)) p.procurement.bills = [];
+      if (Array.isArray(p.purchaseOrders) && p.purchaseOrders.length > 0 && p.procurement.purchaseOrders.length === 0) {
+        p.procurement.purchaseOrders = p.purchaseOrders.map((po) => ({
+          id: po.id || uid(),
+          number: po.number || `PO-${String(Date.now()).slice(-6)}`,
+          supplier: po.supplier || po.vendorName || "",
+          budgetItemId: po.budgetItemId || po.linkedBudgetLineId || "",
+          description: po.description || po.notes || "",
+          amount: Number(po.amount ?? po.totalAmount) || 0,
+          status: normalizeProcurementPoStatus(po.status),
+          createdAt: po.createdAt || new Date().toISOString(),
+        }));
+      }
+      const budgetLines = Array.isArray(p.workingBudget) ? p.workingBudget : (Array.isArray(p.budget) ? p.budget : []);
+      budgetLines.forEach((line) => {
+        const budgetCost = Number(line.budgetCost ?? line.budgetAmount) || 0;
+        const actualCost = Number(line.actualCost ?? line.actualAmount) || 0;
+        line.budgetCost = budgetCost;
+        line.actualCost = actualCost;
+        line.variance = Number(line.variance ?? (actualCost - budgetCost)) || 0;
+        line.budgetAmount = Number(line.budgetAmount ?? budgetCost) || 0;
+        line.actualAmount = Number(line.actualAmount ?? actualCost) || 0;
+      });
+      p.workingBudget = budgetLines;
+      p.budget = budgetLines;
+      if (p.job?.budget?.categories) {
+        p.job.budget.categories.forEach((cat) => {
+          (cat.items || []).forEach((item) => {
+            const budgetCost = Number(item.budgetCost ?? item.costTotal) || 0;
+            const actualCost = Number(item.actualCost) || 0;
+            item.budgetCost = budgetCost;
+            item.actualCost = actualCost;
+            item.variance = Number(item.variance ?? (actualCost - budgetCost)) || 0;
+          });
+        });
+      }
+    });
+    data = norm;
+  }
   return data;
+}
+
+function normalizeProcurementPoStatus(status) {
+  const s = String(status || "Draft").toLowerCase();
+  if (s === "issued" || s === "sent") return "Issued";
+  if (s === "received" || s === "accepted") return "Received";
+  if (s === "billed") return "Billed";
+  return "Draft";
+}
+
+function normalizeVariationStatus(status) {
+  const s = String(status || "Draft").toLowerCase();
+  if (s === "pending" || s === "sent") return "Pending";
+  if (s === "approved") return "Approved";
+  if (s === "rejected") return "Rejected";
+  return "Draft";
 }
 
 function loadNormalized() {

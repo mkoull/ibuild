@@ -56,7 +56,7 @@ export default function CostsPage() {
   const actuals = p.actuals || [];
   const bills = p.supplierBills || [];
 
-  const variance = T.revisedBudget - T.combinedActuals;
+  const variance = T.combinedActuals - T.revisedBudget;
   const committedVar = T.revisedBudget - T.committedTotal;
   const activeModule = params.moduleId ? modulesHook.find(params.moduleId) : null;
   const linkedQuoteModuleId = activeModule?.links?.derivedFrom || activeModule?.links?.sourceOfTruth || null;
@@ -79,7 +79,7 @@ export default function CostsPage() {
       if (allocs.length > 0) {
         allocs.forEach(al => { const tid = al.tradeId || "_none"; ensure(tid); map[tid].budget += al.amount || 0; map[tid].budgetItems.push({ ...b, _allocAmt: al.amount }); });
       } else {
-        const tid = b.tradeId || "_none"; ensure(tid); map[tid].budget += b.budgetAmount || 0; map[tid].budgetItems.push(b);
+        const tid = b.tradeId || "_none"; ensure(tid); map[tid].budget += (b.budgetCost ?? b.budgetAmount) || 0; map[tid].budgetItems.push(b);
       }
     });
     commitments.filter(c => c.status === "Committed" || c.status === "approved").forEach(c => { const tid = c.tradeId || "_none"; ensure(tid); map[tid].committed += c.amount || 0; map[tid].commitItems.push(c); });
@@ -94,7 +94,7 @@ export default function CostsPage() {
       const k = code || "_none";
       if (!map[k]) map[k] = { costCode: k, budget: 0, committed: 0, actual: 0, budgetItems: [], commitItems: [], actualItems: [], billItems: [] };
     };
-    budgetLines.forEach(b => { const k = b.costCode || "_none"; ensure(k); map[k].budget += b.budgetAmount || 0; map[k].budgetItems.push(b); });
+    budgetLines.forEach(b => { const k = b.costCode || "_none"; ensure(k); map[k].budget += (b.budgetCost ?? b.budgetAmount) || 0; map[k].budgetItems.push(b); });
     commitments.filter(c => c.status === "Committed" || c.status === "approved").forEach(c => { const k = c.costCode || "_none"; ensure(k); map[k].committed += c.amount || 0; map[k].commitItems.push(c); });
     actuals.forEach(a => { const k = a.costCode || "_none"; ensure(k); map[k].actual += a.amount || 0; map[k].actualItems.push(a); });
     bills.filter(b => b.status !== "Void").forEach(b => {
@@ -110,7 +110,7 @@ export default function CostsPage() {
       const sec = b.sectionName || "Ungrouped";
       if (!map[sec]) map[sec] = { sectionName: sec, lines: [], total: 0 };
       map[sec].lines.push({ ...b, _idx: idx });
-      map[sec].total += b.budgetAmount || 0;
+      map[sec].total += (b.budgetCost ?? b.budgetAmount) || 0;
     });
     return Object.values(map).sort((a, b) => {
       if (a.sectionName === "Variations") return 1;
@@ -128,7 +128,7 @@ export default function CostsPage() {
     budgetLines.forEach((b, idx) => {
       const sec = b.sectionName || "Ungrouped";
       ensure(sec);
-      map[sec].budget += b.budgetAmount || 0;
+      map[sec].budget += (b.budgetCost ?? b.budgetAmount) || 0;
       map[sec].sellPrice += b.sellPrice || 0;
       map[sec].costAllowance += b.costAllowance || 0;
       map[sec].lines.push({ ...b, _idx: idx });
@@ -165,7 +165,12 @@ export default function CostsPage() {
       const line = pr.budget[idx];
       if (!line) return pr;
       if (editValues.label !== undefined) { line.label = editValues.label; line.description = editValues.label; }
-      if (editValues.budgetAmount !== undefined) line.budgetAmount = parseFloat(editValues.budgetAmount) || 0;
+      if (editValues.budgetAmount !== undefined) {
+        const budgetCost = parseFloat(editValues.budgetAmount) || 0;
+        line.budgetCost = budgetCost;
+        line.budgetAmount = budgetCost;
+        line.variance = (line.actualCost ?? line.actualAmount ?? 0) - budgetCost;
+      }
       if (editValues.costCode !== undefined) line.costCode = editValues.costCode;
       return pr;
     });
@@ -178,7 +183,7 @@ export default function CostsPage() {
     if (!quickAdd.description || !amt) { notify("Description and amount required", "error"); return; }
     up(pr => {
       if (!pr.budget) pr.budget = [];
-      pr.budget.push({ id: uid(), costCode: "", label: quickAdd.description, description: quickAdd.description, sectionName, sellPrice: amt, costAllowance: amt, budgetAmount: amt, tradeId: "", source: "manual", actualAmount: 0, actualPct: null, allocations: [] });
+      pr.budget.push({ id: uid(), costCode: "", label: quickAdd.description, description: quickAdd.description, sectionName, sellPrice: amt, costAllowance: amt, budgetCost: amt, budgetAmount: amt, actualCost: 0, variance: -amt, tradeId: "", source: "manual", actualAmount: 0, actualPct: null, allocations: [] });
       return pr;
     });
     log(`Budget line: ${quickAdd.description} (${fmt(amt)})`);
@@ -191,7 +196,7 @@ export default function CostsPage() {
     if (!budgetForm.labelText || !amt) { notify("Label and amount required", "error"); return; }
     up(pr => {
       if (!pr.budget) pr.budget = [];
-      pr.budget.push({ id: uid(), costCode: budgetForm.costCode, label: budgetForm.labelText, description: budgetForm.labelText, sectionName: budgetForm.sectionName, sellPrice: amt, costAllowance: amt, budgetAmount: amt, tradeId: budgetForm.tradeId, source: "manual", actualAmount: 0, actualPct: null, allocations: [] });
+      pr.budget.push({ id: uid(), costCode: budgetForm.costCode, label: budgetForm.labelText, description: budgetForm.labelText, sectionName: budgetForm.sectionName, sellPrice: amt, costAllowance: amt, budgetCost: amt, budgetAmount: amt, actualCost: 0, variance: -amt, tradeId: budgetForm.tradeId, source: "manual", actualAmount: 0, actualPct: null, allocations: [] });
       return pr;
     });
     log(`Budget line: ${budgetForm.labelText} (${fmt(amt)})`);
@@ -279,11 +284,19 @@ export default function CostsPage() {
         const pct = parseFloat(str.slice(0, -1));
         if (!isNaN(pct)) {
           line.actualPct = pct;
-          line.actualAmount = actualFromPercent(line.budgetAmount, pct);
+          const budgetCost = Number(line.budgetCost ?? line.budgetAmount) || 0;
+          const actualCost = actualFromPercent(budgetCost, pct);
+          line.actualCost = actualCost;
+          line.actualAmount = actualCost;
+          line.variance = actualCost - budgetCost;
         }
       } else {
         const amt = parseFloat(str);
-        line.actualAmount = isNaN(amt) ? 0 : amt;
+        const budgetCost = Number(line.budgetCost ?? line.budgetAmount) || 0;
+        const actualCost = isNaN(amt) ? 0 : amt;
+        line.actualCost = actualCost;
+        line.actualAmount = actualCost;
+        line.variance = actualCost - budgetCost;
         line.actualPct = null;
       }
       return pr;
@@ -341,7 +354,7 @@ export default function CostsPage() {
     const rows = [["Type", "Section", "Trade", "Cost Code", "Description", "Sell Price", "Cost Allowance", "Budget", "Committed", "Actual", "Source", "Allocations"]];
     budgetLines.forEach(b => {
       const allocs = (b.allocations || []).map(a => `${a.tradeLabel || tradeName(a.tradeId)}:${a.amount}`).join("; ");
-      rows.push(["Budget", b.sectionName || "", tradeName(b.tradeId), b.costCode || "", b.label, b.sellPrice || "", b.costAllowance || "", b.budgetAmount, "", b.actualAmount || "", b.source || "", allocs]);
+      rows.push(["Budget", b.sectionName || "", tradeName(b.tradeId), b.costCode || "", b.label, b.sellPrice || "", b.costAllowance || "", b.budgetCost ?? b.budgetAmount ?? 0, "", b.actualCost ?? b.actualAmount ?? 0, b.source || "", allocs]);
     });
     commitments.filter(c => c.status === "Committed" || c.status === "approved").forEach(c => rows.push(["Commitment", "", tradeName(c.tradeId), "", c.description, "", "", "", c.amount, "", c.vendorName || c.vendor || "", ""]));
     actuals.forEach(a => rows.push(["Actual", "", tradeName(a.tradeId), a.costCode || "", a.description, "", "", "", "", a.amount, a.source || "Manual", ""]));
@@ -407,7 +420,7 @@ export default function CostsPage() {
         </Card>
         <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
           <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Variance</div>
-          <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: T.revisedBudget > 0 ? (variance >= 0 ? _.green : _.red) : _.faint }}>
+          <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: T.revisedBudget > 0 ? (variance <= 0 ? _.green : _.red) : _.faint }}>
             {T.revisedBudget > 0 ? `${variance >= 0 ? "+" : ""}${fmt(variance)}` : "—"}
           </div>
         </Card>
@@ -522,16 +535,18 @@ export default function CostsPage() {
                           <div style={{ marginBottom: grp.commitItems.length > 0 || grp.actualItems.length > 0 ? _.s3 : 0 }}>
                             <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s1 }}>Budget Lines</div>
                             {grp.lines.map(b => {
-                              const lineVar = (b.budgetAmount || 0) - (b.actualAmount || 0);
+                              const budgetCost = (b.budgetCost ?? b.budgetAmount) || 0;
+                              const actualCost = (b.actualCost ?? b.actualAmount) || 0;
+                              const lineVar = actualCost - budgetCost;
                               return (
                                 <div key={b.id} style={{ display: "grid", gridTemplateColumns: mobile ? "1fr auto" : "1fr 90px 90px", gap: _.s2, fontSize: _.fontSize.sm, padding: "3px 0", alignItems: "center" }}>
                                   <div style={{ display: "flex", gap: _.s2, alignItems: "center" }}>
                                     <span>{b.costCode ? `[${b.costCode}] ` : ""}{b.label || b.description}</span>
                                     {b.source === "variation" && <span style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, padding: "0 5px", borderRadius: _.rFull, background: `${_.amber}14`, color: _.amber }}>VO</span>}
                                   </div>
-                                  {!mobile && <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", fontWeight: _.fontWeight.semi }}>{fmt(b.budgetAmount)}</span>}
-                                  <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", fontWeight: _.fontWeight.semi, color: b.actualAmount > 0 ? (lineVar >= 0 ? _.green : _.red) : _.faint }}>
-                                    {b.actualAmount > 0 ? `${lineVar >= 0 ? "+" : ""}${fmt(lineVar)}` : fmt(b.budgetAmount)}
+                                  {!mobile && <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", fontWeight: _.fontWeight.semi }}>{fmt(budgetCost)}</span>}
+                                  <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", fontWeight: _.fontWeight.semi, color: actualCost > 0 ? (lineVar <= 0 ? _.green : _.red) : _.faint }}>
+                                    {actualCost > 0 ? `${lineVar >= 0 ? "+" : ""}${fmt(lineVar)}` : fmt(budgetCost)}
                                   </span>
                                 </div>
                               );
@@ -574,7 +589,7 @@ export default function CostsPage() {
                     <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmt(T.combinedActuals)}</span>
                   </>
                 )}
-                <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", color: variance >= 0 ? _.green : _.red }}>{variance >= 0 ? "+" : ""}{fmt(variance)}</span>
+                <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", color: variance <= 0 ? _.green : _.red }}>{variance >= 0 ? "+" : ""}{fmt(variance)}</span>
               </div>
             </>
           )}
@@ -595,7 +610,7 @@ export default function CostsPage() {
                 <span style={{ textAlign: "right" }}>% Complete</span>
               </div>
               {tradeBreakdown.map(row => {
-                const v = row.budget - row.actual;
+                const v = row.actual - row.budget;
                 const pctComplete = row.budget > 0 ? Math.min(100, Math.max(0, (row.actual / row.budget) * 100)) : 0;
                 const isExpanded = expandedTrade === row.tradeId;
                 return (
@@ -618,10 +633,10 @@ export default function CostsPage() {
                           <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{row.budget > 0 ? fmt(row.budget) : "—"}</span>
                           <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", color: _.amber }}>{row.committed > 0 ? fmt(row.committed) : "—"}</span>
                           <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{row.actual > 0 ? fmt(row.actual) : "—"}</span>
-                          <span style={{ textAlign: "right", fontWeight: _.fontWeight.semi, fontVariantNumeric: "tabular-nums", color: v >= 0 ? _.green : _.red }}>{v >= 0 ? "+" : ""}{fmt(v)}</span>
+                          <span style={{ textAlign: "right", fontWeight: _.fontWeight.semi, fontVariantNumeric: "tabular-nums", color: v <= 0 ? _.green : _.red }}>{v >= 0 ? "+" : ""}{fmt(v)}</span>
                         </>
                       )}
-                      <span style={{ textAlign: "right", fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: row.budget > 0 ? (v >= 0 ? _.green : _.red) : _.faint }}>
+                      <span style={{ textAlign: "right", fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: row.budget > 0 ? (v <= 0 ? _.green : _.red) : _.faint }}>
                         {row.budget > 0 ? `${pctComplete.toFixed(0)}%` : "—"}
                       </span>
                     </div>
@@ -633,7 +648,7 @@ export default function CostsPage() {
                             {row.budgetItems.map(b => (
                               <div key={b.id} style={{ display: "flex", justifyContent: "space-between", fontSize: _.fontSize.sm, padding: "2px 0" }}>
                                 <span>{b.costCode ? `[${b.costCode}] ` : ""}{b.label}</span>
-                                <span style={{ fontVariantNumeric: "tabular-nums", fontWeight: _.fontWeight.semi }}>{fmt(b.budgetAmount)}</span>
+                                <span style={{ fontVariantNumeric: "tabular-nums", fontWeight: _.fontWeight.semi }}>{fmt(b.budgetCost ?? b.budgetAmount ?? 0)}</span>
                               </div>
                             ))}
                           </div>
@@ -679,7 +694,7 @@ export default function CostsPage() {
                     <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmt(T.actualsTotal)}</span>
                   </>
                 )}
-                <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", color: variance >= 0 ? _.green : _.red }}>{variance >= 0 ? "+" : ""}{fmt(variance)}</span>
+                <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", color: variance <= 0 ? _.green : _.red }}>{variance >= 0 ? "+" : ""}{fmt(variance)}</span>
               </div>
             </>
           )}
@@ -699,7 +714,7 @@ export default function CostsPage() {
                 <span style={{ textAlign: "right" }}>Variance</span>
               </div>
               {costCodeBreakdown.map(row => {
-                const v = row.budget - row.actual;
+                const v = row.actual - row.budget;
                 const isExpanded = expandedCode === row.costCode;
                 return (
                   <div key={row.costCode}>
@@ -722,7 +737,7 @@ export default function CostsPage() {
                           <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{row.actual > 0 ? fmt(row.actual) : "—"}</span>
                         </>
                       )}
-                      <span style={{ textAlign: "right", fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: row.budget > 0 ? (v >= 0 ? _.green : _.red) : _.faint }}>
+                      <span style={{ textAlign: "right", fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: row.budget > 0 ? (v <= 0 ? _.green : _.red) : _.faint }}>
                         {row.budget > 0 ? `${v >= 0 ? "+" : ""}${fmt(v)}` : "—"}
                       </span>
                     </div>
@@ -734,7 +749,7 @@ export default function CostsPage() {
                             {row.budgetItems.map(b => (
                               <div key={b.id} style={{ display: "flex", justifyContent: "space-between", fontSize: _.fontSize.sm, padding: "2px 0" }}>
                                 <span>{tradeName(b.tradeId)} — {b.label}</span>
-                                <span style={{ fontVariantNumeric: "tabular-nums", fontWeight: _.fontWeight.semi }}>{fmt(b.budgetAmount)}</span>
+                                <span style={{ fontVariantNumeric: "tabular-nums", fontWeight: _.fontWeight.semi }}>{fmt(b.budgetCost ?? b.budgetAmount ?? 0)}</span>
                               </div>
                             ))}
                           </div>
@@ -914,57 +929,59 @@ export default function CostsPage() {
                     {isExp && (
                       <div style={{ borderLeft: `2px solid ${_.line}`, borderRight: `1px solid ${_.line}`, borderBottom: `1px solid ${_.line}`, borderRadius: `0 0 ${_.rSm}px ${_.rSm}px`, marginBottom: _.s2 }}>
                         {/* Column header */}
-                        <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr 90px 30px" : "60px 1fr 120px 100px 80px 30px", gap: _.s2, padding: `${_.s2}px ${_.s3}px`, fontSize: _.fontSize.xs, color: _.muted, fontWeight: _.fontWeight.semi, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", borderBottom: `1px solid ${_.line}` }}>
+                        <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr 90px 30px" : "60px 1fr 120px 100px 100px 30px", gap: _.s2, padding: `${_.s2}px ${_.s3}px`, fontSize: _.fontSize.xs, color: _.muted, fontWeight: _.fontWeight.semi, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", borderBottom: `1px solid ${_.line}` }}>
                           {!mobile && <span>Code</span>}
                           <span>Label</span>
-                          {!mobile && <span style={{ textAlign: "right" }}>Budget</span>}
-                          {!mobile && <span style={{ textAlign: "right" }}>Actual</span>}
-                          <span style={{ textAlign: "right" }}>{mobile ? "Amt" : "Var."}</span>
+                          {!mobile && <span style={{ textAlign: "right" }}>Budget Cost</span>}
+                          {!mobile && <span style={{ textAlign: "right" }}>Actual Cost</span>}
+                          <span style={{ textAlign: "right" }}>{mobile ? "Amt" : "Variance"}</span>
                           <span></span>
                         </div>
                         {grp.lines.map(b => {
                           const i = b._idx;
-                          const lineVar = (b.budgetAmount || 0) - (b.actualAmount || 0);
+                          const budgetCost = (b.budgetCost ?? b.budgetAmount) || 0;
+                          const actualCost = (b.actualCost ?? b.actualAmount) || 0;
+                          const lineVar = actualCost - budgetCost;
                           const srcTag = b.source === "quote_import" ? { text: "Quote", color: _.muted }
                             : b.source === "variation" ? { text: "VO", color: _.amber }
                             : null;
                           const isEditing = editingLine === b.id;
                           return (
                             <div key={b.id || i}>
-                            <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr 90px 30px" : "60px 1fr 120px 100px 80px 30px", gap: _.s2, padding: `${_.s3}px ${_.s3}px`, borderBottom: `1px solid ${_.line}`, alignItems: "center", fontSize: _.fontSize.base }}>
+                            <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr 90px 30px" : "60px 1fr 120px 100px 100px 30px", gap: _.s2, padding: `${_.s3}px ${_.s3}px`, borderBottom: `1px solid ${_.line}`, alignItems: "center", fontSize: _.fontSize.base }}>
                               {!mobile && (
                                 isEditing ? (
                                   <input style={{ ...input, padding: "2px 4px", fontSize: _.fontSize.sm }} value={editValues.costCode ?? b.costCode ?? ""} onChange={e => setEditValues({ ...editValues, costCode: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveInlineEdit(i); if (e.key === "Escape") { setEditingLine(null); setEditValues({}); } }} />
                                 ) : (
-                                  <span style={{ color: _.muted, fontVariantNumeric: "tabular-nums", fontWeight: _.fontWeight.semi, cursor: "pointer" }} onClick={() => { setEditingLine(b.id); setEditValues({ costCode: b.costCode || "", label: b.label || b.description || "", budgetAmount: b.budgetAmount || 0 }); }}>{b.costCode || "—"}</span>
+                                  <span style={{ color: _.muted, fontVariantNumeric: "tabular-nums", fontWeight: _.fontWeight.semi, cursor: "pointer" }} onClick={() => { setEditingLine(b.id); setEditValues({ costCode: b.costCode || "", label: b.label || b.description || "", budgetAmount: budgetCost || 0 }); }}>{b.costCode || "—"}</span>
                                 )
                               )}
                               <div style={{ display: "flex", alignItems: "center", gap: _.s2, minWidth: 0 }}>
                                 {isEditing ? (
                                   <input style={{ ...input, flex: 1, padding: "2px 4px", fontSize: _.fontSize.sm }} value={editValues.label ?? (b.label || b.description || "")} onChange={e => setEditValues({ ...editValues, label: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveInlineEdit(i); if (e.key === "Escape") { setEditingLine(null); setEditValues({}); } }} autoFocus />
                                 ) : (
-                                  <span style={{ fontWeight: _.fontWeight.medium, color: _.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: "pointer" }} onClick={() => { setEditingLine(b.id); setEditValues({ costCode: b.costCode || "", label: b.label || b.description || "", budgetAmount: b.budgetAmount || 0 }); }}>{b.label || b.description}</span>
+                                  <span style={{ fontWeight: _.fontWeight.medium, color: _.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: "pointer" }} onClick={() => { setEditingLine(b.id); setEditValues({ costCode: b.costCode || "", label: b.label || b.description || "", budgetAmount: budgetCost || 0 }); }}>{b.label || b.description}</span>
                                 )}
                                 {!isEditing && srcTag && <span onClick={b.linkedVariationId ? (e) => { e.stopPropagation(); navigate(`../variations/${b.linkedVariationId}`); } : undefined} style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, padding: "1px 6px", borderRadius: _.rFull, background: `${srcTag.color}14`, color: srcTag.color, flexShrink: 0, cursor: b.linkedVariationId ? "pointer" : "default" }}>{srcTag.text}</span>}
                               </div>
                               {!mobile && (
                                 isEditing ? (
-                                  <input type="number" style={{ ...input, textAlign: "right", padding: "2px 4px", fontSize: _.fontSize.sm }} value={editValues.budgetAmount ?? b.budgetAmount ?? ""} onChange={e => setEditValues({ ...editValues, budgetAmount: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveInlineEdit(i); if (e.key === "Escape") { setEditingLine(null); setEditValues({}); } }} />
+                                  <input type="number" style={{ ...input, textAlign: "right", padding: "2px 4px", fontSize: _.fontSize.sm }} value={editValues.budgetAmount ?? budgetCost ?? ""} onChange={e => setEditValues({ ...editValues, budgetAmount: e.target.value })} onKeyDown={e => { if (e.key === "Enter") saveInlineEdit(i); if (e.key === "Escape") { setEditingLine(null); setEditValues({}); } }} />
                                 ) : (
-                                  <span style={{ textAlign: "right", fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", cursor: "pointer" }} onClick={() => { setEditingLine(b.id); setEditValues({ costCode: b.costCode || "", label: b.label || b.description || "", budgetAmount: b.budgetAmount || 0 }); }}>{fmt(b.budgetAmount)}</span>
+                                  <span style={{ textAlign: "right", fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", cursor: "pointer" }} onClick={() => { setEditingLine(b.id); setEditValues({ costCode: b.costCode || "", label: b.label || b.description || "", budgetAmount: budgetCost || 0 }); }}>{fmt(budgetCost)}</span>
                                 )
                               )}
                               {!mobile && (
                                 <input
                                   style={{ width: "100%", padding: "3px 6px", background: _.well, border: `1px solid ${_.line}`, borderRadius: 5, color: _.ink, fontSize: _.fontSize.sm, textAlign: "right", outline: "none" }}
                                   placeholder="0"
-                                  defaultValue={b.actualPct != null ? `${b.actualPct}%` : (b.actualAmount || "")}
+                                  defaultValue={b.actualPct != null ? `${b.actualPct}%` : (actualCost || "")}
                                   onBlur={e => updateBudgetActual(i, e.target.value)}
                                   onKeyDown={e => { if (e.key === "Enter") e.target.blur(); }}
                                 />
                               )}
-                              <span style={{ textAlign: "right", fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", fontSize: _.fontSize.sm, color: b.actualAmount > 0 ? (lineVar >= 0 ? _.green : _.red) : _.faint }}>
-                                {b.actualAmount > 0 ? `${lineVar >= 0 ? "+" : ""}${fmt(lineVar)}` : (mobile ? fmt(b.budgetAmount) : "—")}
+                              <span style={{ textAlign: "right", fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", fontSize: _.fontSize.sm, color: actualCost > 0 ? (lineVar <= 0 ? _.green : _.red) : _.faint }}>
+                                {actualCost > 0 ? `${lineVar >= 0 ? "+" : ""}${fmt(lineVar)}` : (mobile ? fmt(budgetCost) : "—")}
                               </span>
                               <div style={{ display: "flex", gap: 2, justifyContent: "center" }}>
                                 <div onClick={() => setAllocExpanded(allocExpanded === b.id ? null : b.id)} style={{ cursor: "pointer", color: (b.allocations || []).length > 0 ? _.ac : _.faint, display: "flex", transition: `color ${_.tr}` }} title="Split across trades"><Split size={12} /></div>
@@ -1042,7 +1059,7 @@ export default function CostsPage() {
                 <label style={label}>Link to budget line</label>
                 <select style={{ ...input, cursor: "pointer", maxWidth: 360 }} value={commitForm.linkedBudgetLineId} onChange={e => setCommitForm({ ...commitForm, linkedBudgetLineId: e.target.value })}>
                   <option value="">— None —</option>
-                  {budgetLines.map(b => <option key={b.id} value={b.id}>{b.sectionName ? `${b.sectionName} — ` : ""}{b.label || b.description} ({fmt(b.budgetAmount)})</option>)}
+                  {budgetLines.map(b => <option key={b.id} value={b.id}>{b.sectionName ? `${b.sectionName} — ` : ""}{b.label || b.description} ({fmt((b.budgetCost ?? b.budgetAmount) || 0)})</option>)}
                 </select>
               </div>
             )}
@@ -1109,7 +1126,7 @@ export default function CostsPage() {
                 <label style={label}>Link to budget line</label>
                 <select style={{ ...input, cursor: "pointer", maxWidth: 360 }} value={actualForm.linkedBudgetLineId} onChange={e => setActualForm({ ...actualForm, linkedBudgetLineId: e.target.value })}>
                   <option value="">— None —</option>
-                  {budgetLines.map(b => <option key={b.id} value={b.id}>{b.sectionName ? `${b.sectionName} — ` : ""}{b.label || b.description} ({fmt(b.budgetAmount)})</option>)}
+                  {budgetLines.map(b => <option key={b.id} value={b.id}>{b.sectionName ? `${b.sectionName} — ` : ""}{b.label || b.description} ({fmt((b.budgetCost ?? b.budgetAmount) || 0)})</option>)}
                 </select>
               </div>
             )}
@@ -1149,7 +1166,7 @@ export default function CostsPage() {
           <div style={{ fontSize: _.fontSize.caption, color: _.muted, fontWeight: _.fontWeight.semi, letterSpacing: _.letterSpacing.wider, textTransform: "uppercase", marginBottom: _.s4 }}>Job Cost Summary</div>
           {(() => {
             const combined = T.combinedActuals != null ? T.combinedActuals : T.actualsTotal;
-            const reportVariance = T.revisedBudget - combined;
+            const reportVariance = combined - T.revisedBudget;
             const kpis = [
               { label: "Contract Value", value: fmt(T.curr), color: _.ink },
               { label: "Sell Price Total", value: fmt(T.sellPriceTotal), color: T.sellPriceTotal > 0 ? _.ink : _.faint },
@@ -1163,7 +1180,7 @@ export default function CostsPage() {
               { label: "Forecast Cost", value: fmt(T.forecastCost), color: _.ink },
               { label: "Forecast Margin", value: fmt(T.forecastMarginNew), color: T.forecastMarginNew >= 0 ? _.green : _.red },
               { label: "Margin %", value: `${T.marginPctNew.toFixed(1)}%`, color: T.marginPctNew >= 0 ? _.green : _.red },
-              { label: "Variance", value: `${reportVariance >= 0 ? "+" : ""}${fmt(reportVariance)}`, color: reportVariance >= 0 ? _.green : _.red },
+              { label: "Variance", value: `${reportVariance >= 0 ? "+" : ""}${fmt(reportVariance)}`, color: reportVariance <= 0 ? _.green : _.red },
             ];
             return (
               <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "1fr 1fr", gap: _.s3, marginBottom: _.s6 }}>

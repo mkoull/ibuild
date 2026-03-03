@@ -68,23 +68,25 @@ export function calcInvoicing(invoices) {
  * @param {number} curr - Current contract value
  * @returns {Object} Cost-control fields
  */
-export function calcBudget(budget, commitments, actuals, costAllowances, supplierBills, curr) {
+export function calcBudget(budget, commitments, actuals, costAllowances, supplierBills, procurement, curr) {
   const budgetLines = budget || [];
-  const budgetTotal = budgetLines.reduce((t, b) => t + (b.budgetAmount || 0), 0);
+  const budgetTotal = budgetLines.reduce((t, b) => t + ((b.budgetCost ?? b.budgetAmount) || 0), 0);
   const committedTotal = (commitments || []).filter(c => c.status === "Committed" || c.status === "approved").reduce((t, c) => t + (c.amount || 0), 0);
   const actualsTotal = (actuals || []).reduce((t, a) => t + (a.amount || 0), 0);
-  const budgetActualsTotal = budgetLines.reduce((t, b) => t + (b.actualAmount || 0), 0);
+  const budgetActualsTotal = budgetLines.reduce((t, b) => t + ((b.actualCost ?? b.actualAmount) || 0), 0);
   const combinedActuals = actualsTotal + budgetActualsTotal;
 
   const bills = supplierBills || [];
+  const procurementBills = procurement?.bills || [];
   const billsTotal = bills.filter(b => b.status !== "Void").reduce((t, b) => t + (b.total || 0), 0);
   const billsPaid = bills.filter(b => b.status === "Paid").reduce((t, b) => t + (b.total || 0), 0);
+  const procurementBillsTotal = procurementBills.reduce((t, b) => t + (b.amount || 0), 0);
 
   const forecastMargin = curr > 0 ? curr - combinedActuals : 0;
   const marginPctCalc = curr > 0 ? ((curr - combinedActuals) / curr) * 100 : 0;
 
-  const baselineBudget = budgetLines.filter(b => b.source !== "variation").reduce((t, b) => t + (b.budgetAmount || 0), 0);
-  const variationBudget = budgetLines.filter(b => b.source === "variation").reduce((t, b) => t + (b.budgetAmount || 0), 0);
+  const baselineBudget = budgetLines.filter(b => b.source !== "variation").reduce((t, b) => t + ((b.budgetCost ?? b.budgetAmount) || 0), 0);
+  const variationBudget = budgetLines.filter(b => b.source === "variation").reduce((t, b) => t + ((b.budgetCost ?? b.budgetAmount) || 0), 0);
   const revisedBudget = budgetTotal;
 
   const ca = costAllowances || {};
@@ -92,7 +94,7 @@ export function calcBudget(budget, commitments, actuals, costAllowances, supplie
   const overheadAmt = ((ca.siteOverhead || {}).amount || 0) + ((ca.officeOverhead || {}).amount || 0);
 
   const sellPriceTotal = budgetLines.reduce((t, b) => t + (b.sellPrice || 0), 0);
-  const costBudget = budgetLines.reduce((t, b) => t + (b.costAllowance || 0), 0);
+  const costBudget = budgetLines.reduce((t, b) => t + ((b.budgetCost ?? b.costAllowance) || 0), 0);
   const costVariance = costBudget - combinedActuals;
 
   const forecastCost = committedTotal + Math.max(0, revisedBudget - committedTotal) + overheadAmt;
@@ -107,6 +109,7 @@ export function calcBudget(budget, commitments, actuals, costAllowances, supplie
   return {
     budgetTotal, committedTotal, actualsTotal, budgetActualsTotal, combinedActuals,
     forecastMargin, marginPctCalc, billsTotal, billsPaid,
+    procurementBillsTotal,
     baselineBudget, variationBudget, revisedBudget,
     allowancesAmt, overheadAmt, sellPriceTotal, costBudget, costVariance,
     forecastCost, forecastMarginNew, marginPctNew,
@@ -129,7 +132,7 @@ export function calc(p) {
   const varResult = calcVariations(p.variations);
   const curr = scopeResult.orig + varResult.aV;
   const invResult = calcInvoicing(p.invoices);
-  const budgetResult = calcBudget(p.budget, p.commitments, p.actuals, p.costAllowances, p.supplierBills, curr);
+  const budgetResult = calcBudget(p.budget, p.commitments, p.actuals, p.costAllowances, p.supplierBills, p.procurement, curr);
 
   return {
     ...scopeResult,

@@ -230,6 +230,10 @@ export function mkProject(overrides = {}) {
     budgetBaseline: null,
     workingBudget: [],
     budget: [],
+    procurement: {
+      purchaseOrders: [],
+      bills: [],
+    },
     variationLedger: [],
     activity: [{ action: "Project created", time: ts(), date: ds() }],
     createdAt: now,

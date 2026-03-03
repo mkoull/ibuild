@@ -1,7 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useProject } from "../../context/ProjectContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
-import { advancePOStatus as svcAdvancePO } from "../../services/projectService.js";
 import Section from "../../components/ui/Section.jsx";
 import Card from "../../components/ui/Card.jsx";
 import Button from "../../components/ui/Button.jsx";
@@ -9,195 +8,252 @@ import Modal from "../../components/ui/Modal.jsx";
 import Empty from "../../components/ui/Empty.jsx";
 import Table from "../../components/ui/Table.jsx";
 import _ from "../../theme/tokens.js";
-import { uid, fmt, input, label, badge } from "../../theme/styles.js";
-import { ShoppingCart, Plus, Trash2, Check, Send, PackageCheck } from "lucide-react";
+import { uid, ds, fmt, input, label, badge } from "../../theme/styles.js";
+import { ShoppingCart, Plus, Receipt, FilePlus2 } from "lucide-react";
 
-const STATUS_FLOW = ["draft", "sent", "accepted", "received"];
-const STATUS_COLORS = { draft: _.muted, sent: _.blue, accepted: _.green, received: _.violet };
+const PO_STATUSES = ["Draft", "Issued", "Received", "Billed"];
+const STATUS_COLORS = {
+  Draft: _.muted,
+  Issued: _.blue,
+  Received: _.green,
+  Billed: _.violet,
+};
 
-const blankPO = () => ({
-  id: uid(),
-  tradeId: "",
-  items: [],
-  status: "draft",
-  totalAmount: 0,
-  issueDate: new Date().toISOString().split("T")[0],
-  expectedDelivery: "",
-  linkedBudgetLineId: null,
-  notes: "",
-});
+function newPoForm() {
+  return {
+    supplier: "",
+    budgetItemId: "",
+    description: "",
+    amount: "",
+    status: "Draft",
+  };
+}
 
-const blankItem = () => ({ id: uid(), description: "", qty: 1, unit: "each", rate: 0 });
+function newBillForm() {
+  return {
+    poId: "",
+    amount: "",
+    date: new Date().toISOString().split("T")[0],
+  };
+}
 
 export default function PurchaseOrdersPage() {
   const { project: p, update } = useProject();
-  const { mobile, notify, tradesHook } = useApp();
-  const [editPO, setEditPO] = useState(null);
+  const { mobile, notify } = useApp();
+  const [showPoModal, setShowPoModal] = useState(false);
+  const [showBillModal, setShowBillModal] = useState(false);
+  const [poForm, setPoForm] = useState(newPoForm);
+  const [billForm, setBillForm] = useState(newBillForm);
 
-  const pos = p.purchaseOrders || [];
+  const budgetLines = p.workingBudget || p.budget || [];
+  const procurement = p.procurement || { purchaseOrders: [], bills: [] };
+  const purchaseOrders = procurement.purchaseOrders || [];
+  const bills = procurement.bills || [];
 
-  const trades = tradesHook?.trades || [];
-  const tradeName = (id) => trades.find(t => t.id === id)?.businessName || "—";
-
-  const savePO = (po) => {
-    po.totalAmount = (po.items || []).reduce((s, i) => s + (i.qty || 0) * (i.rate || 0), 0);
-    update(draft => {
-      if (!draft.purchaseOrders) draft.purchaseOrders = [];
-      const idx = draft.purchaseOrders.findIndex(x => x.id === po.id);
-      if (idx >= 0) draft.purchaseOrders[idx] = po;
-      else draft.purchaseOrders.push(po);
+  const budgetLabelById = useMemo(() => {
+    const out = {};
+    budgetLines.forEach((b) => {
+      out[b.id] = `${b.sectionName ? `${b.sectionName} - ` : ""}${b.label || b.description || "Budget line"}`;
     });
-    setEditPO(null);
-    notify("Purchase order saved");
-  };
-
-  const deletePO = (id) => {
-    update(draft => {
-      draft.purchaseOrders = (draft.purchaseOrders || []).filter(x => x.id !== id);
-    });
-    setEditPO(null);
-    notify("Purchase order deleted");
-  };
-
-  const advanceStatus = (po) => {
-    const idx = STATUS_FLOW.indexOf(po.status);
-    if (idx < 0 || idx >= STATUS_FLOW.length - 1) return;
-    const next = STATUS_FLOW[idx + 1];
-    const poIdx = pos.findIndex(x => x.id === po.id);
-    if (poIdx < 0) return;
-    svcAdvancePO(update, poIdx, next);
-    setEditPO(null);
-    notify(`PO ${next}`);
-  };
+    return out;
+  }, [budgetLines]);
 
   const columns = [
-    { key: "id", label: "PO #", width: "100px", render: r => r.id.slice(0, 6) },
-    { key: "trade", label: "Trade", width: "1fr", render: r => tradeName(r.tradeId) },
-    { key: "items", label: "Items", width: "60px", align: "center", render: r => (r.items || []).length },
-    { key: "totalAmount", label: "Amount", width: "120px", align: "right", render: r => fmt(r.totalAmount || 0) },
-    { key: "status", label: "Status", width: "100px", render: r => <span style={badge(STATUS_COLORS[r.status] || _.muted)}>{r.status}</span> },
-    { key: "issueDate", label: "Date", width: "100px", render: r => r.issueDate || "—" },
+    { key: "number", label: "PO #", width: "120px", render: (r) => r.number || "—" },
+    { key: "supplier", label: "Supplier", width: "1fr", render: (r) => r.supplier || "—" },
+    { key: "budgetItem", label: "Budget Item", width: "1fr", render: (r) => budgetLabelById[r.budgetItemId] || "—" },
+    { key: "amount", label: "Amount", width: "140px", align: "right", render: (r) => fmt(r.amount || 0) },
+    { key: "status", label: "Status", width: "120px", render: (r) => <span style={badge(STATUS_COLORS[r.status] || _.muted)}>{r.status || "Draft"}</span> },
   ];
+
+  const createPo = () => {
+    const amount = Number(poForm.amount) || 0;
+    if (!poForm.supplier.trim() || !poForm.budgetItemId || amount <= 0) {
+      notify("Supplier, budget item and amount are required", "error");
+      return;
+    }
+    const now = new Date().toISOString();
+    const nextNumber = `PO-${String(purchaseOrders.length + 1).padStart(4, "0")}`;
+    update((pr) => {
+      if (!pr.procurement) pr.procurement = { purchaseOrders: [], bills: [] };
+      if (!Array.isArray(pr.procurement.purchaseOrders)) pr.procurement.purchaseOrders = [];
+      const po = {
+        id: uid(),
+        number: nextNumber,
+        supplier: poForm.supplier.trim(),
+        budgetItemId: poForm.budgetItemId,
+        description: poForm.description.trim(),
+        amount,
+        status: poForm.status || "Draft",
+        createdAt: now,
+      };
+      pr.procurement.purchaseOrders.push(po);
+    });
+    setPoForm(newPoForm());
+    setShowPoModal(false);
+    notify("Purchase order created");
+  };
+
+  const markStatus = (poId, status) => {
+    update((pr) => {
+      if (!pr.procurement?.purchaseOrders) return;
+      const po = pr.procurement.purchaseOrders.find((x) => x.id === poId);
+      if (!po) return;
+      po.status = status;
+    });
+  };
+
+  const recordBill = () => {
+    const amount = Number(billForm.amount) || 0;
+    if (!billForm.poId || amount <= 0 || !billForm.date) {
+      notify("PO, amount and date are required", "error");
+      return;
+    }
+    update((pr) => {
+      if (!pr.procurement) pr.procurement = { purchaseOrders: [], bills: [] };
+      if (!Array.isArray(pr.procurement.bills)) pr.procurement.bills = [];
+      const po = (pr.procurement.purchaseOrders || []).find((x) => x.id === billForm.poId);
+      if (!po) return;
+      pr.procurement.bills.push({
+        id: uid(),
+        poId: po.id,
+        supplier: po.supplier,
+        amount,
+        date: billForm.date,
+      });
+      po.status = "Billed";
+      const lines = pr.workingBudget || pr.budget || [];
+      const line = lines.find((b) => b.id === po.budgetItemId);
+      if (line) {
+        const budgetCost = Number(line.budgetCost ?? line.budgetAmount) || 0;
+        const actualCost = (Number(line.actualCost ?? line.actualAmount) || 0) + amount;
+        line.budgetCost = budgetCost;
+        line.budgetAmount = budgetCost;
+        line.actualCost = actualCost;
+        line.actualAmount = actualCost;
+        line.variance = actualCost - budgetCost;
+      }
+    });
+    setBillForm(newBillForm());
+    setShowBillModal(false);
+    notify("Supplier bill recorded");
+  };
 
   return (
     <Section>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: _.s3, marginBottom: _.s5, flexWrap: "wrap" }}>
         <div>
-          <h1 style={{ fontSize: mobile ? _.fontSize["3xl"] : _.fontSize["4xl"], fontWeight: _.fontWeight.bold, letterSpacing: _.letterSpacing.tight, marginBottom: 4 }}>Purchase Orders</h1>
-          <div style={{ fontSize: _.fontSize.md, color: _.muted }}>{pos.length} PO{pos.length !== 1 ? "s" : ""}</div>
+          <h1 style={{ fontSize: mobile ? _.fontSize["3xl"] : _.fontSize["4xl"], fontWeight: _.fontWeight.bold, letterSpacing: _.letterSpacing.tight, marginBottom: 4 }}>Procurement</h1>
+          <div style={{ fontSize: _.fontSize.md, color: _.muted }}>
+            {purchaseOrders.length} purchase order{purchaseOrders.length === 1 ? "" : "s"} • {bills.length} bill{bills.length === 1 ? "" : "s"}
+          </div>
         </div>
-        <Button icon={Plus} onClick={() => setEditPO(blankPO())}>New PO</Button>
+        <div style={{ display: "flex", gap: _.s2, flexWrap: "wrap" }}>
+          <Button icon={Plus} onClick={() => setShowPoModal(true)}>Create Purchase Order</Button>
+          <Button variant="secondary" icon={Receipt} onClick={() => setShowBillModal(true)} disabled={purchaseOrders.length === 0}>Record Bill</Button>
+        </div>
       </div>
 
-      {pos.length === 0 ? (
-        <Empty icon={ShoppingCart} title="No purchase orders" text="Create a purchase order to track materials and subcontractor procurement." action={() => setEditPO(blankPO())} actionText="Create PO" />
+      {purchaseOrders.length === 0 ? (
+        <Empty
+          icon={ShoppingCart}
+          title="No purchase orders yet"
+          text="Create your first PO and link it to a budget item to start tracking actual costs."
+          action={() => setShowPoModal(true)}
+          actionText="Create Purchase Order"
+        />
       ) : (
         <Card>
-          <Table columns={columns} data={pos} onRowClick={row => setEditPO({ ...row, items: [...(row.items || []).map(i => ({ ...i }))] })} />
+          <Table columns={columns} data={purchaseOrders} />
+          <div style={{ marginTop: _.s3, display: "grid", gridTemplateColumns: mobile ? "1fr" : "1fr 1fr", gap: _.s3 }}>
+            {purchaseOrders.map((po) => (
+              <div key={po.id} style={{ padding: _.s3, border: `1px solid ${_.line}`, borderRadius: _.rSm }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: _.s2 }}>
+                  <strong style={{ color: _.ink }}>{po.number}</strong>
+                  <span style={badge(STATUS_COLORS[po.status] || _.muted)}>{po.status}</span>
+                </div>
+                <div style={{ fontSize: _.fontSize.sm, color: _.body, marginBottom: _.s2 }}>{po.description || "No description"}</div>
+                <div style={{ fontSize: _.fontSize.sm, color: _.muted, marginBottom: _.s2 }}>
+                  Linked budget: {budgetLabelById[po.budgetItemId] || "—"}
+                </div>
+                <div style={{ display: "flex", gap: _.s2, flexWrap: "wrap" }}>
+                  {PO_STATUSES.map((status) => (
+                    <Button
+                      key={status}
+                      size="sm"
+                      variant={po.status === status ? "secondary" : "ghost"}
+                      onClick={() => markStatus(po.id, status)}
+                      disabled={po.status === status}
+                    >
+                      {status}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         </Card>
       )}
 
-      {/* PO Edit Modal */}
-      <Modal open={!!editPO} onClose={() => setEditPO(null)} title={editPO?.status === "draft" ? "Edit Purchase Order" : `PO ${editPO?.id?.slice(0, 6)}`} width={640}>
-        {editPO && <POForm po={editPO} setPO={setEditPO} trades={trades} onSave={savePO} onDelete={deletePO} onAdvance={advanceStatus} />}
+      <Modal open={showPoModal} onClose={() => setShowPoModal(false)} title="Create Purchase Order" width={560}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: _.s3 }}>
+          <div>
+            <label style={label}>Supplier *</label>
+            <input style={input} value={poForm.supplier} onChange={(e) => setPoForm((v) => ({ ...v, supplier: e.target.value }))} />
+          </div>
+          <div>
+            <label style={label}>Amount *</label>
+            <input type="number" style={input} value={poForm.amount} onChange={(e) => setPoForm((v) => ({ ...v, amount: e.target.value }))} />
+          </div>
+          <div style={{ gridColumn: "1 / -1" }}>
+            <label style={label}>Budget Item *</label>
+            <select style={{ ...input, cursor: "pointer" }} value={poForm.budgetItemId} onChange={(e) => setPoForm((v) => ({ ...v, budgetItemId: e.target.value }))}>
+              <option value="">— Select budget line —</option>
+              {budgetLines.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {budgetLabelById[b.id]} ({fmt(b.budgetCost ?? b.budgetAmount ?? 0)})
+                </option>
+              ))}
+            </select>
+          </div>
+          <div style={{ gridColumn: "1 / -1" }}>
+            <label style={label}>Description</label>
+            <textarea style={{ ...input, minHeight: 72 }} value={poForm.description} onChange={(e) => setPoForm((v) => ({ ...v, description: e.target.value }))} />
+          </div>
+        </div>
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: _.s2, marginTop: _.s4 }}>
+          <Button variant="ghost" onClick={() => setShowPoModal(false)}>Cancel</Button>
+          <Button icon={FilePlus2} onClick={createPo}>Create PO</Button>
+        </div>
+      </Modal>
+
+      <Modal open={showBillModal} onClose={() => setShowBillModal(false)} title="Record Bill" width={520}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: _.s3 }}>
+          <div style={{ gridColumn: "1 / -1" }}>
+            <label style={label}>PO *</label>
+            <select style={{ ...input, cursor: "pointer" }} value={billForm.poId} onChange={(e) => setBillForm((v) => ({ ...v, poId: e.target.value }))}>
+              <option value="">— Select PO —</option>
+              {purchaseOrders.map((po) => (
+                <option key={po.id} value={po.id}>
+                  {po.number} - {po.supplier} ({fmt(po.amount)})
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label style={label}>Bill Amount *</label>
+            <input type="number" style={input} value={billForm.amount} onChange={(e) => setBillForm((v) => ({ ...v, amount: e.target.value }))} />
+          </div>
+          <div>
+            <label style={label}>Date *</label>
+            <input type="date" style={input} value={billForm.date} onChange={(e) => setBillForm((v) => ({ ...v, date: e.target.value }))} />
+          </div>
+        </div>
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: _.s2, marginTop: _.s4 }}>
+          <Button variant="ghost" onClick={() => setShowBillModal(false)}>Cancel</Button>
+          <Button icon={Receipt} onClick={recordBill}>Record Bill</Button>
+        </div>
       </Modal>
     </Section>
-  );
-}
-
-function POForm({ po, setPO, trades, onSave, onDelete, onAdvance }) {
-  const set = (k, v) => setPO(prev => ({ ...prev, [k]: v }));
-  const isDraft = po.status === "draft";
-
-  const setItem = (idx, k, v) => {
-    const items = [...po.items];
-    items[idx] = { ...items[idx], [k]: v };
-    setPO(prev => ({ ...prev, items }));
-  };
-  const addItem = () => setPO(prev => ({ ...prev, items: [...prev.items, blankItem()] }));
-  const removeItem = (idx) => setPO(prev => ({ ...prev, items: prev.items.filter((_, i) => i !== idx) }));
-
-  const total = po.items.reduce((s, i) => s + (i.qty || 0) * (i.rate || 0), 0);
-
-  return (
-    <div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: _.s3, marginBottom: _.s4 }}>
-        <div>
-          <label style={label}>Trade</label>
-          <select style={input} value={po.tradeId} onChange={e => set("tradeId", e.target.value)} disabled={!isDraft}>
-            <option value="">— Select trade —</option>
-            {trades.map(t => <option key={t.id} value={t.id}>{t.businessName}</option>)}
-          </select>
-        </div>
-        <div>
-          <label style={label}>Status</label>
-          <div style={{ ...input, background: _.well, display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={badge(STATUS_COLORS[po.status] || _.muted)}>{po.status}</span>
-          </div>
-        </div>
-        <div>
-          <label style={label}>Issue Date</label>
-          <input style={input} type="date" value={po.issueDate} onChange={e => set("issueDate", e.target.value)} disabled={!isDraft} />
-        </div>
-        <div>
-          <label style={label}>Expected Delivery</label>
-          <input style={input} type="date" value={po.expectedDelivery} onChange={e => set("expectedDelivery", e.target.value)} />
-        </div>
-      </div>
-
-      <div style={{ marginBottom: _.s3 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: _.s2 }}>
-          <label style={{ ...label, marginBottom: 0 }}>Line Items</label>
-          {isDraft && <Button size="sm" variant="secondary" icon={Plus} onClick={addItem}>Add</Button>}
-        </div>
-        {po.items.map((item, idx) => (
-          <div key={item.id} style={{ display: "grid", gridTemplateColumns: "2fr 60px 60px 80px 32px", gap: _.s2, marginBottom: _.s2, alignItems: "end" }}>
-            <div>
-              {idx === 0 && <label style={{ ...label, fontSize: _.fontSize.xs }}>Description</label>}
-              <input style={input} value={item.description} onChange={e => setItem(idx, "description", e.target.value)} disabled={!isDraft} />
-            </div>
-            <div>
-              {idx === 0 && <label style={{ ...label, fontSize: _.fontSize.xs }}>Qty</label>}
-              <input style={{ ...input, textAlign: "center" }} type="number" value={item.qty} onChange={e => setItem(idx, "qty", parseFloat(e.target.value) || 0)} disabled={!isDraft} />
-            </div>
-            <div>
-              {idx === 0 && <label style={{ ...label, fontSize: _.fontSize.xs }}>Unit</label>}
-              <input style={{ ...input, textAlign: "center" }} value={item.unit} onChange={e => setItem(idx, "unit", e.target.value)} disabled={!isDraft} />
-            </div>
-            <div>
-              {idx === 0 && <label style={{ ...label, fontSize: _.fontSize.xs }}>Rate</label>}
-              <input style={{ ...input, textAlign: "right" }} type="number" value={item.rate} onChange={e => setItem(idx, "rate", parseFloat(e.target.value) || 0)} disabled={!isDraft} />
-            </div>
-            {isDraft && (
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: _.red }} onClick={() => removeItem(idx)}>
-                <Trash2 size={14} />
-              </div>
-            )}
-          </div>
-        ))}
-        <div style={{ textAlign: "right", fontWeight: _.fontWeight.semi, fontSize: _.fontSize.lg, color: _.ink, marginTop: _.s2 }}>
-          Total: {fmt(total)}
-        </div>
-      </div>
-
-      <div style={{ marginBottom: _.s4 }}>
-        <label style={label}>Notes</label>
-        <textarea style={{ ...input, minHeight: 60 }} value={po.notes || ""} onChange={e => set("notes", e.target.value)} />
-      </div>
-
-      <div style={{ display: "flex", gap: _.s2, justifyContent: "space-between" }}>
-        <div style={{ display: "flex", gap: _.s2 }}>
-          {isDraft && <Button onClick={() => onSave(po)}>Save Draft</Button>}
-          {po.status !== "received" && (
-            <Button variant="secondary" icon={po.status === "draft" ? Send : po.status === "sent" ? Check : PackageCheck} onClick={() => onAdvance(po)}>
-              {po.status === "draft" ? "Send" : po.status === "sent" ? "Accept" : "Mark Received"}
-            </Button>
-          )}
-        </div>
-        {isDraft && (
-          <Button variant="danger" size="sm" icon={Trash2} onClick={() => onDelete(po.id)}>Delete</Button>
-        )}
-      </div>
-    </div>
   );
 }
