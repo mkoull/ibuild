@@ -10,6 +10,15 @@ import _ from "../../theme/tokens.js";
 import { fmt, pName, stCol, badge as badgeStyle } from "../../theme/styles.js";
 import Button from "../ui/Button.jsx";
 
+const LIFECYCLE_STEPS = ["Lead", "Quoted", "Approved", "Active", "Complete"];
+
+function lifecycleIndex(stage) {
+  const s = String(stage || "").toLowerCase();
+  if (s === "invoiced") return LIFECYCLE_STEPS.indexOf("Active");
+  const direct = LIFECYCLE_STEPS.findIndex((x) => x.toLowerCase() === s);
+  return direct >= 0 ? direct : 0;
+}
+
 export default function WorkspaceShell({ workspaceType }) {
   const { id, estimateId, jobId } = useParams();
   const location = useLocation();
@@ -45,6 +54,11 @@ export default function WorkspaceShell({ workspaceType }) {
   const marginPct = Number(totals?.marginPctNew ?? totals?.marginPctCalc ?? 0);
   const outstanding = Number(totals?.outstanding || 0);
   const marginValue = Number(totals?.forecastMarginNew ?? totals?.forecastMargin ?? 0);
+  const createdAt = project?.createdAt ? new Date(project.createdAt) : null;
+  const createdLabel = createdAt && !Number.isNaN(createdAt.getTime())
+    ? createdAt.toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })
+    : "Unknown";
+  const stageIdx = lifecycleIndex(stage);
 
   // Active tab detection
   const pathAfterBase = location.pathname.split(`/${entityId}/`)[1] || "overview";
@@ -114,19 +128,25 @@ export default function WorkspaceShell({ workspaceType }) {
           {project.type || project.buildType || "Project"}
         </span>
 
-        {/* Status pill */}
-        <span style={badgeStyle(statusColor)}>{displayStatus}</span>
-
         <div style={{ flex: 1 }} />
 
         {/* Buildxact-style finance strip */}
-        <div style={{ display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap", justifyContent: "flex-end" }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
+            <div style={{ fontSize: 11, color: _.muted, fontWeight: 500, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+              Status
+            </div>
+            <span style={badgeStyle(statusColor)}>{displayStatus}</span>
+            <div style={{ fontSize: 11, color: _.muted, marginTop: 4 }}>
+              Created {createdLabel}
+            </div>
+          </div>
           {total > 0 && (
-            <div style={{ textAlign: "right", flexShrink: 0 }}>
+            <div style={{ textAlign: "right", flexShrink: 0, minWidth: 170 }}>
               <div style={{ fontSize: 11, color: _.muted, fontWeight: 500, letterSpacing: "0.04em", textTransform: "uppercase" }}>
                 {isEstimate ? "Quote Total" : "Contract Total"}
               </div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: _.ink, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}>
+              <div style={{ fontSize: 24, fontWeight: 700, color: _.ink, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}>
                 {fmt(total)}
               </div>
             </div>
@@ -198,6 +218,40 @@ export default function WorkspaceShell({ workspaceType }) {
               }}
             >
               {t.label}
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ display: "flex", gap: 0, alignItems: "center", marginBottom: 18, overflowX: "auto" }}>
+        {LIFECYCLE_STEPS.map((s, idx) => {
+          const active = idx <= stageIdx;
+          const current = idx === stageIdx;
+          return (
+            <div key={s} style={{ display: "flex", alignItems: "center" }}>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 92 }}>
+                <div style={{
+                  width: 8, height: 8, borderRadius: "50%",
+                  background: active ? _.ac : _.line2,
+                  boxShadow: current ? `0 0 0 3px ${_.ac}22` : "none",
+                }} />
+                <div style={{
+                  marginTop: 6,
+                  fontSize: 11,
+                  color: current ? _.ink : _.muted,
+                  fontWeight: current ? 600 : 500,
+                  whiteSpace: "nowrap",
+                }}>
+                  {s}
+                </div>
+              </div>
+              {idx < LIFECYCLE_STEPS.length - 1 && (
+                <div style={{
+                  width: 42,
+                  height: 1,
+                  background: idx < stageIdx ? `${_.ac}88` : _.line2,
+                  margin: "0 4px",
+                }} />
+              )}
             </div>
           );
         })}

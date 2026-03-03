@@ -1,8 +1,8 @@
 import { useNavigate } from "react-router-dom";
-import { Lock } from "lucide-react";
+import { Hammer } from "lucide-react";
 import _ from "../../theme/tokens.js";
-import Button from "./Button.jsx";
 import { useProject } from "../../context/ProjectContext.jsx";
+import Empty from "./Empty.jsx";
 
 export default function LockedTabGate({ children }) {
   const navigate = useNavigate();
@@ -29,23 +29,21 @@ export default function LockedTabGate({ children }) {
 
   return (
     <div style={{
-      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-      minHeight: 400, textAlign: "center", padding: 40,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      minHeight: 420,
+      padding: 24,
     }}>
-      <div style={{
-        width: 56, height: 56, borderRadius: "50%", background: _.well,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        marginBottom: 20,
-      }}>
-        <Lock size={24} color={_.muted} />
+      <div style={{ width: "min(560px, 100%)" }}>
+        <Empty
+          icon={Hammer}
+          title="Convert to Job to unlock this area"
+          text="This area becomes available once the project is converted into an active job so delivery workflows can run against an active lifecycle."
+          action={onConvert}
+          actionText="Convert to Job"
+        />
       </div>
-      <div style={{ fontSize: 16, fontWeight: 600, color: _.ink, marginBottom: 8 }}>
-        Convert to Job to unlock
-      </div>
-      <div style={{ fontSize: 14, color: _.muted, maxWidth: 380, lineHeight: 1.5, marginBottom: 24 }}>
-        This area becomes available once the project is converted into an active job.
-      </div>
-      <Button onClick={onConvert}>Convert to Job</Button>
     </div>
   );
 }
