@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 
 /**
- * Global sidebar: 6 top-level items.
+ * Global sidebar: 5 top-level items.
  * type "link"  → direct nav link
  * type "group" → expandable accordion with children[]
  */
@@ -17,29 +17,12 @@ export const NAV_STRUCTURE = {
       id: "pipeline", label: "Pipeline", type: "group", Ic: TrendingUp,
       children: [
         { id: "clients", label: "Clients", to: "/clients", match: "/clients" },
-        { id: "leads", label: "Leads", to: "/leads", match: "/leads" },
         { id: "quotes", label: "Quotes", to: "/quotes", match: "/quotes" },
         { id: "jobs", label: "Jobs", to: "/jobs", match: "/jobs" },
       ],
     },
     { id: "projects", label: "Projects", type: "link", Ic: FolderOpen, to: "/projects", match: "/projects" },
-    {
-      id: "financials", label: "Financials", type: "group", Ic: Landmark,
-      children: [
-        { id: "invoices", label: "Invoices", to: "/jobs#invoices", match: "/jobs" },
-        { id: "bills", label: "Bills", to: "/jobs#bills", match: "/jobs" },
-        { id: "payments", label: "Payments", to: "/jobs#payments", match: "/jobs" },
-      ],
-    },
-    {
-      id: "site", label: "Site", type: "group", Ic: HardHat,
-      children: [
-        { id: "documents", label: "Documents", to: "/jobs#documents", match: "/jobs" },
-        { id: "diary", label: "Diary", to: "/jobs#site-diary", match: "/jobs" },
-        { id: "defects", label: "Defects", to: "/jobs#defects", match: "/jobs" },
-        { id: "trades", label: "Trades", to: "/trades", match: "/trades" },
-      ],
-    },
+    { id: "trades", label: "Trades", type: "link", Ic: HardHat, to: "/trades", match: "/trades" },
     {
       id: "admin", label: "Admin", type: "group", Ic: Settings,
       children: [

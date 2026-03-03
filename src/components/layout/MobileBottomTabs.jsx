@@ -28,10 +28,8 @@ const PROJECT_TABS = [
 
 const GLOBAL_MORE = [
   { type: "header", label: "Pipeline" },
-  { path: "/leads", label: "Leads", Ic: TrendingUp },
   { path: "/quotes", label: "Quotes", Ic: FileText },
   { path: "/jobs", label: "Jobs", Ic: Wrench },
-  { type: "header", label: "Site" },
   { path: "/trades", label: "Trades", Ic: Building2 },
   { type: "header", label: "Admin" },
   { path: "/rate-library", label: "Rate Library", Ic: Library },
