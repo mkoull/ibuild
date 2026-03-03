@@ -9,6 +9,7 @@ import tradesRouter from "./routes/trades.js";
 import settingsRouter from "./routes/settings.js";
 import purchaseOrdersRouter from "./routes/purchaseOrders.js";
 import workOrdersRouter from "./routes/workOrders.js";
+import authRouter from "./auth.js";
 
 export function createApp() {
   const app = express();
@@ -29,6 +30,7 @@ export function createApp() {
   app.use("/api/clients", clientsRouter);
   app.use("/api/trades", tradesRouter);
   app.use("/api/settings", settingsRouter);
+  app.use("/api/auth", authRouter);
 
   // Nested project routes — mergeParams ensures :projectId propagates to sub-routers
   app.use("/api/projects/:projectId/purchase-orders", purchaseOrdersRouter);
