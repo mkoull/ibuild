@@ -1,50 +1,98 @@
 # iBuild — Builder Command Centre
 
-Construction project management SaaS. Vite + React single-page app with Express backend for AI features.
+Construction project management app with:
+- React SPA frontend (Vite)
+- Express backend
+- Prisma/Postgres persistence
+- Multi-tenant auth and integration-style APIs for Buildxact and Procore
 
 ## Quick Start
 
 ```bash
 npm install
+```
 
-# Terminal 1 — API server (port 3001)
+1) Start Postgres and configure `DATABASE_URL`.
+2) Run Prisma migration:
+
+```bash
+npm run db:migrate
+```
+
+3) Run backend and frontend:
+
+```bash
+# Terminal 1
 npm run server
 
-# Terminal 2 — Vite dev server (port 5173)
+# Terminal 2
 npm run dev
 ```
 
 ## Environment Variables
 
+Copy `.env.example` to `.env` and set values:
+
 | Variable | Required | Description |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | No | Set on the **server** (not in `.env`). When present, Plans AI calls Anthropic for real floor plan analysis. When missing, the server returns stub data so the UI still works. |
+| `DATABASE_URL` | Yes | PostgreSQL connection string |
+| `ENCRYPTION_KEY` | Yes | 32-byte hex key used for server encryption helpers |
+| `JWT_SECRET` | Yes | JWT signing secret for `/api/register` + `/api/login` |
+| `ANTHROPIC_API_KEY` | No | Enables live floor plan AI analysis |
+| `PORT` | No | API port (default `3001`) |
+
+## API Overview
+
+### Auth
+- `POST /api/register`
+- `POST /api/login`
+
+### Buildxact mode (JWT required)
+- `GET /api/buildxact/projects`
+- `POST /api/buildxact/projects`
+- `GET /api/buildxact/estimates`
+- `POST /api/buildxact/estimates`
+- `GET /api/buildxact/invoices`
+- `POST /api/buildxact/invoices`
+- `POST /api/buildxact/documents` (`multipart/form-data`, field `file`)
+
+### Procore mode (JWT required)
+- `GET /api/procore/projects`
+- `POST /api/procore/projects`
+- `GET /api/procore/observations`
+- `POST /api/procore/observations`
+- `GET /api/procore/invoices`
+- `POST /api/procore/invoices`
+- `GET /api/procore/bills`
+- `POST /api/procore/bills`
+
+### Existing AI endpoint
+- `POST /api/floorplan/analyse`
+
+## Frontend Integration Mode
+
+Projects list includes a source selector:
+- `Local`
+- `Buildxact`
+- `Procore`
+
+Mode is stored in localStorage (`ib_integration_mode`).  
+JWT token for API requests is read from `ib_auth_token`.
+
+## Testing
 
 ```bash
-# Live AI analysis
-ANTHROPIC_API_KEY=sk-ant-... npm run server
-
-# Stub mode (no key needed)
-npm run server
+npm run test           # frontend unit tests
+npm run test:server    # server tests
+npm run test:integration
+npm run build
 ```
 
-## API Endpoints
+## CI
 
-| Method | Path | Description |
-|---|---|---|
-| `POST` | `/api/floorplan/analyse` | Accepts `multipart/form-data` with a `file` field (image). Returns JSON with `total_m2`, `rooms`, `notes`, and `scope_items`. |
-
-## Local Storage Keys
-
-| Key | Shape | Description |
-|---|---|---|
-| `ib_projects` | `{ v: 1, projects: [...], ai: number }` | All projects + active index. Autosaved with 300ms debounce. |
-| `ib_templates` | `[{ name, scope, margin, contingency }]` | Saved scope templates. |
-
-## Architecture
-
-- **Primary file:** `src/ibuild-command-centre.jsx` — entire app in one component
-- **Server:** `server/index.js` — Express + cors + multer, proxies to Anthropic API
-- **Entry:** `src/main.jsx` → `src/App.jsx` → `IBuild`
-- **Storage:** `localStorage` via `store` wrapper (get/set/remove with JSON + try/catch)
-- **Local-first** — all project data in browser storage, server only needed for AI features
+GitHub Actions workflow at `.github/workflows/ci.yml` runs:
+- Prisma migrate deploy
+- lint
+- unit tests
+- integration tests
+- build

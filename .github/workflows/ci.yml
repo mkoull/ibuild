@@ -28,6 +28,7 @@ jobs:
     env:
       DATABASE_URL: postgresql://ibuild:test@localhost:5432/ibuild_test
       ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      JWT_SECRET: test-secret
       NODE_ENV: test
 
     steps:
@@ -51,6 +52,9 @@ jobs:
 
       - name: Server tests
         run: npm run test:server
+
+      - name: Integration tests
+        run: npm run test:integration
 
       - name: Build
         run: npm run build

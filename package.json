@@ -13,6 +13,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:server": "vitest run --config vitest.server.config.js",
+    "test:integration": "vitest run --config vitest.server.config.js server/__tests__/integration",
     "test:e2e": "playwright test",
     "db:migrate": "prisma migrate dev --schema server/db/prisma/schema.prisma",
     "db:push": "prisma db push --schema server/db/prisma/schema.prisma",
