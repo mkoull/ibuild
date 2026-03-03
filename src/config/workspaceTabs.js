@@ -14,35 +14,129 @@ export function displayStage(stage) {
   return STAGE_DISPLAY[stage] || stage || "Draft";
 }
 
+export const DEFAULT_LOCKED_MESSAGE = "Convert this quote to a job to unlock this area";
+export function isEstimateConverted(estimate) {
+  return !!estimate?.jobId || String(estimate?.status || "").toLowerCase() === "converted";
+}
+
 /**
- * Estimate workspace tabs.
- * Locked tabs are visible but greyed — clicking shows LockedTabGate.
+ * Buildxact-style estimate workspace tab config.
+ * Shape requirement:
+ * { id, label, path, isLocked(estimate), lockedMessage, ctaLabel, ctaAction }
  */
 export const ESTIMATE_TABS = [
-  { label: "Estimate Details",   path: "overview" },
-  { label: "Plans & Take-Offs",  path: "plans" },
-  { label: "Estimate Costings",  path: "quote",           defaultStep: "scope" },
-  { label: "Request for Quotes", path: "rfq" },
-  { label: "Specifications",     path: "proposals" },
-  { label: "Quote Letter",       path: "quote-review",    defaultStep: "review" },
-  // Job tabs — visible but locked on estimates
-  { label: "Job Details",        path: "job-overview",     locked: true },
-  { label: "Schedule",           path: "schedule",         locked: true },
-  { label: "Purchase Orders",    path: "purchase-orders",  locked: true },
-  { label: "Work Orders",        path: "work-orders",      locked: true },
-  { label: "Actuals Costings",   path: "costs",            locked: true },
+  {
+    id: "details",
+    label: "Details",
+    path: "overview",
+    isLocked: () => false,
+    lockedMessage: "",
+    ctaLabel: "",
+    ctaAction: "",
+  },
+  {
+    id: "plans_takeoffs",
+    label: "Plans & Takeoffs",
+    path: "plans",
+    isLocked: () => false,
+    lockedMessage: "",
+    ctaLabel: "",
+    ctaAction: "",
+  },
+  {
+    id: "costings",
+    label: "Costings",
+    path: "quote",
+    isLocked: () => false,
+    lockedMessage: "",
+    ctaLabel: "",
+    ctaAction: "",
+  },
+  {
+    id: "rfqs",
+    label: "RFQs",
+    path: "rfq",
+    isLocked: () => false,
+    lockedMessage: "",
+    ctaLabel: "",
+    ctaAction: "",
+  },
+  {
+    id: "specifications",
+    label: "Specifications",
+    path: "proposals",
+    isLocked: () => false,
+    lockedMessage: "",
+    ctaLabel: "",
+    ctaAction: "",
+  },
+  {
+    id: "quote_letter",
+    label: "Quote Letter",
+    path: "quote-review",
+    isLocked: () => false,
+    lockedMessage: "",
+    ctaLabel: "",
+    ctaAction: "",
+  },
+  {
+    id: "job_details",
+    label: "Job Details",
+    path: "job-overview",
+    isLocked: (estimate) => !isEstimateConverted(estimate),
+    lockedMessage: DEFAULT_LOCKED_MESSAGE,
+    ctaLabel: "Convert to Job",
+    ctaAction: "convert_to_job",
+  },
+  {
+    id: "schedule",
+    label: "Schedule",
+    path: "schedule",
+    isLocked: (estimate) => !isEstimateConverted(estimate),
+    lockedMessage: DEFAULT_LOCKED_MESSAGE,
+    ctaLabel: "Convert to Job",
+    ctaAction: "convert_to_job",
+  },
+  {
+    id: "purchase_orders",
+    label: "Purchase Orders",
+    path: "purchase-orders",
+    isLocked: (estimate) => !isEstimateConverted(estimate),
+    lockedMessage: DEFAULT_LOCKED_MESSAGE,
+    ctaLabel: "Convert to Job",
+    ctaAction: "convert_to_job",
+  },
+  {
+    id: "work_orders",
+    label: "Work Orders",
+    path: "work-orders",
+    isLocked: (estimate) => !isEstimateConverted(estimate),
+    lockedMessage: DEFAULT_LOCKED_MESSAGE,
+    ctaLabel: "Convert to Job",
+    ctaAction: "convert_to_job",
+  },
+  {
+    id: "actuals",
+    label: "Actuals",
+    path: "costs",
+    isLocked: (estimate) => !isEstimateConverted(estimate),
+    lockedMessage: DEFAULT_LOCKED_MESSAGE,
+    ctaLabel: "Convert to Job",
+    ctaAction: "convert_to_job",
+  },
 ];
 
 /** Job workspace tabs */
 export const JOB_TABS = [
-  { label: "Job Details",        path: "overview" },
-  { label: "Schedule",           path: "schedule" },
-  { label: "Purchase Orders",    path: "purchase-orders" },
-  { label: "Work Orders",        path: "work-orders" },
-  { label: "Actuals Costings",   path: "costs" },
-  { label: "Documents",          path: "documents" },
-  { label: "Diary",              path: "site-diary" },
-  { label: "Defects",            path: "defects" },
+  { label: "Overview", path: "overview" },
+  { label: "Schedule", path: "schedule" },
+  { label: "Budget/Cost Tracker", path: "costs" },
+  { label: "Procurement", path: "procurement" },
+  { label: "Variations", path: "variations" },
+  { label: "Invoices", path: "invoices" },
+  { label: "Docs", path: "documents" },
+  { label: "Diary", path: "site-diary" },
+  { label: "Defects", path: "defects" },
 ];
 
 /** Build the workspace URL for a project */

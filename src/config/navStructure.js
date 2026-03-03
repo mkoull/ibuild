@@ -1,5 +1,5 @@
 import {
-  LayoutDashboard, TrendingUp, FileText, HardHat, Landmark, Settings,
+  LayoutDashboard, TrendingUp, FolderKanban, Landmark, HardHat, Settings,
 } from "lucide-react";
 
 /**
@@ -8,10 +8,10 @@ import {
 export const NAV_STRUCTURE = {
   global: [
     { id: "dashboard",  label: "Dashboard",  Ic: LayoutDashboard, to: "/dashboard" },
-    { id: "pipeline",   label: "Pipeline",   Ic: TrendingUp,      to: "/clients" },
-    { id: "estimates",  label: "Estimates",   Ic: FileText,        to: "/estimates" },
-    { id: "jobs",       label: "Jobs",        Ic: HardHat,         to: "/jobs" },
-    { id: "finance",    label: "Finance",     Ic: Landmark,        to: "/invoices" },
+    { id: "pipeline",   label: "Pipeline",   Ic: TrendingUp,      to: "/pipeline" },
+    { id: "projects",   label: "Projects",   Ic: FolderKanban,    to: "/projects" },
+    { id: "finance",    label: "Finance",    Ic: Landmark,        to: "/finance" },
+    { id: "site",       label: "Site",       Ic: HardHat,         to: "/site" },
     { id: "settings",   label: "Settings",    Ic: Settings,        to: "/settings" },
   ],
 
@@ -20,10 +20,10 @@ export const NAV_STRUCTURE = {
    */
   activeMap: {
     dashboard:  ["/dashboard"],
-    pipeline:   ["/clients", "/leads"],
-    estimates:  ["/estimates", "/quotes"],
-    jobs:       ["/jobs"],
-    finance:    ["/invoices", "/bills", "/payments"],
-    settings:   ["/settings", "/rate-library", "/trades", "/documents", "/site-diary", "/defects"],
+    pipeline:   ["/pipeline", "/clients", "/leads", "/quotes"],
+    projects:   ["/projects", "/estimates", "/jobs"],
+    finance:    ["/finance", "/invoices", "/bills", "/payments"],
+    site:       ["/site", "/documents", "/site-diary", "/defects"],
+    settings:   ["/settings", "/rate-library", "/trades"],
   },
 };

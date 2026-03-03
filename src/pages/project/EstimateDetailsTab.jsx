@@ -11,12 +11,12 @@ const CARD = {
   background: "#fff",
   border: "1px solid rgba(0,0,0,0.08)",
   borderRadius: 8,
-  padding: 20,
+  padding: 18,
 };
 
 const CARD_HEADER = {
   display: "flex", justifyContent: "space-between", alignItems: "center",
-  marginBottom: 16,
+  marginBottom: 12,
 };
 
 const CARD_TITLE = {
@@ -30,11 +30,15 @@ const EDIT_BTN = {
 };
 
 const ROW = {
-  display: "flex", gap: 12, padding: "6px 0",
+  display: "grid",
+  gridTemplateColumns: "140px 1fr",
+  gap: 10,
+  padding: "7px 0",
+  borderBottom: `1px solid ${_.line}60`,
 };
 
 const LBL = {
-  fontSize: 13, color: _.muted, minWidth: 100, flexShrink: 0,
+  fontSize: 12, color: _.muted, flexShrink: 0,
 };
 
 const VAL = {
@@ -50,6 +54,12 @@ function InfoRow({ label, value }) {
   );
 }
 
+function safeText(value) {
+  if (value === null || value === undefined) return "—";
+  const t = String(value).trim();
+  return t ? t : "—";
+}
+
 export default function EstimateDetailsTab() {
   const { project: p, update: up, client } = useProject();
   const { mobile, notify } = useApp();
@@ -58,6 +68,14 @@ export default function EstimateDetailsTab() {
 
   const stage = p.stage || p.status || "Lead";
   const contact = client?.contacts?.[0];
+  const createdAt = p.createdAt
+    ? new Date(p.createdAt).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })
+    : ds();
+  const customerName = client?.displayName || p.client || "";
+  const customerPhone = contact?.phone || p.phone || "";
+  const customerEmail = contact?.email || p.email || "";
+  const address = [p.address, p.suburb, p.state, p.postcode].filter(Boolean).join(", ");
+  const mapsHref = address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}` : "";
 
   const handleSaveNotes = () => {
     up(pr => { pr.notes = notes; return pr; });
@@ -82,16 +100,12 @@ export default function EstimateDetailsTab() {
               <Pencil size={14} />
             </button>
           </div>
-          <InfoRow label="Number" value={p.estimateNumber} />
-          <InfoRow label="Name" value={p.name} />
-          <InfoRow label="Status" value={displayStage(stage)} />
-          <InfoRow label="Created" value={p.createdAt ? new Date(p.createdAt).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" }) : ds()} />
-          <InfoRow label="Build Type" value={p.buildType || p.type} />
-          <InfoRow label="Floor Area" value={p.floorArea ? `${p.floorArea}m²` : null} />
-          <InfoRow label="Storeys" value={p.storeys} />
-          <InfoRow label="Margin %" value={p.marginPct != null ? `${p.marginPct}%` : null} />
-          <InfoRow label="Contingency %" value={p.contingencyPct != null ? `${p.contingencyPct}%` : null} />
-          <InfoRow label="Valid Days" value={p.validDays} />
+          <InfoRow label="Estimate #" value={safeText(p.estimateNumber)} />
+          <InfoRow label="Description" value={safeText(p.name)} />
+          <InfoRow label="Created" value={safeText(createdAt)} />
+          <InfoRow label="Build Type" value={safeText(p.buildType || p.type)} />
+          <InfoRow label="Tax Profile" value={safeText(p.taxProfile || (p.gstEnabled ? "GST" : ""))} />
+          <InfoRow label="Status" value={safeText(displayStage(stage))} />
         </div>
 
         {/* Customer Details */}
@@ -102,10 +116,9 @@ export default function EstimateDetailsTab() {
               <Pencil size={14} />
             </button>
           </div>
-          <InfoRow label="Name" value={client?.displayName || p.client} />
-          <InfoRow label="Address" value={[p.address, p.suburb].filter(Boolean).join(", ")} />
-          <InfoRow label="Phone" value={contact?.phone || p.phone} />
-          <InfoRow label="Email" value={contact?.email || p.email} />
+          <InfoRow label="Name" value={safeText(customerName)} />
+          <InfoRow label="Phone" value={safeText(customerPhone)} />
+          <InfoRow label="Email" value={safeText(customerEmail)} />
         </div>
 
         {/* Lead Details */}
@@ -113,7 +126,7 @@ export default function EstimateDetailsTab() {
           <div style={CARD_HEADER}>
             <h3 style={CARD_TITLE}>Lead Details</h3>
           </div>
-          <div style={{ fontSize: 13, color: _.muted, lineHeight: 1.5 }}>
+          <div style={{ fontSize: 13, color: _.muted, lineHeight: 1.5, padding: `${_.s2}px 0` }}>
             No lead linked to this estimate.
           </div>
         </div>
@@ -126,12 +139,15 @@ export default function EstimateDetailsTab() {
           <div style={CARD_HEADER}>
             <h3 style={CARD_TITLE}>Work Location</h3>
           </div>
-          {(p.address || p.suburb) ? (
-            <div style={{ fontSize: 14, color: _.ac, marginBottom: 12 }}>
-              {[p.address, p.suburb].filter(Boolean).join(", ")}
-            </div>
+          <div style={{ fontSize: 14, color: _.ink, marginBottom: 8 }}>
+            {safeText(address)}
+          </div>
+          {mapsHref ? (
+            <a href={mapsHref} target="_blank" rel="noreferrer" style={{ fontSize: 13, color: _.ac, textDecoration: "none", display: "inline-block", marginBottom: 12 }}>
+              Open in Maps
+            </a>
           ) : (
-            <div style={{ fontSize: 13, color: _.muted, marginBottom: 12 }}>No address set</div>
+            <div style={{ fontSize: 13, color: _.muted, marginBottom: 12 }}>Open in Maps</div>
           )}
           <div style={{
             height: 280, background: _.well, borderRadius: 6,
@@ -141,7 +157,7 @@ export default function EstimateDetailsTab() {
           }}>
             <MapPin size={24} color={_.muted} />
             <span style={{ fontSize: 13, color: _.muted }}>
-              {p.address || p.suburb || "Map preview"}
+              {address || "Map preview"}
             </span>
           </div>
         </div>

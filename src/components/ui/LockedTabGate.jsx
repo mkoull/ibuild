@@ -2,9 +2,13 @@ import { useNavigate } from "react-router-dom";
 import { Lock } from "lucide-react";
 import _ from "../../theme/tokens.js";
 import Button from "./Button.jsx";
+import { useProject } from "../../context/ProjectContext.jsx";
 
-export default function LockedTabGate() {
+export default function LockedTabGate({ children }) {
   const navigate = useNavigate();
+  const { project } = useProject();
+  const unlocked = !!project?.jobId || String(project?.status || "").toLowerCase() === "converted";
+  if (unlocked) return children || null;
 
   return (
     <div style={{
@@ -22,7 +26,7 @@ export default function LockedTabGate() {
         This feature is available for jobs
       </div>
       <div style={{ fontSize: 14, color: _.muted, maxWidth: 380, lineHeight: 1.5, marginBottom: 24 }}>
-        Convert this quote to a job to unlock scheduling, procurement and actuals.
+        Convert this quote to a job to unlock this area.
       </div>
       <Button onClick={() => navigate("../overview?action=convert")}>Convert to Job</Button>
     </div>

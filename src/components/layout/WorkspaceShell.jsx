@@ -2,23 +2,29 @@ import { useMemo } from "react";
 import { useParams, Outlet, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { useProjectsCtx } from "../../context/AppContext.jsx";
+import { useApp } from "../../context/AppContext.jsx";
 import { ProjectProvider } from "../../context/ProjectContext.jsx";
 import { calc } from "../../lib/calc.js";
 import { isQuote } from "../../lib/lifecycle.js";
-import { ESTIMATE_TABS, JOB_TABS, displayStage } from "../../config/workspaceTabs.js";
+import { ESTIMATE_TABS, JOB_TABS, displayStage, isEstimateConverted } from "../../config/workspaceTabs.js";
+import { getNextJobNumber } from "../../config/workspaceTabs.js";
 import _ from "../../theme/tokens.js";
 import { fmt, pName, stCol, badge as badgeStyle } from "../../theme/styles.js";
+import Button from "../ui/Button.jsx";
+import { uid } from "../../theme/styles.js";
 
 export default function WorkspaceShell({ workspaceType }) {
-  const { id } = useParams();
+  const { id, estimateId, jobId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const { find, clients } = useProjectsCtx();
+  const { find, clients, projects, create, update } = useProjectsCtx();
+  const { notify } = useApp();
+  const entityId = estimateId || jobId || id;
 
-  const project = find(id);
+  const project = find(entityId);
   const totals = useMemo(() => project ? calc(project) : null, [project]);
 
-  if (!project) return <Navigate to="/estimates" replace />;
+  if (!project) return <Navigate to={isEstimate ? "/estimates" : "/jobs"} replace />;
 
   const stage = project.stage || project.status || "Lead";
   const isEstimate = workspaceType === "estimate" || isQuote(stage);
@@ -36,16 +42,100 @@ export default function WorkspaceShell({ workspaceType }) {
   const statusColor = stCol(stage);
 
   // Quote / contract total
-  const total = totals ? totals.curr : 0;
+  const costingsTotal = Number(project?.costingsTotals?.quoteTotal) || 0;
+  const total = isEstimate ? (costingsTotal > 0 ? costingsTotal : (totals ? totals.curr : 0)) : (totals ? totals.curr : 0);
+  const marginPct = Number(totals?.marginPctNew ?? totals?.marginPctCalc ?? 0);
+  const outstanding = Number(totals?.outstanding || 0);
+  const marginValue = Number(totals?.forecastMarginNew ?? totals?.forecastMargin ?? 0);
 
   // Active tab detection
-  const pathAfterBase = location.pathname.split(`/${id}/`)[1] || "overview";
+  const pathAfterBase = location.pathname.split(`/${entityId}/`)[1] || "overview";
   const activeTabPath = pathAfterBase.split("/")[0].split("?")[0];
 
   // Resolve which tab is active
   const resolvedActive = tabs.find(t => t.path === activeTabPath)?.path
-    || tabs.find(t => !t.locked)?.path
+    || tabs.find(t => !(t.isLocked?.(project)))?.path
     || "overview";
+  const showConvertPrimary = isEstimate && !isEstimateConverted(project);
+
+  const toBudgetLine = (line, index) => {
+    const qty = Number(line.qty) || 0;
+    const unitCost = Number(line.unitCost) || 0;
+    const markupPct = Number(line.markupPct) || 0;
+    const budgetAmount = Math.round((qty * unitCost * (1 + markupPct / 100)) * 100) / 100;
+    return {
+      id: uid(),
+      category: line.category || "General",
+      trade: line.category || "General",
+      item: line.description || `Line ${index + 1}`,
+      description: line.description || "",
+      unit: line.uom || "ea",
+      qty,
+      rate: unitCost,
+      markupPct,
+      tax: line.tax || "GST",
+      budgetAmount,
+      source: "estimate_costings_snapshot",
+      version: 1,
+    };
+  };
+
+  const convertToJob = () => {
+    if (!isEstimate || isEstimateConverted(project)) return;
+
+    const allProjects = Array.isArray(projects) ? projects : [];
+    const jobNumber = getNextJobNumber(allProjects);
+    const lineItems = project?.costings?.lineItems || [];
+    const baselineLines = lineItems.map(toBudgetLine);
+    const baseline = {
+      version: 1,
+      createdAt: Date.now(),
+      sourceEstimateId: project.id,
+      budgetLines: baselineLines,
+    };
+
+    const job = create({
+      name: project.name || "New Job",
+      clientId: project.clientId || "",
+      client: project.client || "",
+      email: project.email || "",
+      phone: project.phone || "",
+      address: project.address || "",
+      suburb: project.suburb || "",
+      buildType: project.buildType || project.type || "New Build",
+      storeys: project.storeys || "Single Storey",
+      floorArea: project.floorArea || "",
+      stage: "Approved",
+      status: "Approved",
+      estimateNumber: project.estimateNumber || null,
+      jobNumber,
+      scope: JSON.parse(JSON.stringify(project.scope || {})),
+      costings: JSON.parse(JSON.stringify(project.costings || { lineItems })),
+      costingsTotals: JSON.parse(JSON.stringify(project.costingsTotals || { quoteTotal: total })),
+      workingBudget: JSON.parse(JSON.stringify(baselineLines)),
+      budget: JSON.parse(JSON.stringify(baselineLines)),
+      budgetBaseline: baseline,
+      sourceEstimateId: project.id,
+      linkedEstimateId: project.id,
+      quoteSnapshotBudget: baseline,
+      conversion: { fromEstimateId: project.id, convertedAt: Date.now() },
+    });
+
+    update(project.id, (pr) => {
+      pr.status = "Converted";
+      pr.jobId = job.id;
+      pr.convertedAt = Date.now();
+      if (!pr.jobConversion) pr.jobConversion = {};
+      pr.jobConversion = { jobId: job.id, convertedAt: pr.convertedAt };
+      if (!Array.isArray(pr.activity)) pr.activity = [];
+      pr.activity.unshift({ action: `Converted to Job ${job.jobNumber || ""}`.trim(), date: new Date().toLocaleDateString("en-AU"), time: new Date().toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit" }) });
+      if (pr.activity.length > 30) pr.activity = pr.activity.slice(0, 30);
+      return pr;
+    });
+
+    notify("Converted to Job");
+    navigate("job-overview");
+  };
 
   return (
     <ProjectProvider project={project}>
@@ -89,16 +179,42 @@ export default function WorkspaceShell({ workspaceType }) {
 
         <div style={{ flex: 1 }} />
 
-        {/* Quote/Contract total */}
-        {total > 0 && (
-          <div style={{ textAlign: "right", flexShrink: 0 }}>
-            <div style={{ fontSize: 11, color: _.muted, fontWeight: 500, letterSpacing: "0.04em", textTransform: "uppercase" }}>
-              {isEstimate ? "Quote Total" : "Contract Value"}
+        {/* Buildxact-style finance strip */}
+        <div style={{ display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap" }}>
+          {total > 0 && (
+            <div style={{ textAlign: "right", flexShrink: 0 }}>
+              <div style={{ fontSize: 11, color: _.muted, fontWeight: 500, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+                {isEstimate ? "Quote Total" : "Contract Total"}
+              </div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: _.ink, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}>
+                {fmt(total)}
+              </div>
             </div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: _.ink, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}>
-              {fmt(total)}
-            </div>
-          </div>
+          )}
+          {!isEstimate && (
+            <>
+              <div style={{ textAlign: "right", minWidth: 108 }}>
+                <div style={{ fontSize: 11, color: _.muted, fontWeight: 500, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+                  Margin
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: _.ink }}>
+                  {marginPct.toFixed(1)}%
+                </div>
+                <div style={{ fontSize: 11, color: _.muted }}>{fmt(marginValue)}</div>
+              </div>
+              <div style={{ textAlign: "right", minWidth: 108 }}>
+                <div style={{ fontSize: 11, color: _.muted, fontWeight: 500, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+                  Outstanding
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: _.ink }}>
+                  {fmt(outstanding)}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+        {showConvertPrimary && (
+          <Button size="sm" onClick={convertToJob}>Convert to Job</Button>
         )}
       </div>
 
@@ -110,7 +226,7 @@ export default function WorkspaceShell({ workspaceType }) {
       }}>
         {tabs.map(t => {
           const active = resolvedActive === t.path;
-          const locked = !!t.locked;
+          const locked = !!t.isLocked?.(project);
 
           return (
             <div

@@ -6,7 +6,7 @@ import { shadowWriter } from "../lib/shadowWrite.js";
 import { getNextEstimateNumber } from "../config/workspaceTabs.js";
 
 const STORAGE_KEY = "ib_projects";
-const STORE_VERSION = 13;
+const STORE_VERSION = 14;
 const SAVE_DEBOUNCE_MS = 300;
 
 function hydrateProject(pr) {
@@ -241,6 +241,20 @@ function migrateProjects(data, fromVersion) {
       if (!p.jobNumber && JOB_STAGES.has(p.stage)) {
         jobNum++;
         p.jobNumber = `J${jobNum}`;
+      }
+    });
+    data = norm;
+  }
+  if (fromVersion <= 13) {
+    const norm = data && data.byId ? data : { byId: {}, allIds: [] };
+    Object.values(norm.byId).forEach((p) => {
+      if (p.jobId === undefined) p.jobId = null;
+      if (p.status === undefined || p.status === null || p.status === "") {
+        p.status = p.stage || "Lead";
+      }
+      if (p.convertedAt === undefined) p.convertedAt = null;
+      if (!p.jobConversion && p.jobId) {
+        p.jobConversion = { jobId: p.jobId, convertedAt: p.convertedAt || Date.now() };
       }
     });
     data = norm;
