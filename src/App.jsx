@@ -4,7 +4,8 @@ import { AppProvider } from "./context/AppContext.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import LoadingSpinner from "./components/ui/LoadingSpinner.jsx";
 import GlobalShell from "./components/layout/GlobalShell.jsx";
-import ProjectShell from "./components/layout/ProjectShell.jsx";
+import WorkspaceShell from "./components/layout/WorkspaceShell.jsx";
+import ProjectRedirect from "./components/routing/ProjectRedirect.jsx";
 
 // Lazy-loaded global pages
 const DashboardPage = lazy(() => import("./pages/global/DashboardPage.jsx"));
@@ -27,8 +28,10 @@ const DefectsListPage = lazy(() => import("./pages/global/DefectsListPage.jsx"))
 
 // Lazy-loaded project pages
 const OverviewPage = lazy(() => import("./pages/project/OverviewPage.jsx"));
+const EstimateDetailsTab = lazy(() => import("./pages/project/EstimateDetailsTab.jsx"));
 const ScopePage = lazy(() => import("./pages/project/ScopePage.jsx"));
 const QuotePage = lazy(() => import("./pages/project/QuotePage.jsx"));
+const EstimateCostingsWrapper = lazy(() => import("./pages/project/EstimateCostingsWrapper.jsx"));
 const PlansAIPage = lazy(() => import("./pages/project/PlansAIPage.jsx"));
 const CostsPage = lazy(() => import("./pages/project/CostsPage.jsx"));
 const SchedulePage = lazy(() => import("./pages/project/SchedulePage.jsx"));
@@ -47,6 +50,7 @@ const PaymentsPage = lazy(() => import("./pages/project/PaymentsPage.jsx"));
 const WorkOrdersPage = lazy(() => import("./pages/project/WorkOrdersPage.jsx"));
 const PurchaseOrdersPage = lazy(() => import("./pages/project/PurchaseOrdersPage.jsx"));
 const RFQPage = lazy(() => import("./pages/project/RFQPage.jsx"));
+const LockedTabGate = lazy(() => import("./components/ui/LockedTabGate.jsx"));
 
 export default function App() {
   return (
@@ -60,6 +64,7 @@ export default function App() {
                 <Route index element={<Navigate to="/dashboard" replace />} />
                 <Route path="dashboard" element={<DashboardPage />} />
                 <Route path="projects" element={<ProjectsListPage />} />
+                <Route path="estimates" element={<QuotesListPage />} />
                 <Route path="quotes" element={<QuotesListPage />} />
                 <Route path="leads" element={<QuotesListPage />} />
                 <Route path="jobs" element={<JobsListPage />} />
@@ -77,37 +82,63 @@ export default function App() {
                 <Route path="settings" element={<SettingsPage />} />
                 <Route path="settings/data" element={<DataPage />} />
 
-                {/* Project routes — isolated error boundary */}
-                <Route path="projects/:id" element={
+                {/* ─── Estimate workspace ─── */}
+                <Route path="estimates/:id" element={
                   <ErrorBoundary level="project">
-                    <ProjectShell />
+                    <WorkspaceShell workspaceType="estimate" />
+                  </ErrorBoundary>
+                }>
+                  <Route index element={<Navigate to="overview" replace />} />
+                  <Route path="overview" element={<EstimateDetailsTab />} />
+                  <Route path="plans" element={<PlansAIPage />} />
+                  <Route path="quote" element={<QuotePage />} />
+                  <Route path="quote-review" element={<QuotePage />} />
+                  <Route path="costings" element={<EstimateCostingsWrapper />} />
+                  <Route path="rfq" element={<RFQPage />} />
+                  <Route path="proposals" element={<ProposalsPage />} />
+                  <Route path="proposals/:propIndex" element={<ProposalDetail />} />
+                  <Route path="scope" element={<ScopePage />} />
+                  {/* Locked job tabs */}
+                  <Route path="job-overview" element={<LockedTabGate />} />
+                  <Route path="schedule" element={<LockedTabGate />} />
+                  <Route path="purchase-orders" element={<LockedTabGate />} />
+                  <Route path="work-orders" element={<LockedTabGate />} />
+                  <Route path="costs" element={<LockedTabGate />} />
+                </Route>
+
+                {/* ─── Job workspace ─── */}
+                <Route path="jobs/:id" element={
+                  <ErrorBoundary level="project">
+                    <WorkspaceShell workspaceType="job" />
                   </ErrorBoundary>
                 }>
                   <Route index element={<Navigate to="overview" replace />} />
                   <Route path="overview" element={<OverviewPage />} />
-                  <Route path="quote" element={<QuotePage />} />
-                  <Route path="scope" element={<ScopePage />} />
-                  <Route path="plans" element={<PlansAIPage />} />
-                  <Route path="plans-ai" element={<PlansAIPage />} />
-                  <Route path="costs" element={<CostsPage />} />
                   <Route path="schedule" element={<SchedulePage />} />
+                  <Route path="purchase-orders" element={<PurchaseOrdersPage />} />
+                  <Route path="work-orders" element={<WorkOrdersPage />} />
+                  <Route path="costs" element={<CostsPage />} />
+                  <Route path="documents" element={<DocumentsPage />} />
+                  <Route path="site-diary" element={<SiteDiaryPage />} />
+                  <Route path="defects" element={<DefectsPage />} />
                   <Route path="variations" element={<VariationsPage />} />
                   <Route path="variations/:voIndex" element={<VariationDetail />} />
                   <Route path="invoices" element={<InvoicesPage />} />
                   <Route path="invoices/:invIndex" element={<InvoiceDetail />} />
                   <Route path="bills" element={<BillsPage />} />
                   <Route path="payments" element={<PaymentsPage />} />
+                  <Route path="rfq" element={<RFQPage />} />
                   <Route path="proposals" element={<ProposalsPage />} />
                   <Route path="proposals/:propIndex" element={<ProposalDetail />} />
-                  <Route path="documents" element={<DocumentsPage />} />
-                  <Route path="site-diary" element={<SiteDiaryPage />} />
-                  <Route path="defects" element={<DefectsPage />} />
+                  <Route path="scope" element={<ScopePage />} />
+                  <Route path="quote" element={<QuotePage />} />
                   <Route path="trades" element={<ProjectTradesPage />} />
-                  <Route path="work-orders" element={<WorkOrdersPage />} />
-                  <Route path="purchase-orders" element={<PurchaseOrdersPage />} />
-                  <Route path="rfq" element={<RFQPage />} />
-                  <Route path="modules" element={<Navigate to="overview" replace />} />
+                  <Route path="plans" element={<PlansAIPage />} />
                 </Route>
+
+                {/* ─── Legacy project redirect ─── */}
+                <Route path="projects/:id/*" element={<ProjectRedirect />} />
+
                 <Route path="modules/:moduleId" element={<Navigate to="/projects" replace />} />
               </Route>
             </Routes>

@@ -147,7 +147,7 @@ export function isJobOnlyModule(modulePath) {
  * @param {string} opts.targetStage - default "Approved"
  * @returns {object} the mutated project
  */
-export function applyJobConversion(pr, { targetStage = "Approved" } = {}) {
+export function applyJobConversion(pr, { targetStage = "Approved", jobNumber = null } = {}) {
   // Guard: only convert from a quote stage
   const current = normaliseStage(pr.stage || pr.status);
   if (!QUOTE_STAGES.has(current)) return pr;
@@ -161,6 +161,7 @@ export function applyJobConversion(pr, { targetStage = "Approved" } = {}) {
   pr.stage = safeTargetStage;
   pr.status = safeTargetStage;
   pr.updatedAt = now;
+  if (jobNumber) pr.jobNumber = jobNumber;
 
   pr.lockedQuote = true;
   pr.jobUnlocked = true;

@@ -8,14 +8,14 @@ import {
   ReceiptText, FileText, HandCoins, NotebookText, Bug, HardHat,
   TrendingUp, Landmark, Building2, Plus, ArrowRight,
 } from "lucide-react";
+import { getWorkspaceUrl } from "../../config/workspaceTabs.js";
 
 /* ─── Static navigation entries ─── */
 const NAV_ITEMS = [
   { label: "Dashboard",    to: "/dashboard",     Ic: LayoutDashboard, group: "Navigate" },
-  { label: "Projects",     to: "/projects",      Ic: FolderOpen,      group: "Navigate" },
-  { label: "Clients",      to: "/clients",       Ic: Users,           group: "Navigate" },
-  { label: "Quotes",       to: "/quotes",        Ic: TrendingUp,      group: "Navigate" },
+  { label: "Estimates",    to: "/estimates",     Ic: FileText,        group: "Navigate" },
   { label: "Jobs",         to: "/jobs",           Ic: HardHat,         group: "Navigate" },
+  { label: "Clients",      to: "/clients",       Ic: Users,           group: "Navigate" },
   { label: "Invoices",     to: "/invoices",       Ic: ReceiptText,     group: "Navigate" },
   { label: "Bills",        to: "/bills",          Ic: FileText,        group: "Navigate" },
   { label: "Payments",     to: "/payments",       Ic: HandCoins,       group: "Navigate" },
@@ -25,6 +25,7 @@ const NAV_ITEMS = [
   { label: "Trades",       to: "/trades",         Ic: Building2,       group: "Navigate" },
   { label: "Rate Library", to: "/rate-library",   Ic: Landmark,        group: "Navigate" },
   { label: "Settings",     to: "/settings",       Ic: Settings,        group: "Navigate" },
+  { label: "Projects",     to: "/projects",       Ic: FolderOpen,      group: "Navigate" },
 ];
 
 export default function CommandBar() {
@@ -68,7 +69,7 @@ export default function CommandBar() {
   const projectResults = q
     ? projects.filter(p => pName(p, clients).toLowerCase().includes(q)).slice(0, 5).map(p => ({
         label: pName(p, clients), sub: p.stage || "Project", Ic: FolderOpen,
-        group: "Projects", action: () => { navigate(`/projects/${p.id}/overview`); close(); },
+        group: "Projects", action: () => { navigate(`${getWorkspaceUrl(p)}/overview`); close(); },
       }))
     : [];
 
@@ -84,9 +85,9 @@ export default function CommandBar() {
   }));
 
   const createResults = !q || "create new project client trade".includes(q) ? [
-    { label: "New Project", sub: "Create", Ic: Plus, group: "Create", action: () => {
+    { label: "New Estimate", sub: "Create", Ic: Plus, group: "Create", action: () => {
       const p = create({ marginPct: settings.defaultMargin ?? 18, contingencyPct: settings.defaultContingency ?? 5, validDays: settings.defaultValidDays ?? 30 });
-      navigate(`/projects/${p.id}/quote?step=details`); notify("New project created"); close();
+      navigate(`/estimates/${p.id}/overview`); notify("New estimate created"); close();
     }},
     { label: "New Client", sub: "Create", Ic: Plus, group: "Create", action: () => {
       const c = clientsHook.create(); navigate(`/clients/${c.id}`); notify("New client created"); close();

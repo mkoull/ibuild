@@ -137,8 +137,10 @@ export default function OverviewPage() {
     setShowConvertModal(false);
     notify("Converted to Job");
     if (pendingReturnPath) {
-      navigate(`../${pendingReturnPath}`);
+      navigate(`/jobs/${p.id}/${pendingReturnPath}`);
       setPendingReturnPath("");
+    } else {
+      navigate(`/jobs/${p.id}/overview`);
     }
   };
 

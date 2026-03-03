@@ -9,10 +9,11 @@ import { Search, Plus, FolderOpen, Users, Building2 } from "lucide-react";
 const ROUTE_TITLES = {
   "/dashboard":  "Dashboard",
   "/projects":   "All Projects",
-  "/clients":    "Clients",
+  "/estimates":  "Estimates",
   "/quotes":     "Quotes",
   "/jobs":       "Jobs",
   "/leads":      "Leads",
+  "/clients":    "Clients",
   "/invoices":   "Invoices",
   "/bills":      "Bills",
   "/payments":   "Payments",
@@ -65,7 +66,12 @@ export default function TopBar() {
   } else {
     const path = location.pathname;
     for (const [route, t] of Object.entries(ROUTE_TITLES)) {
-      if (path === route || (route !== "/" && path.startsWith(route))) { title = t; break; }
+      if (path === route || (route !== "/" && path.startsWith(route + "/"))) { title = t; break; }
+    }
+    if (!title) {
+      for (const [route, t] of Object.entries(ROUTE_TITLES)) {
+        if (route !== "/" && path.startsWith(route)) { title = t; break; }
+      }
     }
   }
 
@@ -75,8 +81,8 @@ export default function TopBar() {
       contingencyPct: settings.defaultContingency ?? 5,
       validDays: settings.defaultValidDays ?? 30,
     });
-    navigate(`/projects/${p.id}/quote?step=details`);
-    notify("New project created");
+    navigate(`/estimates/${p.id}/overview`);
+    notify("New estimate created");
     setShowCreate(false);
   };
 

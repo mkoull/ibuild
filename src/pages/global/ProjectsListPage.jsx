@@ -12,6 +12,7 @@ import SearchInput from "../../components/ui/SearchInput.jsx";
 import Modal from "../../components/ui/Modal.jsx";
 import Button from "../../components/ui/Button.jsx";
 import { FolderOpen, Trash2, ArrowRight, Plus } from "lucide-react";
+import { getWorkspaceUrl } from "../../config/workspaceTabs.js";
 
 const FILTERS = ["All", ...STAGES];
 
@@ -73,8 +74,8 @@ export default function ProjectsListPage() {
       return;
     }
     const p = create();
-    navigate(`/projects/${p.id}/quote?step=details`);
-    notify("New project created");
+    navigate(`/estimates/${p.id}/overview`);
+    notify("New estimate created");
   };
 
   const handleDelete = (id) => {
@@ -168,7 +169,7 @@ export default function ProjectsListPage() {
 
             return (
               <div key={pr.id}
-                onClick={() => navigate(`/projects/${pr.id}/overview`)}
+                onClick={() => navigate(`${getWorkspaceUrl(pr)}/overview`)}
                 onMouseEnter={() => setHoveredId(pr.id)}
                 onMouseLeave={() => setHoveredId(null)}
                 style={{
@@ -221,7 +222,7 @@ export default function ProjectsListPage() {
                     display: "flex", gap: 4, minWidth: 56, justifyContent: "flex-end",
                     opacity: isHovered ? 1 : 0, transition: "opacity 0.12s ease",
                   }}>
-                    <div onClick={e => { e.stopPropagation(); navigate(`/projects/${pr.id}/overview`); }}
+                    <div onClick={e => { e.stopPropagation(); navigate(`${getWorkspaceUrl(pr)}/overview`); }}
                       title="Open"
                       style={{ padding: 4, borderRadius: 4, color: _.body, cursor: "pointer" }}
                     >

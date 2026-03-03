@@ -3,9 +3,10 @@ import { uid, ds } from "../theme/styles.js";
 import { mkProject } from "../data/models.js";
 import { loadVersioned, saveVersioned } from "../data/store.js";
 import { shadowWriter } from "../lib/shadowWrite.js";
+import { getNextEstimateNumber } from "../config/workspaceTabs.js";
 
 const STORAGE_KEY = "ib_projects";
-const STORE_VERSION = 12;
+const STORE_VERSION = 13;
 const SAVE_DEBOUNCE_MS = 300;
 
 function hydrateProject(pr) {
@@ -222,6 +223,28 @@ function migrateProjects(data, fromVersion) {
     });
     data = norm;
   }
+  if (fromVersion <= 12) {
+    const norm = data && data.byId ? data : { byId: {}, allIds: [] };
+    const JOB_STAGES = new Set(["Approved", "Active", "Invoiced", "Complete"]);
+    // Sort by creation order to assign sequential numbers
+    const sorted = norm.allIds
+      .map(id => norm.byId[id])
+      .filter(Boolean)
+      .sort((a, b) => (a.createdAt || "").localeCompare(b.createdAt || ""));
+    let estNum = 1000;
+    let jobNum = 1000;
+    sorted.forEach(p => {
+      if (!p.estimateNumber) {
+        estNum++;
+        p.estimateNumber = `Q${estNum}`;
+      }
+      if (!p.jobNumber && JOB_STAGES.has(p.stage)) {
+        jobNum++;
+        p.jobNumber = `J${jobNum}`;
+      }
+    });
+    data = norm;
+  }
   return data;
 }
 
@@ -278,10 +301,17 @@ export function useProjects() {
 
   const create = useCallback((overrides) => {
     const p = mkProject(overrides);
-    setState(prev => ({
-      byId: { ...prev.byId, [p.id]: p },
-      allIds: [...prev.allIds, p.id],
-    }));
+    // Auto-assign estimate number from existing projects
+    setState(prev => {
+      const allProjects = prev.allIds.map(id => prev.byId[id]).filter(Boolean);
+      if (!p.estimateNumber) {
+        p.estimateNumber = getNextEstimateNumber(allProjects);
+      }
+      return {
+        byId: { ...prev.byId, [p.id]: p },
+        allIds: [...prev.allIds, p.id],
+      };
+    });
     return p;
   }, []);
 

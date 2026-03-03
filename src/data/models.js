@@ -216,6 +216,8 @@ export function mkProject(overrides = {}) {
     assignedTradeIds: [],
     diary: [],
     defects: [],
+    estimateNumber: null,
+    jobNumber: null,
     sigData: null,
     quoteSnapshotBudget: null,
     budgetBaseline: null,

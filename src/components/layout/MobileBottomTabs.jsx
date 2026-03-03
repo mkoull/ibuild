@@ -12,9 +12,9 @@ import {
 
 const GLOBAL_TABS = [
   { path: "/dashboard", label: "Home", Ic: LayoutDashboard },
-  { path: "/projects", label: "Projects", Ic: FolderOpen },
+  { path: "/estimates", label: "Estimates", Ic: FileText },
   null, // FAB slot
-  { path: "/clients", label: "Pipeline", Ic: TrendingUp },
+  { path: "/jobs", label: "Jobs", Ic: HardHat },
   { id: "more", label: "More", Ic: MoreHorizontal },
 ];
 
@@ -29,7 +29,7 @@ const PROJECT_TABS = [
 const GLOBAL_MORE = [
   { type: "header", label: "Pipeline" },
   { path: "/clients", label: "Clients", Ic: Users },
-  { path: "/quotes", label: "Quotes", Ic: TrendingUp },
+  { path: "/estimates", label: "Estimates", Ic: FileText },
   { path: "/jobs", label: "Jobs", Ic: HardHat },
   { type: "header", label: "Finance" },
   { path: "/invoices", label: "Invoices", Ic: ReceiptText },
@@ -91,8 +91,8 @@ export default function MobileBottomTabs() {
       contingencyPct: settings.defaultContingency ?? 5,
       validDays: settings.defaultValidDays ?? 30,
     });
-    navigate(`/projects/${p.id}/quote?step=details`);
-    notify("New quote created");
+    navigate(`/estimates/${p.id}/overview`);
+    notify("New estimate created");
     setShowCreate(false);
   };
 
@@ -112,7 +112,7 @@ export default function MobileBottomTabs() {
 
   const handleNewVariation = () => {
     if (isProject) {
-      navigate(`/projects/${params.id}/variations`);
+      navigate(`/jobs/${params.id}/variations`);
       notify("Go to Variations to create");
     }
     setShowCreate(false);
@@ -128,8 +128,14 @@ export default function MobileBottomTabs() {
   }
 
   const navTo = (path) => {
-    if (isProject) navigate(`/projects/${params.id}/${path}`);
-    else navigate(path);
+    if (isProject && project) {
+      const base = projectIsJob ? `/jobs/${params.id}` : `/estimates/${params.id}`;
+      navigate(`${base}/${path}`);
+    } else if (isProject) {
+      navigate(`/estimates/${params.id}/${path}`);
+    } else {
+      navigate(path);
+    }
     setShowMore(false);
   };
 

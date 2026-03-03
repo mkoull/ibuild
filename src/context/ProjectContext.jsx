@@ -5,11 +5,12 @@ import { useApp } from "./AppContext.jsx";
 import { calc } from "../lib/calc.js";
 import { ts, ds } from "../theme/styles.js";
 import { canTransition, applyJobConversion, isQuote, isJob } from "../lib/lifecycle.js";
+import { getNextJobNumber } from "../config/workspaceTabs.js";
 
 const ProjectCtx = createContext(null);
 
 export function ProjectProvider({ project, children }) {
-  const { update, clientsHook } = useProjectsCtx();
+  const { update, clientsHook, projects } = useProjectsCtx();
   const { notify } = useApp();
 
   const T = useMemo(() => calc(project), [project]);
@@ -31,7 +32,8 @@ export function ProjectProvider({ project, children }) {
     const currentStage = project.stage || "Lead";
     if (!canTransition(currentStage, newStage)) return;
     if (isQuote(currentStage) && isJob(newStage)) {
-      up(pr => applyJobConversion(pr, { targetStage: newStage }));
+      const jn = getNextJobNumber(projects);
+      up(pr => applyJobConversion(pr, { targetStage: newStage, jobNumber: jn }));
       notify(`Stage → ${newStage}`);
       return;
     }
@@ -47,6 +49,9 @@ export function ProjectProvider({ project, children }) {
   };
 
   const convertToJob = (opts = {}) => {
+    if (!opts.jobNumber) {
+      opts.jobNumber = getNextJobNumber(projects);
+    }
     up(pr => applyJobConversion(pr, opts));
   };
 
