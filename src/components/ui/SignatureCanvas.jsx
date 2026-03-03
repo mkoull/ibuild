@@ -1,7 +1,7 @@
 import { useRef, useCallback } from "react";
 import _ from "../../theme/tokens.js";
 
-export default function SignatureCanvas({ width = 500, height = 100, onSign }) {
+export default function SignatureCanvas({ width = 500, height = 100 }) {
   const canvasRef = useRef(null);
   const ctxRef = useRef(null);
   const drawing = useRef(false);

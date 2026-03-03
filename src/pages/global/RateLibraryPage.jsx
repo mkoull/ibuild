@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 import _ from "../../theme/tokens.js";
-import { fmt, input, label, btnPrimary, btnSecondary } from "../../theme/styles.js";
+import { fmt, input, btnPrimary } from "../../theme/styles.js";
 import Section from "../../components/ui/Section.jsx";
 import SearchInput from "../../components/ui/SearchInput.jsx";
 import { ChevronRight, Plus, X } from "lucide-react";
 
 export default function RateLibraryPage() {
   const { rateLibrary, mobile } = useApp();
-  const { categories, items, addCategory, updateCategory, removeCategory, addItem, updateItem, removeItem, getItemsByCategory } = rateLibrary;
+  const { categories, items, addCategory, removeCategory, addItem, updateItem, removeItem, getItemsByCategory } = rateLibrary;
   const [exp, setExp] = useState({});
   const [newCat, setNewCat] = useState("");
   const [search, setSearch] = useState("");

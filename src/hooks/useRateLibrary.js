@@ -1,5 +1,4 @@
 import { useStore } from "./useStore.js";
-import { uid } from "../theme/styles.js";
 import { mkRateCategory, mkRateItem } from "../data/models.js";
 
 export function useRateLibrary() {

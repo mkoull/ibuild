@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext.jsx";
 import _ from "../../theme/tokens.js";
-import { input, label, btnPrimary, btnSecondary, btnGhost, fmt, pName } from "../../theme/styles.js";
+import { input, label, btnSecondary, btnGhost, fmt, pName } from "../../theme/styles.js";
 import { mkContact } from "../../data/models.js";
 import { selectCalc as calc } from "../../lib/selectors.js";
 import Section from "../../components/ui/Section.jsx";

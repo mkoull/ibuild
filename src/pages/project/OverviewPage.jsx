@@ -16,8 +16,8 @@ import PageHero from "../../components/ui/PageHero.jsx";
 import { ArrowRight, Pencil, TrendingUp, Calendar, DollarSign, ChevronRight, Receipt } from "lucide-react";
 
 export default function OverviewPage() {
-  const { project: p, update: up, T, client, log, transitionStage, convertToJob } = useProject();
-  const { projects, clients, mobile, notify } = useApp();
+  const { project: p, update: up, T, log, transitionStage, convertToJob } = useProject();
+  const { clients, mobile, notify } = useApp();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -34,7 +34,7 @@ export default function OverviewPage() {
   useEffect(() => {
     if (searchParams.get("action") === "convert") {
       const requestedReturn = (searchParams.get("return") || "").trim();
-      setPendingReturnPath(/^[a-z0-9-]+$/i.test(requestedReturn) ? requestedReturn : "");
+      setPendingReturnPath(/^[a-z0-9-]+$/i.test(requestedReturn) ? requestedReturn : ""); // eslint-disable-line react-hooks/set-state-in-effect -- parse URL params on mount
       setSearchParams({}, { replace: true });
       // Only open convert modal if project is at a quote stage
       const s = normaliseStage(p.stage || p.status);

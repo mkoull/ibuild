@@ -10,7 +10,7 @@ import { ArrowRight, Printer, X } from "lucide-react";
 export default function InvoiceDetail() {
   const { invIndex } = useParams();
   const navigate = useNavigate();
-  const { project: p, update: up, T, log } = useProject();
+  const { project: p, update: up, T } = useProject();
   const { clients, notify } = useApp();
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState("");

@@ -19,7 +19,7 @@ function formatSize(bytes) {
 }
 
 export default function PlansAIPage() {
-  const { project: p, update: up, log } = useProject();
+  const { update: up, log } = useProject();
   const { mobile, notify } = useApp();
   const navigate = useNavigate();
   const fileRef = useRef(null);

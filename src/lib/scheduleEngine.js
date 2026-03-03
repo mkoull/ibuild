@@ -128,15 +128,6 @@ export function getDependencyConflicts(milestones) {
   return conflicts;
 }
 
-// ── Core: compute dates for a single milestone ──────────────────────────────
-
-function computeDates(m, startDate) {
-  const copy = { ...m };
-  copy.plannedStart = addDays(startDate, copy.offsetDays || 0);
-  copy.plannedFinish = addDays(copy.plannedStart, copy.durationDays || 7);
-  return copy;
-}
-
 // ── Core schedule calculation ───────────────────────────────────────────────
 // ONLY applies dependency-driven dates. Does NOT cascade or shift anything.
 // This is used for display purposes — it computes dates from offsets + deps.

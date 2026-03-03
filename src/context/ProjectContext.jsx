@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useMemo } from "react";
 import { useProjectsCtx } from "./AppContext.jsx";
 import { useApp } from "./AppContext.jsx";

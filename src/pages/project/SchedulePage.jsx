@@ -36,7 +36,7 @@ function loadColWidths() {
 }
 
 function saveColWidths(w) {
-  try { localStorage.setItem(COL_KEY, JSON.stringify(w)); } catch {}
+  try { localStorage.setItem(COL_KEY, JSON.stringify(w)); } catch { /* ignore */ }
 }
 
 // ── Print CSS (injected once) ────────────────────────────────────────────────
@@ -449,8 +449,7 @@ export default function SchedulePage() {
   const undoneCount = useMemo(() => milestones.filter(m => m.status ? m.status !== "complete" : !m.done).length, [milestones]);
   const pinnedCount = useMemo(() => milestones.filter(m => m.manuallyPinned).length, [milestones]);
 
-  // ── Resize handle component ──
-  const ResizeHandle = ({ col }) => (
+  const resizeHandle = (col) => (
     <div
       onMouseDown={e => handleResizeStart(e, col)}
       onMouseEnter={e => { e.currentTarget.firstChild.style.background = _.ac; }}
@@ -573,14 +572,14 @@ export default function SchedulePage() {
           {!mobile ? (
             <div style={{ display: "grid", gridTemplateColumns: gridCols, gap: 4, padding: "6px 0", borderBottom: `2px solid ${_.ink}`, fontSize: _.fontSize.xs, color: _.muted, fontWeight: _.fontWeight.semi, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", minWidth: 900 }}>
               <span></span>
-              <span style={{ position: "relative" }}>Milestone<ResizeHandle col="name" /></span>
-              <span style={{ position: "relative", textAlign: "center" }}>Dur.<ResizeHandle col="dur" /></span>
-              <span style={{ position: "relative" }}>Start<ResizeHandle col="start" /></span>
-              <span style={{ position: "relative" }}>Finish<ResizeHandle col="finish" /></span>
-              <span style={{ position: "relative" }}>Trade<ResizeHandle col="trade" /></span>
-              <span style={{ position: "relative" }}>Status<ResizeHandle col="status" /></span>
-              <span style={{ position: "relative", textAlign: "center" }}>%<ResizeHandle col="pct" /></span>
-              <span style={{ position: "relative" }}>Depends On<ResizeHandle col="deps" /></span>
+              <span style={{ position: "relative" }}>Milestone{resizeHandle("name")}</span>
+              <span style={{ position: "relative", textAlign: "center" }}>Dur.{resizeHandle("dur")}</span>
+              <span style={{ position: "relative" }}>Start{resizeHandle("start")}</span>
+              <span style={{ position: "relative" }}>Finish{resizeHandle("finish")}</span>
+              <span style={{ position: "relative" }}>Trade{resizeHandle("trade")}</span>
+              <span style={{ position: "relative" }}>Status{resizeHandle("status")}</span>
+              <span style={{ position: "relative", textAlign: "center" }}>%{resizeHandle("pct")}</span>
+              <span style={{ position: "relative" }}>Depends On{resizeHandle("deps")}</span>
               <span></span>
             </div>
           ) : (

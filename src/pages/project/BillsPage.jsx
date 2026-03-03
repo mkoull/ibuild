@@ -39,7 +39,7 @@ export default function BillsPage() {
   const commitments = (p.commitments || []).filter(c => c.status === "Committed" || c.status === "approved");
 
   const inboxItems = useMemo(() => uploads.filter(u => u.status !== "processed"), [uploads]);
-  const processedCount = useMemo(() => uploads.filter(u => u.status === "processed").length, [uploads]);
+
 
   const tradeName = (tradeId) => {
     if (!tradeId) return "—";

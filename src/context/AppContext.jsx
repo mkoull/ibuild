@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useMemo } from "react";
 import { useProjects } from "../hooks/useProjects.js";
 import { useClients } from "../hooks/useClients.js";

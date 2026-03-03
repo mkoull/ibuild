@@ -13,7 +13,7 @@ import { FileText, Plus, ChevronRight, X } from "lucide-react";
 
 export default function ProposalsPage() {
   const { project: p, update: up, T, log } = useProject();
-  const { clients, mobile, notify } = useApp();
+  const { mobile, notify } = useApp();
   const navigate = useNavigate();
   const [deleteIdx, setDeleteIdx] = useState(null);
 

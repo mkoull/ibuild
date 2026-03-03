@@ -13,12 +13,11 @@ export default function ProjectShell() {
   const { find } = useProjectsCtx();
 
   const project = find(id);
+  const totals = useMemo(() => project ? calc(project) : null, [project]);
 
   if (!project) {
     return <Navigate to="/projects" replace />;
   }
-
-  const totals = useMemo(() => calc(project), [project]);
   const status = project.stage || project.status || "Lead";
   const isJobProject = isJob(status);
   const variance = totals.revisedBudget - totals.combinedActuals;

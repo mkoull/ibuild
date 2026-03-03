@@ -51,7 +51,7 @@ export default function MobileBottomTabs() {
   const location = useLocation();
   const navigate = useNavigate();
   const params = useParams();
-  const { projects, clients, create, clientsHook, tradesHook, notify, settings } = useApp();
+  const { projects, create, clientsHook, tradesHook, notify, settings } = useApp();
   const [showCreate, setShowCreate] = useState(false);
   const [showMore, setShowMore] = useState(false);
 
@@ -214,7 +214,7 @@ export default function MobileBottomTabs() {
         paddingBottom: "var(--safe-bottom)",
         boxSizing: "border-box",
       }}>
-        {tabs.map((item, i) => {
+        {tabs.map((item) => {
           // Center FAB
           if (item === null) {
             return (

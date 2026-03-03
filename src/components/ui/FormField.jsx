@@ -1,4 +1,4 @@
-import { label as labelStyle, input as inputStyle } from "../../theme/styles.js";
+import { label as labelStyle } from "../../theme/styles.js";
 
 export default function FormField({ label, children, style: wrapStyle }) {
   return (

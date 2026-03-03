@@ -7,7 +7,7 @@ export default function SearchInput({ value, onChange, placeholder = "Search\u20
   const [local, setLocal] = useState(value || "");
   const timer = useRef(null);
 
-  useEffect(() => { setLocal(value || ""); }, [value]);
+  useEffect(() => { setLocal(value || ""); }, [value]); // eslint-disable-line react-hooks/set-state-in-effect -- sync prop→local
 
   const handleChange = e => {
     const v = e.target.value;

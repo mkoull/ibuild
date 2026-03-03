@@ -159,7 +159,6 @@ export default function ProposalDetail() {
   const idx = parseInt(propIndex);
   const propD = p.proposals[idx];
   const [editName, setEditName] = useState(false);
-  const [editValid, setEditValid] = useState(false);
 
   const sig = SignatureCanvas({ width: 600, height: 100 });
 

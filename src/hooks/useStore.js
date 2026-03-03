@@ -16,7 +16,7 @@ export function useStore(key, initialValue) {
 
   useEffect(() => {
     if (timer.current) clearTimeout(timer.current);
-    setSaveStatus("saving");
+    setSaveStatus("saving"); // eslint-disable-line react-hooks/set-state-in-effect -- intentional save indicator
     timer.current = setTimeout(() => {
       store.set(key, data);
       setSaveStatus(new Date().toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit" }));

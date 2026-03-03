@@ -3,9 +3,9 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useProject } from "../../context/ProjectContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
 import { commitmentRemaining } from "../../lib/calc.js";
-import { importSectionLevel, importItemLevel, importMissingLines, snapshotFromQuote, actualFromPercent, recalcAllowances, baselineBudgetTotal, allowancesTotal, mkAllocation, validateAllocations, autoSplitAllocations, createBudgetBaseline } from "../../lib/budgetEngine.js";
+import { importSectionLevel, importItemLevel, importMissingLines, snapshotFromQuote, actualFromPercent, recalcAllowances, baselineBudgetTotal, mkAllocation, validateAllocations, autoSplitAllocations, createBudgetBaseline } from "../../lib/budgetEngine.js";
 import _ from "../../theme/tokens.js";
-import { fmt, input, label, badge, uid, ds } from "../../theme/styles.js";
+import { fmt, input, label, uid, ds } from "../../theme/styles.js";
 import Section from "../../components/ui/Section.jsx";
 import Card from "../../components/ui/Card.jsx";
 import Empty from "../../components/ui/Empty.jsx";
@@ -369,7 +369,7 @@ export default function CostsPage() {
     a.click();
     URL.revokeObjectURL(url);
     notify("CSV downloaded");
-  }, [budgetLines, commitments, actuals, notify, T]);
+  }, [budgetLines, commitments, actuals, notify, T, tradeName]);
 
   return (
     <Section>
