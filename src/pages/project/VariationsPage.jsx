@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useProject } from "../../context/ProjectContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
-import { createVariationBudgetLine, createVariationLedgerEntry } from "../../lib/budgetEngine.js";
+import { createVariation as svcCreateVariation, approveVariation as svcApproveVariation, advanceVariationStatus } from "../../services/projectService.js";
 import _ from "../../theme/tokens.js";
-import { fmt, input, label, badge, uid, ds } from "../../theme/styles.js";
+import { fmt, input, label, badge } from "../../theme/styles.js";
 import Section from "../../components/ui/Section.jsx";
 import Empty from "../../components/ui/Empty.jsx";
 import Button from "../../components/ui/Button.jsx";
@@ -21,43 +21,21 @@ export default function VariationsPage() {
   const [editForm, setEditForm] = useState({ title: "", description: "", amount: "" });
   const [deleteIdx, setDeleteIdx] = useState(null);
 
-  const createVariation = () => {
+  const handleCreate = () => {
     if (!form.title || !form.amount) { setForm({ ...form, _err: true }); return; }
     const amt = parseFloat(form.amount) || 0;
-    up(pr => {
-      pr.variations.push({
-        id: `VO-${uid()}`,
-        title: form.title,
-        description: form.description,
-        amount: amt,
-        status: "draft",
-        createdAt: ds(),
-      });
-      return pr;
-    });
-    log(`Variation created: ${form.title} (${fmt(parseFloat(form.amount))})`);
+    svcCreateVariation(up, { title: form.title, description: form.description, amount: amt });
+    log(`Variation created: ${form.title} (${fmt(amt)})`);
     notify("Variation created");
     setForm({ title: "", description: "", amount: "", _err: false });
   };
 
   const setStatus = (i, newStatus) => {
-    up(pr => {
-      const v = pr.variations[i];
-      v.status = newStatus;
-      if (newStatus === "approved") {
-        v.approvedAt = ds();
-        // Feed-through: create budget line + ledger entry
-        if (!pr.budget) pr.budget = [];
-        if (!pr.variationLedger) pr.variationLedger = [];
-        const alreadyLinked = pr.budget.some(b => b.linkedVariationId === v.id);
-        if (!alreadyLinked) {
-          const budgetLine = createVariationBudgetLine(v, pr.marginPct);
-          pr.budget.push(budgetLine);
-          pr.variationLedger.push(createVariationLedgerEntry(v, budgetLine.id));
-        }
-      }
-      return pr;
-    });
+    if (newStatus === "approved") {
+      svcApproveVariation(up, i);
+    } else {
+      advanceVariationStatus(up, i, newStatus);
+    }
     const v = p.variations[i];
     log(`Variation ${STATUS_LABEL[newStatus]}: ${v.title} (${fmt(v.amount)})`);
     notify(`${v.title} → ${STATUS_LABEL[newStatus]}`);
@@ -116,7 +94,7 @@ export default function VariationsPage() {
         </div>
         {form._err && <div style={{ fontSize: _.fontSize.base, color: _.red, marginBottom: _.s2 }}>Title and amount are required</div>}
         {form.amount && <div style={{ fontSize: _.fontSize.md, color: _.muted, marginBottom: _.s3 }}>Contract {parseFloat(form.amount) >= 0 ? "increases" : "decreases"} by <strong style={{ color: _.ac }}>{fmt(Math.abs(parseFloat(form.amount) || 0))}</strong></div>}
-        <Button icon={ArrowRight} onClick={createVariation}>Create variation</Button>
+        <Button icon={ArrowRight} onClick={handleCreate}>Create variation</Button>
       </div>
 
       {/* Variations list */}

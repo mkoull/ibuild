@@ -1,3 +1,5 @@
+/** @typedef {import("../types/entities.js").Milestone} Milestone */
+
 /**
  * scheduleEngine.js — Pure function library for construction schedule calculations.
  *

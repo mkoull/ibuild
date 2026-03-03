@@ -34,6 +34,9 @@ export function loadVersioned(key, { fallback, version = CURRENT_VERSION, migrat
 
     if (parsed && typeof parsed === "object" && parsed.__v != null) {
       let data = parsed.data;
+      if (data === undefined || data === null) {
+        return { version, data: typeof fallback === "function" ? fallback() : fallback };
+      }
       let v = parsed.__v;
       if (migrate && v < version) {
         data = migrate(data, v);
@@ -84,4 +87,16 @@ export function upsert(arr, item) {
 
 export function removeById(arr, id) {
   return arr.filter(x => x.id !== id);
+}
+
+/**
+ * Clear all iBuild localStorage keys. Used for factory reset.
+ */
+export function resetAll() {
+  const keys = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith("ib_")) keys.push(key);
+  }
+  keys.forEach(k => localStorage.removeItem(k));
 }

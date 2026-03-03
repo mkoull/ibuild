@@ -16,6 +16,14 @@ import { mkClient, mkContact, mkRateCategory, mkRateItem } from "./models.js";
  * - Write all new keys, set ib_meta.v = 2
  */
 export function runMigration() {
+  try {
+    return _runMigration();
+  } catch (err) {
+    console.warn("[migration] migration failed, skipping to avoid crash", err);
+  }
+}
+
+function _runMigration() {
   const meta = store.get("ib_meta") || {};
   if (meta.v >= 2) return;
 

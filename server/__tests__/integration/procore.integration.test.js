@@ -5,7 +5,7 @@ import { prisma } from "../../db/client.js";
 
 const { default: request } = await import("supertest");
 
-describe("Procore API", () => {
+describe("V1 API — Observations", () => {
   let app;
   let token;
 
@@ -30,13 +30,13 @@ describe("Procore API", () => {
     ]);
 
     const createRes = await request(app)
-      .post("/api/procore/observations")
+      .post("/api/v1/observations")
       .set("Authorization", `Bearer ${token}`)
       .send({ projectId: "p1", description: "Site check", status: "open" });
     expect(createRes.status).toBe(200);
 
     const listRes = await request(app)
-      .get("/api/procore/observations")
+      .get("/api/v1/observations")
       .set("Authorization", `Bearer ${token}`);
     expect(listRes.status).toBe(200);
     expect(listRes.body.length).toBeGreaterThan(0);

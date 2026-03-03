@@ -1,3 +1,8 @@
+/** @typedef {import("../types/entities.js").Project} Project */
+/** @typedef {import("../types/entities.js").BudgetLine} BudgetLine */
+/** @typedef {import("../types/entities.js").Variation} Variation */
+/** @typedef {import("../types/entities.js").CostAllowances} CostAllowances */
+
 import { uid } from "../theme/styles.js";
 
 /**
@@ -6,7 +11,11 @@ import { uid } from "../theme/styles.js";
  * Follows the calc.js pattern: stateless, returns new objects.
  */
 
-/** Creates an immutable snapshot of the scope for reference */
+/**
+ * Creates an immutable snapshot of the scope for reference.
+ * @param {Project} project
+ * @returns {Array<{sectionName: string, items: Array, total: number}>}
+ */
 export function snapshotFromQuote(project) {
   const scope = project.scope || {};
   return Object.entries(scope)
@@ -27,7 +36,11 @@ export function snapshotFromQuote(project) {
     });
 }
 
-/** Section-level import: one budget line per scope category (summed) */
+/**
+ * Section-level import: one budget line per scope category (summed).
+ * @param {Project} project
+ * @returns {BudgetLine[]}
+ */
 export function importSectionLevel(project) {
   const scope = project.scope || {};
   const marginPct = project.marginPct ?? 0;
@@ -57,7 +70,11 @@ export function importSectionLevel(project) {
     .filter(line => line.sellPrice > 0);
 }
 
-/** Item-level import: one budget line per scope item */
+/**
+ * Item-level import: one budget line per scope item.
+ * @param {Project} project
+ * @returns {BudgetLine[]}
+ */
 export function importItemLevel(project) {
   const scope = project.scope || {};
   const marginPct = project.marginPct ?? 0;
@@ -92,7 +109,12 @@ export function importItemLevel(project) {
   return lines;
 }
 
-/** Creates a budget line for an approved variation */
+/**
+ * Creates a budget line for an approved variation.
+ * @param {Variation} variation
+ * @param {number} [marginPct]
+ * @returns {BudgetLine}
+ */
 export function createVariationBudgetLine(variation, marginPct = 0) {
   const amt = variation.amount || 0;
   const costAllowance = marginPct > 0 ? Math.round(amt * (1 - marginPct / 100) * 100) / 100 : amt;
@@ -138,7 +160,12 @@ export function actualFromPercent(budgetAmount, percent) {
   return Math.round(((budgetAmount || 0) * (percent / 100)) * 100) / 100;
 }
 
-/** Recalculate unlocked cost-allowance amounts from their percentages */
+/**
+ * Recalculate unlocked cost-allowance amounts from their percentages.
+ * @param {CostAllowances} costAllowances
+ * @param {number} budgetSubtotal
+ * @returns {CostAllowances}
+ */
 export function recalcAllowances(costAllowances, budgetSubtotal) {
   if (!costAllowances) return costAllowances;
   const out = {};
@@ -195,7 +222,11 @@ export function autoSplitAllocations(line) {
   return allocs.map(a => a.locked ? a : { ...a, amount: share });
 }
 
-/** Creates an immutable budget baseline snapshot from the current budget lines */
+/**
+ * Creates an immutable budget baseline snapshot from the current budget lines.
+ * @param {Project} project
+ * @returns {import("../types/entities.js").BudgetBaseline}
+ */
 export function createBudgetBaseline(project) {
   return {
     versionId: uid(),

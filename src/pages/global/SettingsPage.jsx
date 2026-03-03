@@ -4,14 +4,18 @@ import { input, label } from "../../theme/styles.js";
 import Section from "../../components/ui/Section.jsx";
 import Card from "../../components/ui/Card.jsx";
 import Button from "../../components/ui/Button.jsx";
+import Modal from "../../components/ui/Modal.jsx";
 import { useApp } from "../../context/AppContext.jsx";
-import { Save, Upload, X, Database, RefreshCw, ArrowUpFromLine, ArrowDownToLine } from "lucide-react";
+import { resetAll } from "../../data/store.js";
+import { Save, Upload, X, ArrowUpFromLine, ArrowDownToLine, Trash2 } from "lucide-react";
 
 export default function SettingsPage() {
   const { mobile, notify, settingsHook, featureFlags, api } = useApp();
   const [settings, setLocal] = useState(() => ({ ...settingsHook.settings }));
   const fileRef = useRef(null);
   const [syncing, setSyncing] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [seeding, setSeeding] = useState(false);
 
   const flags = featureFlags?.flags || {};
   const setFlag = featureFlags?.setFlag;
@@ -283,6 +287,59 @@ export default function SettingsPage() {
           }}>Import Backup (JSON)</Button>
         </div>
       </Card>
+      <Card title="Danger Zone" style={{ marginBottom: 24, borderLeft: `3px solid ${_.red}` }}>
+        <div style={{ fontSize: _.fontSize.base, color: _.body, marginBottom: 16 }}>
+          Permanently delete all local data. This cannot be undone.
+        </div>
+        <Button variant="danger" size="sm" icon={Trash2} onClick={() => setShowResetConfirm(true)}>
+          Reset Local Data
+        </Button>
+      </Card>
+
+      {import.meta.env.DEV && (
+        <Card title="Dev Tools" style={{ marginBottom: 24 }}>
+          <div style={{ fontSize: _.fontSize.sm, color: _.muted, marginBottom: 12 }}>Development-only utilities for testing.</div>
+          <div style={{ display: "flex", gap: _.s3 }}>
+            <Button variant="secondary" size="sm" disabled={seeding} onClick={async () => {
+              setSeeding(true);
+              try {
+                const { seedProjects } = await import("../../dev/seedProjects.js");
+                const n = seedProjects(10);
+                notify(`Seeded ${n} projects — refresh to see them`);
+              } catch (err) { notify("Seed failed: " + err.message, "error"); }
+              finally { setSeeding(false); }
+            }}>
+              {seeding ? "Seeding..." : "Seed 10 Projects"}
+            </Button>
+            <Button variant="secondary" size="sm" disabled={seeding} onClick={async () => {
+              setSeeding(true);
+              try {
+                const { seedProjects } = await import("../../dev/seedProjects.js");
+                const n = seedProjects(100);
+                notify(`Seeded ${n} projects — refresh to see them`);
+              } catch (err) { notify("Seed failed: " + err.message, "error"); }
+              finally { setSeeding(false); }
+            }}>
+              {seeding ? "Seeding..." : "Seed 100 Projects"}
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {showResetConfirm && (
+        <Modal title="Reset All Local Data?" onClose={() => setShowResetConfirm(false)}>
+          <p style={{ fontSize: _.fontSize.base, color: _.body, marginBottom: _.s5 }}>
+            This will permanently delete all projects, clients, trades, settings, and other data stored in your browser. This action cannot be undone.
+          </p>
+          <div style={{ display: "flex", gap: _.s3, justifyContent: "flex-end" }}>
+            <Button variant="secondary" size="sm" onClick={() => setShowResetConfirm(false)}>Cancel</Button>
+            <Button variant="danger" size="sm" onClick={() => {
+              resetAll();
+              window.location.reload();
+            }}>Delete Everything</Button>
+          </div>
+        </Modal>
+      )}
     </Section>
   );
 }

@@ -11,15 +11,14 @@ import purchaseOrdersRouter from "./routes/purchaseOrders.js";
 import workOrdersRouter from "./routes/workOrders.js";
 import authRouter from "./auth.js";
 import { authenticate } from "./middleware/authenticate.js";
-import { bxLimiter, pcLimiter } from "./middleware/rateLimit.js";
-import buildxactProjectsRouter from "./api/buildxact/projects.js";
-import buildxactEstimatesRouter from "./api/buildxact/estimates.js";
-import buildxactInvoicesRouter from "./api/buildxact/invoices.js";
-import buildxactDocumentsRouter from "./api/buildxact/documents.js";
-import procoreProjectsRouter from "./api/procore/projects.js";
-import procoreObservationsRouter from "./api/procore/observations.js";
-import procoreInvoicesRouter from "./api/procore/invoices.js";
-import procoreBillsRouter from "./api/procore/bills.js";
+import { bxLimiter } from "./middleware/rateLimit.js";
+// Unified v1 API routes
+import v1ProjectsRouter from "./api/v1/projects.js";
+import v1EstimatesRouter from "./api/v1/estimates.js";
+import v1InvoicesRouter from "./api/v1/invoices.js";
+import v1DocumentsRouter from "./api/v1/documents.js";
+import v1ObservationsRouter from "./api/v1/observations.js";
+import v1BillsRouter from "./api/v1/bills.js";
 
 export function createApp() {
   const app = express();
@@ -34,23 +33,22 @@ export function createApp() {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
-  // Routes
+  // Public routes
   app.use("/api/floorplan", floorplanRouter);
   app.use("/api/projects", projectsRouter);
   app.use("/api/clients", clientsRouter);
   app.use("/api/trades", tradesRouter);
   app.use("/api/settings", settingsRouter);
   app.use("/api", authRouter);
-  app.use("/api/buildxact", bxLimiter, authenticate);
-  app.use("/api/procore", pcLimiter, authenticate);
-  app.use("/api/buildxact", buildxactProjectsRouter);
-  app.use("/api/buildxact", buildxactEstimatesRouter);
-  app.use("/api/buildxact", buildxactInvoicesRouter);
-  app.use("/api/buildxact", buildxactDocumentsRouter);
-  app.use("/api/procore", procoreProjectsRouter);
-  app.use("/api/procore", procoreObservationsRouter);
-  app.use("/api/procore", procoreInvoicesRouter);
-  app.use("/api/procore", procoreBillsRouter);
+
+  // Authenticated v1 API (rate-limited)
+  app.use("/api/v1", bxLimiter, authenticate);
+  app.use("/api/v1", v1ProjectsRouter);
+  app.use("/api/v1", v1EstimatesRouter);
+  app.use("/api/v1", v1InvoicesRouter);
+  app.use("/api/v1", v1DocumentsRouter);
+  app.use("/api/v1", v1ObservationsRouter);
+  app.use("/api/v1", v1BillsRouter);
 
   // Nested project routes — mergeParams ensures :projectId propagates to sub-routers
   app.use("/api/projects/:projectId/purchase-orders", purchaseOrdersRouter);

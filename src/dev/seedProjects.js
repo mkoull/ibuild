@@ -113,7 +113,8 @@ export function seedProjects(count = 100) {
   return projects.length;
 }
 
-if (import.meta.env.DEV) {
+// Expose on window for console usage in dev
+if (import.meta.env.DEV && typeof window !== "undefined") {
   window.__SEED_100_PROJECTS__ = () => {
     const n = seedProjects(100);
     console.log(`Seeded ${n} projects. Refresh to see them.`);

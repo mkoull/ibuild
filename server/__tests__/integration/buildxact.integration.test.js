@@ -5,7 +5,7 @@ import { prisma } from "../../db/client.js";
 
 const { default: request } = await import("supertest");
 
-describe("Buildxact API", () => {
+describe("V1 API — Projects", () => {
   let app;
   let token;
 
@@ -26,14 +26,14 @@ describe("Buildxact API", () => {
     prisma.project.findMany.mockResolvedValue([{ id: "p1", name: "Proj", stage: "Lead", tenantId: "tenant-1" }]);
 
     const createRes = await request(app)
-      .post("/api/buildxact/projects")
+      .post("/api/v1/projects")
       .set("Authorization", `Bearer ${token}`)
       .send({ name: "Proj", status: "Lead" });
 
     expect(createRes.status).toBe(200);
 
     const listRes = await request(app)
-      .get("/api/buildxact/projects")
+      .get("/api/v1/projects")
       .set("Authorization", `Bearer ${token}`);
 
     expect(listRes.status).toBe(200);

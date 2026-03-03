@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useProject } from "../../context/ProjectContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
+import { advancePOStatus as svcAdvancePO } from "../../services/projectService.js";
 import Section from "../../components/ui/Section.jsx";
 import Card from "../../components/ui/Card.jsx";
 import Button from "../../components/ui/Button.jsx";
@@ -8,7 +9,7 @@ import Modal from "../../components/ui/Modal.jsx";
 import Empty from "../../components/ui/Empty.jsx";
 import Table from "../../components/ui/Table.jsx";
 import _ from "../../theme/tokens.js";
-import { uid, fmt, ds, input, label, badge } from "../../theme/styles.js";
+import { uid, fmt, input, label, badge } from "../../theme/styles.js";
 import { ShoppingCart, Plus, Trash2, Check, Send, PackageCheck } from "lucide-react";
 
 const STATUS_FLOW = ["draft", "sent", "accepted", "received"];
@@ -62,32 +63,9 @@ export default function PurchaseOrdersPage() {
     const idx = STATUS_FLOW.indexOf(po.status);
     if (idx < 0 || idx >= STATUS_FLOW.length - 1) return;
     const next = STATUS_FLOW[idx + 1];
-    const updated = { ...po, status: next };
-
-    // When accepted → create commitment
-    if (next === "accepted") {
-      update(draft => {
-        if (!draft.commitments) draft.commitments = [];
-        const exists = draft.commitments.some(c => c.linkedPOId === po.id);
-        if (!exists) {
-          draft.commitments.push({
-            id: uid(),
-            tradeId: po.tradeId,
-            description: `PO: ${po.items.map(i => i.description).filter(Boolean).join(", ") || "Purchase Order"}`,
-            amount: po.totalAmount,
-            status: "committed",
-            linkedPOId: po.id,
-            linkedBudgetLineId: po.linkedBudgetLineId || null,
-            date: ds(),
-          });
-        }
-        const poIdx = (draft.purchaseOrders || []).findIndex(x => x.id === po.id);
-        if (poIdx >= 0) draft.purchaseOrders[poIdx] = updated;
-      });
-    } else {
-      savePO(updated);
-      return;
-    }
+    const poIdx = pos.findIndex(x => x.id === po.id);
+    if (poIdx < 0) return;
+    svcAdvancePO(update, poIdx, next);
     setEditPO(null);
     notify(`PO ${next}`);
   };

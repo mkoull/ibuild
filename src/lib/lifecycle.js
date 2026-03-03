@@ -1,7 +1,11 @@
 /**
  * Lifecycle V2 — single source of truth for project stages,
  * entity types, allowed modules, transitions, and primary CTAs.
+ *
+ * Project transitions delegate to stateMachines.js for validation.
  */
+
+import { canTransition as smCanTransition } from "./stateMachines.js";
 
 export const STAGES = ["Lead", "Quoted", "Approved", "Active", "Invoiced", "Complete"];
 
@@ -107,7 +111,7 @@ export function getPrimaryCta(stage) {
 }
 
 export function canTransition(from, to) {
-  return VALID_TRANSITIONS[normaliseStage(from)] === normaliseStage(to);
+  return smCanTransition("project", normaliseStage(from), normaliseStage(to));
 }
 
 export function getNextStage(stage) {

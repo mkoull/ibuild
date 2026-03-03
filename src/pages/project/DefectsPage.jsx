@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useProject } from "../../context/ProjectContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
+import { addDefect as svcAddDefect, resolveDefect as svcResolveDefect } from "../../services/projectService.js";
 import _ from "../../theme/tokens.js";
-import { input, label, ds } from "../../theme/styles.js";
+import { input, label } from "../../theme/styles.js";
 import Section from "../../components/ui/Section.jsx";
 import Empty from "../../components/ui/Empty.jsx";
 import Button from "../../components/ui/Button.jsx";
@@ -20,7 +21,7 @@ export default function DefectsPage() {
   return (
     <Section>
       <h1 style={{ fontSize: mobile ? _.fontSize["3xl"] : _.fontSize["4xl"], fontWeight: _.fontWeight.bold, letterSpacing: _.letterSpacing.tight, marginBottom: 4 }}>Defects</h1>
-      <div style={{ fontSize: _.fontSize.md, color: _.muted, marginBottom: _.s7 }}>{p.defects.filter(d => d.done).length} of {p.defects.length} resolved</div>
+      <div style={{ fontSize: _.fontSize.md, color: _.muted, marginBottom: _.s7 }}>{p.defects.filter(d => d.status === "resolved" || d.done).length} of {p.defects.length} resolved</div>
 
       <div style={{ marginBottom: _.s7, paddingBottom: _.s6, borderBottom: `1px solid ${_.line}` }}>
         <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "1fr 1fr 1fr", gap: _.s4, marginBottom: _.s3 }}>
@@ -30,29 +31,35 @@ export default function DefectsPage() {
         </div>
         <Button onClick={() => {
           if (!defectForm.desc) { notify("Add description", "error"); return; }
-          up(pr => { pr.defects.push({ ...defectForm, date: ds(), done: false }); return pr; });
+          svcAddDefect(up, { title: defectForm.desc, description: defectForm.desc, location: defectForm.location, tradeId: null });
           log("Defect: " + defectForm.desc); setDefectForm({ location: "", desc: "", assignee: "" }); notify("Logged");
         }}>Add defect</Button>
       </div>
 
       {p.defects.length === 0 && <Empty icon={Search} text="No defects" />}
-      {p.defects.map((d, i) => (
+      {p.defects.map((d, i) => {
+        const isResolved = d.status === "resolved" || d.done;
+        return (
         <div key={i} style={{
           display: "flex", alignItems: "center", gap: _.s4, padding: `${_.s3}px 0`,
           borderBottom: `1px solid ${_.line}`,
-          opacity: d.done ? 0.4 : 1, transition: `opacity ${_.tr}`,
+          opacity: isResolved ? 0.4 : 1, transition: `opacity ${_.tr}`,
         }}>
           <div onClick={() => {
-            const wasDone = d.done;
-            up(pr => { pr.defects[i] = { ...d, done: !d.done }; return pr; });
-            if (!wasDone) log("Defect resolved: " + d.desc);
-            notify(d.done ? "Reopened" : "Resolved");
+            if (!isResolved) {
+              svcResolveDefect(up, i);
+              log("Defect resolved: " + (d.title || d.desc));
+              notify("Resolved");
+            } else {
+              up(pr => { pr.defects[i] = { ...pr.defects[i], status: "open", done: false }; return pr; });
+              notify("Reopened");
+            }
           }} style={{
             width: 20, height: 20, borderRadius: 10, cursor: "pointer",
-            border: `1.5px solid ${d.done ? _.green : _.line2}`,
-            background: d.done ? _.green : "transparent",
+            border: `1.5px solid ${isResolved ? _.green : _.line2}`,
+            background: isResolved ? _.green : "transparent",
             display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-          }}>{d.done && <Check size={11} strokeWidth={3} color="#fff" />}</div>
+          }}>{isResolved && <Check size={11} strokeWidth={3} color="#fff" />}</div>
           {editIdx === i ? (
             <div style={{ flex: 1 }}>
               <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "1fr 1fr 1fr", gap: _.s3, marginBottom: _.s2 }}>
@@ -84,7 +91,8 @@ export default function DefectsPage() {
             </>
           )}
         </div>
-      ))}
+        );
+      })}
 
       <Modal open={deleteIdx !== null} onClose={() => setDeleteIdx(null)} title="Delete Defect" width={400}>
         <div style={{ fontSize: _.fontSize.md, color: _.body, marginBottom: 24 }}>

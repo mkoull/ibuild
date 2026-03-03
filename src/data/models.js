@@ -1,6 +1,16 @@
+/** @typedef {import("../types/entities.js").Client} Client */
+/** @typedef {import("../types/entities.js").Contact} Contact */
+/** @typedef {import("../types/entities.js").Trade} Trade */
+/** @typedef {import("../types/entities.js").Project} Project */
+/** @typedef {import("../types/entities.js").PurchaseOrder} PurchaseOrder */
+/** @typedef {import("../types/entities.js").WorkOrder} WorkOrder */
+/** @typedef {import("../types/entities.js").RFQ} RFQ */
+/** @typedef {import("../types/entities.js").CostAllowances} CostAllowances */
+
 import { uid, ds, ts } from "../theme/styles.js";
 import { RATES, MILESTONES } from "./defaults.js";
 
+/** @param {Partial<Client>} [overrides] @returns {Client} */
 export function mkClient(overrides = {}) {
   const now = new Date().toISOString();
   return {
@@ -16,6 +26,7 @@ export function mkClient(overrides = {}) {
   };
 }
 
+/** @param {Partial<Contact>} [overrides] @returns {Contact} */
 export function mkContact(overrides = {}) {
   return {
     id: uid(),
@@ -31,6 +42,7 @@ export function mkContact(overrides = {}) {
   };
 }
 
+/** @param {Partial<Trade>} [overrides] @returns {Trade} */
 export function mkTrade(overrides = {}) {
   const now = new Date().toISOString();
   return {
@@ -78,6 +90,7 @@ function mkScope() {
   return s;
 }
 
+/** @param {Partial<CostAllowances>} [overrides] @returns {CostAllowances} */
 export function mkCostAllowances(overrides = {}) {
   return {
     margin: { pct: 0, amount: 0, locked: false },
@@ -88,6 +101,7 @@ export function mkCostAllowances(overrides = {}) {
   };
 }
 
+/** @param {Partial<PurchaseOrder>} [overrides] @returns {PurchaseOrder} */
 export function mkPurchaseOrder(overrides = {}) {
   return {
     id: uid(),
@@ -103,6 +117,7 @@ export function mkPurchaseOrder(overrides = {}) {
   };
 }
 
+/** @param {Partial<WorkOrder>} [overrides] @returns {WorkOrder} */
 export function mkWorkOrder(overrides = {}) {
   return {
     id: uid(),
@@ -118,6 +133,7 @@ export function mkWorkOrder(overrides = {}) {
   };
 }
 
+/** @param {Partial<RFQ>} [overrides] @returns {RFQ} */
 export function mkRFQ(overrides = {}) {
   return {
     id: uid(),
@@ -132,6 +148,7 @@ export function mkRFQ(overrides = {}) {
   };
 }
 
+/** @param {Partial<Project>} [overrides] @returns {Project} */
 export function mkProject(overrides = {}) {
   const now = new Date().toISOString();
   return {

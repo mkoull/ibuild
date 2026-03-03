@@ -5,7 +5,7 @@ import { loadVersioned, saveVersioned } from "../data/store.js";
 import { shadowWriter } from "../lib/shadowWrite.js";
 
 const STORAGE_KEY = "ib_projects";
-const STORE_VERSION = 11;
+const STORE_VERSION = 12;
 const SAVE_DEBOUNCE_MS = 300;
 
 function hydrateProject(pr) {
@@ -208,6 +208,20 @@ function migrateProjects(data, fromVersion) {
     });
     data = norm;
   }
+  if (fromVersion <= 11) {
+    const norm = data && data.byId ? data : { byId: {}, allIds: [] };
+    Object.values(norm.byId).forEach(p => {
+      // Convert defect done:boolean → status string
+      if (Array.isArray(p.defects)) {
+        p.defects.forEach(d => {
+          if (d.status === undefined || d.status === null) {
+            d.status = d.done ? "resolved" : "open";
+          }
+        });
+      }
+    });
+    data = norm;
+  }
   return data;
 }
 
@@ -222,7 +236,13 @@ function loadNormalized() {
   const allIds = data.allIds || Object.keys(byId);
   const hydrated = {};
   for (const id of allIds) {
-    if (byId[id]) hydrated[id] = hydrateProject(byId[id]);
+    if (byId[id]) {
+      try {
+        hydrated[id] = hydrateProject(byId[id]);
+      } catch (err) {
+        if (import.meta.env.DEV) console.warn(`[useProjects] skipping corrupt project ${id}`, err);
+      }
+    }
   }
   return { byId: hydrated, allIds: allIds.filter(id => hydrated[id]) };
 }
