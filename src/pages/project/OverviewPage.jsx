@@ -16,6 +16,22 @@ import Modal from "../../components/ui/Modal.jsx";
 import PageHero from "../../components/ui/PageHero.jsx";
 import { ArrowRight, Pencil, TrendingUp, Calendar, DollarSign, ChevronRight, Receipt } from "lucide-react";
 
+const kpiLabel = {
+  fontSize: _.fontSize.xs,
+  fontWeight: _.fontWeight.semi,
+  color: _.muted,
+  letterSpacing: _.letterSpacing.wide,
+  textTransform: "uppercase",
+  marginBottom: _.s2,
+};
+
+const kpiValue = {
+  fontSize: _.fontSize.xl,
+  fontWeight: _.fontWeight.bold,
+  fontVariantNumeric: "tabular-nums",
+  color: _.ink,
+};
+
 export default function OverviewPage() {
   const { project: p, update: up, T, log, transitionStage } = useProject();
   const { clients, mobile, notify } = useApp();
@@ -47,9 +63,11 @@ export default function OverviewPage() {
 
   const stage = p.stage || p.status;
   const stageIsJob = isJob(stage);
-  const milestones = p.schedule || [];
-  const msDone = milestones.filter(m => m.status === "complete" || m.done).length;
-  const nextMs = milestones.find(m => m.status ? m.status !== "complete" : !m.done);
+  const scheduleTasks = p?.schedule && typeof p.schedule === "object" && !Array.isArray(p.schedule)
+    ? (p.schedule.tasks || [])
+    : (p.schedule || []);
+  const msDone = scheduleTasks.filter((m) => m.status === "complete" || m.done).length;
+  const nextMs = scheduleTasks.find((m) => (m.status ? m.status !== "complete" : !m.done));
 
   // ─── Deterministic primary CTA ───
   const step = getNextStepForProject(p, T);
@@ -147,10 +165,10 @@ export default function OverviewPage() {
     setShowConvertModal(false);
     notify("Converted to Job");
     if (pendingReturnPath) {
-      navigate(`/jobs/${p.id}/${pendingReturnPath}`);
+      navigate(`/projects/${p.id}/${pendingReturnPath}`);
       setPendingReturnPath("");
     } else {
-      navigate(`/jobs/${p.id}/overview`);
+      navigate(`/projects/${p.id}/overview`);
     }
   };
 
@@ -180,7 +198,7 @@ export default function OverviewPage() {
 
   // Health snapshot values
   const budgetVariance = T.sub > 0 ? ((T.act / T.sub) * 100).toFixed(0) : 0;
-  const schedPct = milestones.length > 0 ? Math.round((msDone / milestones.length) * 100) : 0;
+  const schedPct = scheduleTasks.length > 0 ? Math.round((msDone / scheduleTasks.length) * 100) : 0;
   const collPct = T.curr > 0 ? Math.round((T.paid / T.curr) * 100) : 0;
 
   const nextClaim = (p.paymentSchedule || []).find(c => c.status === "Planned") || null;
@@ -223,6 +241,17 @@ export default function OverviewPage() {
     if (actualCostValue >= budgetValue * 0.95) return { label: "Within 5%", color: _.amber };
     return { label: "Under budget", color: _.green };
   })();
+  const upcomingTasks = [...scheduleTasks]
+    .filter((task) => task.startDate && String(task.status || "").toLowerCase() !== "complete")
+    .sort((a, b) => String(a.startDate).localeCompare(String(b.startDate)))
+    .slice(0, 3);
+  const quickActions = [
+    { label: "Add Variation", to: "../variations" },
+    { label: "Create Purchase Order", to: "../procurement" },
+    { label: "Record Bill", to: "../bills" },
+    { label: "Add Diary Entry", to: "../site-diary" },
+    { label: "Create Invoice", to: "../invoices" },
+  ];
 
   return (
     <div style={{ animation: "fadeUp 0.2s ease", maxWidth: 1200 }}>
@@ -273,156 +302,136 @@ export default function OverviewPage() {
         {stage === "Complete" && !step && <div style={{ marginTop: _.s6, fontSize: _.fontSize.base, color: _.green, fontWeight: _.fontWeight.medium }}>Project complete</div>}
       </div>
 
-      {/* ─── Financial Command Centre ─── */}
-      {stageIsJob && (
-        <div style={{ marginBottom: _.s8 }}>
-          <div style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.semi, color: _.ink, marginBottom: _.s3 }}>Financial Command Centre</div>
-          <div style={{ display: "grid", gridTemplateColumns: mobile ? "repeat(2, 1fr)" : "repeat(5, 1fr)", gap: mobile ? _.s2 : _.s3, marginBottom: _.s3 }}>
-            <Card style={{ padding: mobile ? _.s3 : _.s4 }} icon={DollarSign} subtitle="Contract Value" accent>
-              <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Contract Value</div>
-              <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: _.ink }}>{contractDisplay > 0 ? fmt(contractDisplay) : "—"}</div>
-            </Card>
-            <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
-              <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Budget</div>
-              <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: budgetValue > 0 ? _.ink : _.faint }}>{budgetValue > 0 ? fmt(budgetValue) : "—"}</div>
-            </Card>
-            <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
-              <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Actual Cost</div>
-              <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: actualCostValue > 0 ? _.ac : _.faint }}>{actualCostValue > 0 ? fmt(actualCostValue) : "—"}</div>
-            </Card>
-            <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
-              <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Remaining Budget</div>
-              <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: budgetValue > 0 ? (remainingBudgetValue >= 0 ? _.green : _.red) : _.faint }}>
-                {budgetValue > 0 ? fmt(remainingBudgetValue) : "—"}
-              </div>
-            </Card>
-            <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
-              <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Projected Margin</div>
-              <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: projectedMarginValue >= 0 ? _.green : _.red }}>
-                {fmt(projectedMarginValue)}
-              </div>
-            </Card>
-          </div>
-
-          <div style={{ padding: `${_.s3}px ${_.s4}px`, borderRadius: _.rSm, border: `1px solid ${budgetHealth.color}33`, background: `${budgetHealth.color}10`, display: "flex", justifyContent: "space-between", alignItems: "center", gap: _.s3, flexWrap: "wrap", marginBottom: _.s3 }}>
-            <div style={{ fontSize: _.fontSize.sm, color: _.body }}>
+      {/* ─── Job Command Centre ─── */}
+      {stageIsJob ? (
+      <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "2fr 1fr", gap: mobile ? _.s4 : _.s6, marginBottom: _.s8 }}>
+        <div style={{ display: "grid", gap: _.s4 }}>
+          {/* A) Job Health Cards */}
+          <div>
+            <div style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.semi, color: _.ink, marginBottom: _.s3 }}>Job Health</div>
+            <div style={{ display: "grid", gridTemplateColumns: mobile ? "repeat(2, 1fr)" : "repeat(5, 1fr)", gap: _.s3 }}>
+              <Card style={{ padding: mobile ? _.s3 : _.s4 }} icon={DollarSign} accent>
+                <div style={kpiLabel}>Contract Value</div>
+                <div style={kpiValue}>{contractDisplay > 0 ? fmt(contractDisplay) : "—"}</div>
+              </Card>
+              <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
+                <div style={kpiLabel}>Budget</div>
+                <div style={kpiValue}>{budgetValue > 0 ? fmt(budgetValue) : "—"}</div>
+              </Card>
+              <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
+                <div style={kpiLabel}>Actual Cost</div>
+                <div style={kpiValue}>{actualCostValue > 0 ? fmt(actualCostValue) : "—"}</div>
+              </Card>
+              <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
+                <div style={kpiLabel}>Remaining Budget</div>
+                <div style={{ ...kpiValue, color: remainingBudgetValue >= 0 ? _.green : _.red }}>
+                  {budgetValue > 0 ? fmt(remainingBudgetValue) : "—"}
+                </div>
+              </Card>
+              <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
+                <div style={kpiLabel}>Projected Margin</div>
+                <div style={{ ...kpiValue, color: projectedMarginValue >= 0 ? _.green : _.red }}>
+                  {fmt(projectedMarginValue)}
+                </div>
+              </Card>
+            </div>
+            <div style={{ marginTop: _.s3, padding: `${_.s2}px ${_.s3}px`, borderRadius: _.rSm, border: `1px solid ${budgetHealth.color}33`, background: `${budgetHealth.color}10`, fontSize: _.fontSize.sm, color: _.body }}>
               <strong style={{ color: budgetHealth.color }}>Project Health:</strong> {budgetHealth.label}
-            </div>
-            <div style={{ fontSize: _.fontSize.sm, color: _.muted }}>
-              {budgetValue > 0 ? `${budgetProgressPct.toFixed(1)}% of budget used` : "Set budget to track health"}
+              <span style={{ color: _.muted }}> · {budgetValue > 0 ? `${budgetProgressPct.toFixed(1)}% of budget used` : "Set budget to track health"}</span>
             </div>
           </div>
 
-          <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
-            <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>
-              Budget vs Actual
-            </div>
-            <div style={{ height: 8, background: _.well, borderRadius: 4, overflow: "hidden", marginBottom: _.s2 }}>
-              <div style={{ height: "100%", width: `${budgetProgressPct}%`, background: budgetHealth.color, borderRadius: 4, transition: "width 0.5s ease" }} />
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: _.fontSize.sm, color: _.muted }}>
-              <span>Budget {fmt(budgetValue)}</span>
-              <span>Actual {fmt(actualCostValue)}</span>
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {/* ─── Revenue Command Section ─── */}
-      {stageIsJob && (
-        <div style={{ marginBottom: _.s8 }}>
-          <div style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.semi, color: _.ink, marginBottom: _.s3 }}>Revenue</div>
-          <div style={{ display: "grid", gridTemplateColumns: mobile ? "repeat(2, 1fr)" : "repeat(3, 1fr)", gap: mobile ? _.s2 : _.s3, marginBottom: _.s3 }}>
+          {/* B) Job Stage Progress */}
+          <div>
+            <div style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.semi, color: _.ink, marginBottom: _.s3 }}>Job Stage Progress</div>
             <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
-              <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Total Claimed</div>
-              <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: totalClaimed > 0 ? _.ac : _.faint }}>{totalClaimed > 0 ? fmt(totalClaimed) : "—"}</div>
-            </Card>
-            <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
-              <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Total Paid</div>
-              <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: totalPaid > 0 ? _.green : _.faint }}>{totalPaid > 0 ? fmt(totalPaid) : "—"}</div>
-            </Card>
-            <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
-              <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Outstanding</div>
-              <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: outstandingReceivables > 0 ? _.red : _.green }}>{fmt(outstandingReceivables)}</div>
+              <StagePipeline currentStage={stage} />
             </Card>
           </div>
-          <div style={{ height: 6, background: _.well, borderRadius: 3, overflow: "hidden" }}>
-            <div style={{ height: "100%", width: `${claimProgressPct}%`, background: _.ac, borderRadius: 3, transition: "width 0.5s ease" }} />
-          </div>
-          <div style={{ fontSize: _.fontSize.caption, color: _.muted, marginTop: _.s1 }}>
-            Claimed {claimProgressPct.toFixed(1)}% of contract • Remaining to claim {fmt(remainingToClaim)}
-          </div>
-        </div>
-      )}
 
-      {/* ─── Commercial Snapshot (secondary) ─── */}
-      {stageIsJob && (
-        <div style={{ display: "grid", gridTemplateColumns: mobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: mobile ? _.s2 : _.s3, marginBottom: mobile ? _.s6 : _.s8 }}>
-          <Card style={{ padding: mobile ? _.s3 : _.s4 }} icon={DollarSign} subtitle="Contract Value" accent>
-            <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Contract Value</div>
-            <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: _.ink }}>{contractDisplay > 0 ? fmt(contractDisplay) : "—"}</div>
-          </Card>
-          <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
-            <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Base Contract</div>
-            <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: baseContract > 0 ? _.ink : _.faint }}>{baseContract > 0 ? fmt(baseContract) : "—"}</div>
-          </Card>
-          <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
-            <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Approved Variations</div>
-            <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: approvedVariationValue !== 0 ? _.ac : _.faint }}>{approvedVariationValue !== 0 ? fmt(approvedVariationValue) : "—"}</div>
-          </Card>
-          <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
-            <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Margin</div>
-            <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: contractMarginValue >= 0 ? _.green : _.red }}>
-              {fmt(contractMarginValue)}
+          {/* C) Financial Status */}
+          <div>
+            <div style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.semi, color: _.ink, marginBottom: _.s3 }}>Financial Status</div>
+            <div style={{ display: "grid", gridTemplateColumns: mobile ? "repeat(2, 1fr)" : "repeat(3, 1fr)", gap: _.s3 }}>
+              <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
+                <div style={kpiLabel}>Total Claimed</div>
+                <div style={kpiValue}>{totalClaimed > 0 ? fmt(totalClaimed) : "—"}</div>
+              </Card>
+              <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
+                <div style={kpiLabel}>Total Paid</div>
+                <div style={{ ...kpiValue, color: totalPaid > 0 ? _.green : _.ink }}>{totalPaid > 0 ? fmt(totalPaid) : "—"}</div>
+              </Card>
+              <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
+                <div style={kpiLabel}>Outstanding Receivables</div>
+                <div style={{ ...kpiValue, color: outstandingReceivables > 0 ? _.red : _.green }}>{fmt(outstandingReceivables)}</div>
+              </Card>
             </div>
-            <div style={{ fontSize: _.fontSize.caption, color: _.muted, marginTop: 2 }}>
-              {contractMarginPct.toFixed(1)}%
+            <div style={{ height: 6, background: _.well, borderRadius: 3, overflow: "hidden", marginTop: _.s3 }}>
+              <div style={{ height: "100%", width: `${claimProgressPct}%`, background: _.ac, borderRadius: 3, transition: "width 0.5s ease" }} />
             </div>
-          </Card>
+            <div style={{ fontSize: _.fontSize.caption, color: _.muted, marginTop: _.s1 }}>
+              Claimed {claimProgressPct.toFixed(1)}% of contract • Remaining to claim {fmt(remainingToClaim)}
+            </div>
+          </div>
         </div>
-      )}
-      {stageIsJob && (
-        <div style={{ marginTop: -(_.s5), marginBottom: _.s8 }}>
-          <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
-            <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Variations</div>
-            <div style={{ display: "flex", gap: _.s5, flexWrap: "wrap" }}>
-              <div style={{ fontSize: _.fontSize.base, color: _.ink }}>Approved: <strong>{fmt(approvedVariationValue)}</strong></div>
-              <div style={{ fontSize: _.fontSize.base, color: _.ink }}>Pending: <strong>{fmt(pendingVariationValue)}</strong></div>
-            </div>
-          </Card>
-        </div>
-      )}
 
-      {/* Financial Health (Jobs only) */}
-      {stageIsJob && (
-        <div style={{ marginBottom: mobile ? _.s6 : _.s8 }}>
-          <div style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.semi, color: _.ink, marginBottom: _.s3 }}>Financial Health</div>
-          <div style={{ display: "grid", gridTemplateColumns: mobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: mobile ? _.s2 : _.s3 }}>
+        {/* D + E */}
+        <div style={{ display: "grid", gap: _.s4, alignContent: "start" }}>
+          <div>
+            <div style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.semi, color: _.ink, marginBottom: _.s3 }}>Timeline Snapshot</div>
             <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
-              <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Budget</div>
-              <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: T.budgetTotal > 0 ? _.ink : _.faint }}>{T.budgetTotal > 0 ? fmt(T.budgetTotal) : "—"}</div>
+              {upcomingTasks.length === 0 ? (
+                <div style={{ fontSize: _.fontSize.sm, color: _.muted }}>
+                  No upcoming tasks yet. Add schedule tasks to see the next 3 activities here.
+                </div>
+              ) : (
+                <div style={{ display: "grid", gap: _.s2 }}>
+                  {upcomingTasks.map((task) => (
+                    <div key={task.id} style={{ display: "flex", justifyContent: "space-between", gap: _.s2, borderBottom: `1px solid ${_.line}`, paddingBottom: _.s2 }}>
+                      <div>
+                        <div style={{ fontSize: _.fontSize.base, fontWeight: _.fontWeight.medium, color: _.ink }}>{task.name || "Untitled task"}</div>
+                        <div style={{ fontSize: _.fontSize.sm, color: _.muted }}>{task.trade || "Unassigned trade"}</div>
+                      </div>
+                      <div style={{ fontSize: _.fontSize.sm, color: _.body, fontVariantNumeric: "tabular-nums" }}>
+                        {task.startDate || "No date"}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </Card>
+          </div>
+
+          <div>
+            <div style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.semi, color: _.ink, marginBottom: _.s3 }}>Quick Actions</div>
             <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
-              <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Actual Cost</div>
-              <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: T.combinedActuals > 0 ? _.ac : _.faint }}>{T.combinedActuals > 0 ? fmt(T.combinedActuals) : "—"}</div>
-            </Card>
-            <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
-              <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Remaining Budget</div>
-              <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: T.budgetTotal > 0 ? (T.budgetTotal - T.combinedActuals >= 0 ? _.green : _.red) : _.faint }}>
-                {T.budgetTotal > 0 ? fmt(T.budgetTotal - T.combinedActuals) : "—"}
+              <div style={{ display: "grid", gap: _.s2 }}>
+                {quickActions.map((action) => (
+                  <Button key={action.label} variant="secondary" onClick={() => navigate(action.to)}>
+                    {action.label}
+                  </Button>
+                ))}
               </div>
-            </Card>
-            <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
-              <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Variance</div>
-              <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: T.budgetTotal > 0 ? (T.combinedActuals - T.budgetTotal <= 0 ? _.green : _.red) : _.faint }}>
-                {T.budgetTotal > 0 ? fmt(T.combinedActuals - T.budgetTotal) : "—"}
+              <div style={{ marginTop: _.s3, fontSize: _.fontSize.caption, color: _.muted }}>
+                Jump straight to common project actions from one place.
               </div>
             </Card>
           </div>
         </div>
+      </div>
+      ) : (
+        <Card style={{ padding: mobile ? _.s4 : _.s5, marginBottom: _.s8 }}>
+          <div style={{ fontSize: _.fontSize.lg, fontWeight: _.fontWeight.semi, color: _.ink, marginBottom: _.s2 }}>
+            Job Command Centre unlocks after conversion
+          </div>
+          <div style={{ fontSize: _.fontSize.sm, color: _.muted, marginBottom: _.s4 }}>
+            Convert this quote to a job to view live budget, cost, receivables, schedule snapshot, and quick delivery actions.
+          </div>
+          <Button onClick={() => setShowConvertModal(true)}>Convert to Job</Button>
+        </Card>
       )}
 
-      {/* Health Snapshot */}
+      {/* Supporting snapshot + actions */}
       <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "1fr 1fr 1fr", gap: mobile ? _.s3 : _.s4, marginBottom: mobile ? _.s6 : _.s8 }}>
         <Card style={{ padding: mobile ? _.s4 : _.s5 }}>
           <div style={{ display: "flex", alignItems: "center", gap: _.s2, marginBottom: _.s3 }}>
@@ -447,7 +456,7 @@ export default function OverviewPage() {
             <span style={{ fontSize: _.fontSize.caption, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase" }}>Schedule</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: _.s2 }}>
-            <span style={{ fontSize: _.fontSize["2xl"], fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums" }}>{msDone}/{milestones.length}</span>
+            <span style={{ fontSize: _.fontSize["2xl"], fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums" }}>{msDone}/{scheduleTasks.length}</span>
             <span style={{ fontSize: _.fontSize.sm, color: _.muted }}>{schedPct}%</span>
           </div>
           <div style={{ height: 6, background: _.well, borderRadius: 3, overflow: "hidden" }}>
