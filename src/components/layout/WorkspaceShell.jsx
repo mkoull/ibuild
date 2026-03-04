@@ -63,14 +63,12 @@ export default function WorkspaceShell({ workspaceType }) {
     : "Unknown";
   const stageIdx = lifecycleIndex(stage);
 
-  // Active tab detection
-  const pathAfterBase = location.pathname.split(`/${entityId}/`)[1] || "overview";
-  const activeTabPath = pathAfterBase.split("/")[0].split("?")[0];
-
-  // Resolve which tab is active
-  const resolvedActive = tabs.find(t => t.path === activeTabPath)?.path
-    || tabs.find(t => !(t.isLocked?.(project)))?.path
-    || "overview";
+  // Active tab detection (robust against nested routes)
+  const projectBase = isEstimate ? `/estimates/${entityId}` : `/projects/${entityId}`;
+  const resolvedActive = tabs.find((t) => {
+    const tabBase = `${projectBase}/${t.path}`;
+    return location.pathname === tabBase || location.pathname.startsWith(`${tabBase}/`);
+  })?.path || tabs.find((t) => !(t.isLocked?.(project)))?.path || "overview";
   const showConvertPrimary = !isActiveStage;
 
   const convertToJob = () => {
@@ -84,7 +82,7 @@ export default function WorkspaceShell({ workspaceType }) {
       return;
     }
     notify("Project converted to job");
-    navigate("overview");
+    navigate(`${projectBase}/overview`);
   };
 
   return (
@@ -177,7 +175,7 @@ export default function WorkspaceShell({ workspaceType }) {
             </>
           )}
         </div>
-        <Button size="sm" onClick={showConvertPrimary ? convertToJob : () => navigate("variations")}>
+        <Button size="sm" onClick={showConvertPrimary ? convertToJob : () => navigate(`${projectBase}/variations`)}>
           {showConvertPrimary ? "Convert to Job" : "Add Variation"}
         </Button>
       </div>
@@ -194,7 +192,7 @@ export default function WorkspaceShell({ workspaceType }) {
           return (
             <div
               key={t.label}
-              onClick={() => navigate(t.path)}
+              onClick={() => navigate(`${projectBase}/${t.path}`)}
               style={{
                 padding: "10px 16px",
                 cursor: "pointer",

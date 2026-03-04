@@ -163,7 +163,7 @@ export function isLifecycleTabLocked(path, project) {
 /** Build the workspace URL for a project */
 export function getWorkspaceUrl(project) {
   const stage = project.stage || project.status || "Lead";
-  return isQuote(stage) ? `/estimates/${project.id}` : `/jobs/${project.id}`;
+  return isQuote(stage) ? `/estimates/${project.id}` : `/projects/${project.id}`;
 }
 
 /** Compute next estimate number (Q-prefixed, starting at 1001) */

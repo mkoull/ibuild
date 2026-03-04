@@ -73,15 +73,20 @@ export default function MobileBottomTabs() {
   const [showCreate, setShowCreate] = useState(false);
   const [showMore, setShowMore] = useState(false);
 
-  const isProject = !!params.id;
-  const project = isProject ? projects.find(p => p.id === params.id) : null;
+  const projectId = params.id || params.estimateId || params.jobId || null;
+  const isProject = !!projectId;
+  const project = isProject ? projects.find((p) => p.id === projectId) : null;
   const projectIsJob = project && isJob(project.stage || project.status);
   const tabs = isProject ? PROJECT_TABS : GLOBAL_TABS;
   const moreItems = isProject ? PROJECT_MORE : GLOBAL_MORE;
 
   const isActive = (path) => {
     if (!path) return false;
-    if (isProject) return location.pathname.includes(`/${path}`);
+    if (isProject) {
+      const canonicalBase = projectIsJob ? `/projects/${projectId}` : `/estimates/${projectId}`;
+      const tabBase = `${canonicalBase}/${path}`;
+      return location.pathname === tabBase || location.pathname.startsWith(`${tabBase}/`);
+    }
     return location.pathname.startsWith(path);
   };
 
@@ -112,7 +117,7 @@ export default function MobileBottomTabs() {
 
   const handleNewVariation = () => {
     if (isProject) {
-      navigate(`/jobs/${params.id}/variations`);
+      navigate(`/projects/${projectId}/variations`);
       notify("Go to Variations to create");
     }
     setShowCreate(false);
@@ -128,11 +133,11 @@ export default function MobileBottomTabs() {
   }
 
   const navTo = (path) => {
-    if (isProject && project) {
-      const base = projectIsJob ? `/jobs/${params.id}` : `/estimates/${params.id}`;
+    if (isProject && projectId) {
+      const base = projectIsJob ? `/projects/${projectId}` : `/estimates/${projectId}`;
       navigate(`${base}/${path}`);
     } else if (isProject) {
-      navigate(`/estimates/${params.id}/${path}`);
+      navigate(`/estimates/${projectId}/${path}`);
     } else {
       navigate(path);
     }

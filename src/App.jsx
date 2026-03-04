@@ -5,7 +5,7 @@ import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import LoadingSpinner from "./components/ui/LoadingSpinner.jsx";
 import GlobalShell from "./components/layout/GlobalShell.jsx";
 import WorkspaceShell from "./components/layout/WorkspaceShell.jsx";
-import ProjectRedirect from "./components/routing/ProjectRedirect.jsx";
+import LegacyJobRedirect from "./components/routing/LegacyJobRedirect.jsx";
 
 // Lazy-loaded global pages
 const DashboardPage = lazy(() => import("./pages/global/DashboardPage.jsx"));
@@ -133,8 +133,8 @@ export default function App() {
                   <Route path="work-orders" element={<Navigate to="../procurement" replace />} />
                 </Route>
 
-                {/* ─── Job workspace ─── */}
-                <Route path="jobs/:jobId/*" element={
+                {/* ─── Canonical project workspace ─── */}
+                <Route path="projects/:id/*" element={
                   <ErrorBoundary level="project">
                     <WorkspaceShell workspaceType="job" />
                   </ErrorBoundary>
@@ -164,10 +164,10 @@ export default function App() {
                   <Route path="trades" element={<ProjectTradesPage />} />
                   <Route path="plans" element={<PlansAIPage />} />
                 </Route>
-                <Route path="jobs/:id/*" element={<ProjectRedirect />} />
 
-                {/* ─── Legacy project redirect ─── */}
-                <Route path="projects/:id/*" element={<ProjectRedirect />} />
+                {/* ─── Legacy jobs route redirect ─── */}
+                <Route path="jobs/:jobId/*" element={<LegacyJobRedirect />} />
+                <Route path="jobs/:id/*" element={<LegacyJobRedirect />} />
 
                 <Route path="modules/:moduleId" element={<Navigate to="/projects" replace />} />
               </Route>
