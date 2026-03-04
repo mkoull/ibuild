@@ -35,12 +35,85 @@ function money(n) {
   }).format(safe);
 }
 
+function fallbackAiStructure(description = "") {
+  const d = String(description || "").toLowerCase();
+  const hasGarage = d.includes("garage");
+  const hasBedroom = d.includes("bedroom");
+  const hasResidential = d.includes("residential") || hasBedroom;
+  const categories = [
+    {
+      name: "Concrete",
+      items: [
+        { description: "Slab", unit: "m²", rate: 165, qty: hasResidential ? 180 : 90 },
+        { description: "Footings", unit: "unit", rate: 12000, qty: 1 },
+      ],
+    },
+    {
+      name: "Framing",
+      items: [
+        { description: "Timber framing", unit: "m²", rate: 110, qty: hasResidential ? 180 : 90 },
+        { description: "Structural beams", unit: "unit", rate: 750, qty: 6 },
+      ],
+    },
+    {
+      name: "Electrical",
+      items: [
+        { description: "Wiring", unit: "hour", rate: 95, qty: hasResidential ? 45 : 24 },
+        { description: "Switchboard", unit: "unit", rate: 2500, qty: 1 },
+      ],
+    },
+  ];
+  if (hasGarage) {
+    categories.push({
+      name: "Garage",
+      items: [
+        { description: "Garage door", unit: "unit", rate: 2800, qty: 1 },
+        { description: "Garage slab prep", unit: "m²", rate: 75, qty: 36 },
+      ],
+    });
+  }
+  return categories;
+}
+
+function normalizeAiCategories(payload, prompt = "") {
+  const rawCategories = Array.isArray(payload?.categories)
+    ? payload.categories
+    : Array.isArray(payload)
+      ? payload
+      : [];
+  if (!rawCategories.length) return fallbackAiStructure(prompt);
+
+  return rawCategories
+    .map((cat) => ({
+      id: uid(),
+      name: String(cat?.name || "New Category").trim() || "New Category",
+      items: Array.isArray(cat?.items)
+        ? cat.items.map((item) => ({
+          id: uid(),
+          description: String(item?.description || item?.item || "").trim(),
+          quantity: Number(item?.qty ?? item?.quantity ?? 1) || 1,
+          unit: String(item?.unit || "unit"),
+          unitRate: Number(item?.rate ?? item?.unitRate ?? 0) || 0,
+          costTotal: 0,
+          marginPercent: Number(item?.marginPercent ?? 20) || 20,
+          sellTotal: 0,
+        }))
+        : [],
+    }))
+    .filter((cat) => cat.name && cat.items.length > 0);
+}
+
 export default function ScopePage() {
   const { project, update } = useProject();
-  const { rateLibrary } = useApp();
+  const { rateLibrary, api, notify } = useApp();
   const navigate = useNavigate();
   const [libraryModalCategoryId, setLibraryModalCategoryId] = useState("");
   const [libraryQuery, setLibraryQuery] = useState("");
+  const [aiModalOpen, setAiModalOpen] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState("");
+  const [aiPreview, setAiPreview] = useState([]);
   const isActive = String(project.stage || project.status || "").toLowerCase() === "active";
   const estimateCategories = normalizeCategories(project?.estimate?.categories || project.costCategories || []);
   const budgetCategories = normalizeCategories(project?.job?.budget?.categories || []);
@@ -184,6 +257,98 @@ export default function ScopePage() {
     setLibraryQuery("");
   };
 
+  const openAiAssistant = () => {
+    setAiModalOpen(true);
+    setAiError("");
+    setAiPreview([]);
+  };
+
+  const discardAiPreview = () => {
+    setAiPreview([]);
+    setAiError("");
+    setAiLoading(false);
+  };
+
+  const closeAiAssistant = () => {
+    setAiModalOpen(false);
+    discardAiPreview();
+  };
+
+  const generateWithAi = async () => {
+    const prompt = aiPrompt.trim();
+    if (!prompt) {
+      setAiError("Please enter a project description");
+      return;
+    }
+    setAiLoading(true);
+    setAiError("");
+    try {
+      const response = await api.post("/estimate-assistant/generate", { description: prompt });
+      const preview = normalizeAiCategories(response, prompt);
+      if (!preview.length) {
+        setAiError("AI returned no estimate structure");
+        setAiPreview([]);
+      } else {
+        setAiPreview(preview);
+      }
+    } catch {
+      const preview = normalizeAiCategories([], prompt);
+      setAiPreview(preview);
+      setAiError("Could not reach AI service. Showing a local draft structure.");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const updateAiCategoryName = (catId, value) => {
+    setAiPreview((prev) => prev.map((cat) => (cat.id === catId ? { ...cat, name: value } : cat)));
+  };
+
+  const updateAiItem = (catId, itemId, field, value) => {
+    setAiPreview((prev) => prev.map((cat) => {
+      if (cat.id !== catId) return cat;
+      return {
+        ...cat,
+        items: (cat.items || []).map((item) => {
+          if (item.id !== itemId) return item;
+          if (field === "description" || field === "unit") return { ...item, [field]: value };
+          return { ...item, [field]: Number(value) || 0 };
+        }),
+      };
+    }));
+  };
+
+  const acceptAiPreview = () => {
+    if (!aiPreview.length) return;
+    update((pr) => {
+      if (!Array.isArray(pr.costCategories)) pr.costCategories = [];
+      aiPreview.forEach((cat) => {
+        const preparedItems = (cat.items || []).map((item) => ({
+          id: uid(),
+          description: item.description || "",
+          quantity: Number(item.quantity) || 1,
+          unit: item.unit || "unit",
+          unitRate: Number(item.unitRate) || 0,
+          costTotal: 0,
+          marginPercent: Number(item.marginPercent) || 20,
+          sellTotal: 0,
+        }));
+        pr.costCategories.push({
+          id: uid(),
+          name: cat.name || "New Category",
+          items: preparedItems,
+        });
+      });
+      pr.estimate = {
+        categories: normalizeCategories(pr.costCategories),
+        totals: calculateTotals(pr.costCategories),
+      };
+      return pr;
+    });
+    notify("AI estimate structure inserted");
+    closeAiAssistant();
+  };
+
   const updateLineItem = (categoryId, itemId, field, value) => {
     if (isActive) return;
     update((pr) => {
@@ -254,9 +419,14 @@ export default function ScopePage() {
               </Button>
             )}
             {!isActive && (
-              <Button size="sm" icon={Plus} onClick={addCategory}>
-                {noCategories ? "Add First Category" : "Add Category"}
-              </Button>
+              <>
+                <Button size="sm" variant="secondary" onClick={openAiAssistant}>
+                  Generate Estimate
+                </Button>
+                <Button size="sm" icon={Plus} onClick={addCategory}>
+                  {noCategories ? "Add First Category" : "Add Category"}
+                </Button>
+              </>
             )}
           </div>
         </div>
@@ -423,6 +593,108 @@ export default function ScopePage() {
           </>
         )}
       </aside>
+
+      <Modal
+        open={aiModalOpen}
+        onClose={closeAiAssistant}
+        title="AI Estimate Assistant"
+        width={900}
+      >
+        <div style={{ display: "grid", gap: 12 }}>
+          <div style={{ fontSize: 13, color: _.muted }}>
+            Describe the project and AI will suggest estimate categories and line items.
+          </div>
+          <textarea
+            value={aiPrompt}
+            onChange={(e) => setAiPrompt(e.target.value)}
+            placeholder='Example: "3 bedroom residential build with garage"'
+            rows={3}
+            style={{
+              width: "100%",
+              border: `1px solid ${_.line}`,
+              borderRadius: 8,
+              padding: 10,
+              fontSize: 14,
+              background: _.bg,
+              color: _.ink,
+              resize: "vertical",
+            }}
+          />
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+            <div style={{ fontSize: 12, color: aiError ? _.amber : _.muted }}>
+              {aiError || "Review and edit the preview before accepting."}
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <Button size="sm" variant="secondary" onClick={discardAiPreview}>Discard</Button>
+              <Button size="sm" variant="secondary" onClick={generateWithAi} disabled={aiLoading}>
+                {aiLoading ? "Generating..." : "Generate"}
+              </Button>
+              <Button size="sm" onClick={acceptAiPreview} disabled={!aiPreview.length || aiLoading}>
+                Accept & Insert
+              </Button>
+            </div>
+          </div>
+
+          <div style={{ border: `1px solid ${_.line}`, borderRadius: 8, maxHeight: 420, overflowY: "auto", background: _.surface }}>
+            {aiPreview.length === 0 && (
+              <div style={{ padding: 12, fontSize: 13, color: _.muted }}>
+                No preview yet. Click Generate to build an estimate structure.
+              </div>
+            )}
+            {aiPreview.map((cat) => (
+              <div key={cat.id} style={{ borderBottom: `1px solid ${_.line}` }}>
+                <div style={{ padding: "10px 12px", background: _.bg }}>
+                  <input
+                    value={cat.name}
+                    onChange={(e) => updateAiCategoryName(cat.id, e.target.value)}
+                    style={{
+                      width: "100%",
+                      border: `1px solid ${_.line}`,
+                      borderRadius: 6,
+                      padding: "6px 8px",
+                      fontSize: 13,
+                      color: _.ink,
+                      background: _.surface,
+                    }}
+                  />
+                </div>
+                <div style={{ padding: 12, display: "grid", gap: 8 }}>
+                  {(cat.items || []).map((item) => (
+                    <div key={item.id} style={{ display: "grid", gridTemplateColumns: "1.4fr 0.6fr 0.6fr 0.6fr", gap: 8 }}>
+                      <input
+                        value={item.description}
+                        onChange={(e) => updateAiItem(cat.id, item.id, "description", e.target.value)}
+                        placeholder="Line item description"
+                        style={cellInput}
+                      />
+                      <input
+                        value={item.unit}
+                        onChange={(e) => updateAiItem(cat.id, item.id, "unit", e.target.value)}
+                        placeholder="Unit"
+                        style={cellInput}
+                      />
+                      <input
+                        type="number"
+                        value={item.unitRate}
+                        onChange={(e) => updateAiItem(cat.id, item.id, "unitRate", e.target.value)}
+                        placeholder="Rate"
+                        style={cellInput}
+                      />
+                      <input
+                        type="number"
+                        value={item.quantity}
+                        onChange={(e) => updateAiItem(cat.id, item.id, "quantity", e.target.value)}
+                        placeholder="Qty"
+                        style={cellInput}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Modal>
 
       <Modal
         open={!!libraryModalCategoryId}

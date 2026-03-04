@@ -3,6 +3,7 @@ import cors from "cors";
 import { correlationId } from "./middleware/correlationId.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import floorplanRouter from "./routes/floorplan.js";
+import estimateAssistantRouter from "./routes/estimateAssistant.js";
 import projectsRouter from "./routes/projects.js";
 import clientsRouter from "./routes/clients.js";
 import tradesRouter from "./routes/trades.js";
@@ -35,6 +36,7 @@ export function createApp() {
 
   // Public routes
   app.use("/api/floorplan", floorplanRouter);
+  app.use("/api/estimate-assistant", estimateAssistantRouter);
   app.use("/api/projects", projectsRouter);
   app.use("/api/clients", clientsRouter);
   app.use("/api/trades", tradesRouter);
