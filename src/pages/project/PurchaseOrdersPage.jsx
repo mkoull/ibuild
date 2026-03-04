@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useProject } from "../../context/ProjectContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
 import Section from "../../components/ui/Section.jsx";
@@ -43,9 +44,16 @@ export default function PurchaseOrdersPage() {
   const { project: p, update } = useProject();
   const { mobile, notify, settings, addNotification } = useApp();
   const [showPoModal, setShowPoModal] = useState(false);
+  const [searchParams] = useSearchParams();
   const [showBillModal, setShowBillModal] = useState(false);
   const [poForm, setPoForm] = useState(newPoForm);
   const [billForm, setBillForm] = useState(newBillForm);
+
+  useEffect(() => {
+    if (searchParams.get("create") === "1") {
+      setShowPoModal(true);
+    }
+  }, [searchParams]);
 
   const budgetLines = p.workingBudget || p.budget || [];
   const procurement = p.procurement || { purchaseOrders: [], bills: [] };

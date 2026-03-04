@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useProject } from "../../context/ProjectContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
 import _ from "../../theme/tokens.js";
@@ -76,10 +77,17 @@ export default function SiteDiaryPage() {
   const { project: p, update: up, log } = useProject();
   const { mobile, notify, trades, addNotification } = useApp();
   const [showCreate, setShowCreate] = useState(false);
+  const [searchParams] = useSearchParams();
   const [showEdit, setShowEdit] = useState(false);
   const [createForm, setCreateForm] = useState(makeEmptyForm);
   const [editForm, setEditForm] = useState(makeEmptyForm);
   const [editEntryId, setEditEntryId] = useState("");
+
+  useEffect(() => {
+    if (searchParams.get("create") === "1") {
+      setShowCreate(true);
+    }
+  }, [searchParams]);
 
   const normalisedEntries = useMemo(() => {
     const list = Array.isArray(p.diary) ? p.diary : [];

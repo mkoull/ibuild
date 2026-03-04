@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useProject } from "../../context/ProjectContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
 import { applyApprovedVariation } from "../../lib/costEngine.js";
@@ -36,7 +37,14 @@ export default function VariationsPage() {
   const { project: p, update: up, log } = useProject();
   const { mobile, notify, addNotification } = useApp();
   const [showCreate, setShowCreate] = useState(false);
+  const [searchParams] = useSearchParams();
   const [form, setForm] = useState({ title: "", description: "", costImpact: "", sellImpact: "", _err: false });
+
+  useEffect(() => {
+    if (searchParams.get("create") === "1") {
+      setShowCreate(true);
+    }
+  }, [searchParams]);
 
   const variations = Array.isArray(p.variations) ? p.variations : [];
   const isPendingStatus = (status) => {

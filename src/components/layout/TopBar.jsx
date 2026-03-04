@@ -3,7 +3,8 @@ import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { useApp } from "../../context/AppContext.jsx";
 import _ from "../../theme/tokens.js";
 import { pName } from "../../theme/styles.js";
-import { Search, Plus, FolderOpen, Users, Building2, Bell } from "lucide-react";
+import { Search, Plus, Bell, FileText, HardHat, ReceiptText, ShoppingCart, ClipboardList, NotebookText, Bug } from "lucide-react";
+import { applyConvertToJobBaseline } from "../../lib/costEngine.js";
 
 /* ─── Route → title mapping ─── */
 const ROUTE_TITLES = {
@@ -30,8 +31,7 @@ export default function TopBar() {
     projects,
     clients,
     create,
-    clientsHook,
-    tradesHook,
+    update,
     notify,
     settings,
     notifications,
@@ -99,7 +99,40 @@ export default function TopBar() {
     }
   }
 
-  const handleNewProject = () => {
+  const currentWorkspaceProjectId = params.id || params.estimateId || params.jobId || "";
+  const currentWorkspaceProject = currentWorkspaceProjectId
+    ? projects.find((p) => p.id === currentWorkspaceProjectId)
+    : null;
+  const sortedProjects = [...projects].sort((a, b) => {
+    const ta = new Date(a.updatedAt || a.createdAt || 0).getTime();
+    const tb = new Date(b.updatedAt || b.createdAt || 0).getTime();
+    return tb - ta;
+  });
+  const activeProjects = sortedProjects.filter((p) => String(p.stage || p.status || "").toLowerCase() === "active");
+
+  const resolveTargetProject = (requireActive = true) => {
+    if (currentWorkspaceProject) {
+      const isActive = String(currentWorkspaceProject.stage || currentWorkspaceProject.status || "").toLowerCase() === "active";
+      if (!requireActive || isActive) return currentWorkspaceProject;
+    }
+    if (requireActive) return activeProjects[0] || null;
+    return sortedProjects[0] || null;
+  };
+
+  const openProjectCreateFlow = (path, label, requireActive = true) => {
+    const target = resolveTargetProject(requireActive);
+    if (!target) {
+      notify(requireActive ? "Create or convert a project to an active job first" : "Create a project first", "info");
+      navigate("/projects");
+      setShowCreate(false);
+      return;
+    }
+    navigate(`/projects/${target.id}/${path}?create=1`);
+    notify(`${label} flow opened for ${pName(target, clients)}`);
+    setShowCreate(false);
+  };
+
+  const handleNewEstimate = () => {
     const p = create({
       marginPct: settings.defaultMargin ?? 18,
       contingencyPct: settings.defaultContingency ?? 5,
@@ -110,17 +143,18 @@ export default function TopBar() {
     setShowCreate(false);
   };
 
-  const handleNewClient = () => {
-    const c = clientsHook.create();
-    navigate(`/clients/${c.id}`);
-    notify("New client created");
-    setShowCreate(false);
-  };
-
-  const handleNewTrade = () => {
-    const t = tradesHook.create();
-    navigate(`/trades/${t.id}`);
-    notify("New trade created");
+  const handleNewJob = () => {
+    const p = create({
+      marginPct: settings.defaultMargin ?? 18,
+      contingencyPct: settings.defaultContingency ?? 5,
+      validDays: settings.defaultValidDays ?? 30,
+    });
+    update(p.id, (pr) => {
+      applyConvertToJobBaseline(pr);
+      return pr;
+    });
+    navigate(`/projects/${p.id}/overview`);
+    notify("New job created");
     setShowCreate(false);
   };
 
@@ -291,9 +325,13 @@ export default function TopBar() {
             zIndex: 200,
           }}>
             {[
-              { label: "New Project", Ic: FolderOpen, action: handleNewProject },
-              { label: "New Client",  Ic: Users,      action: handleNewClient },
-              { label: "New Trade",   Ic: Building2,   action: handleNewTrade },
+              { label: "New Estimate", Ic: FileText, action: handleNewEstimate },
+              { label: "New Job", Ic: HardHat, action: handleNewJob },
+              { label: "New Invoice", Ic: ReceiptText, action: () => openProjectCreateFlow("invoices", "Invoice") },
+              { label: "New Purchase Order", Ic: ShoppingCart, action: () => openProjectCreateFlow("procurement", "Purchase Order") },
+              { label: "New Variation", Ic: ClipboardList, action: () => openProjectCreateFlow("variations", "Variation") },
+              { label: "New Site Diary Entry", Ic: NotebookText, action: () => openProjectCreateFlow("site-diary", "Site diary entry") },
+              { label: "New Defect", Ic: Bug, action: () => openProjectCreateFlow("defects", "Defect") },
             ].map(item => (
               <div key={item.label} onClick={item.action} style={{
                 display: "flex", alignItems: "center", gap: 10,

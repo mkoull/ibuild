@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useProject } from "../../context/ProjectContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
 import _ from "../../theme/tokens.js";
@@ -37,6 +38,7 @@ export default function InvoicesPage() {
   const { project: p, update: up, T, log } = useProject();
   const { mobile, notify, settings, addNotification } = useApp();
   const [createOpen, setCreateOpen] = useState(false);
+  const [searchParams] = useSearchParams();
   const [invoiceForm, setInvoiceForm] = useState({
     description: "",
     amount: "",
@@ -51,6 +53,12 @@ export default function InvoicesPage() {
       return overdue ? { ...inv, status: "Overdue" } : inv;
     });
   }, [p.invoices]);
+
+  useEffect(() => {
+    if (searchParams.get("create") === "1") {
+      setCreateOpen(true);
+    }
+  }, [searchParams]);
 
   const contractValue = Number(p?.job?.contract?.currentContractValue || T.curr || 0);
   const totalInvoiced = invoices

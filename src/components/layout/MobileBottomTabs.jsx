@@ -2,9 +2,10 @@ import { useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useApp } from "../../context/AppContext.jsx";
 import { isJob } from "../../lib/lifecycle.js";
+import { applyConvertToJobBaseline } from "../../lib/costEngine.js";
 import _ from "../../theme/tokens.js";
 import {
-  LayoutDashboard, FolderOpen, Users, MoreHorizontal, BarChart3, PenLine,
+  LayoutDashboard, FolderOpen, MoreHorizontal, BarChart3, PenLine,
   DollarSign, Calendar, Plus, X, Building2, ClipboardList,
   Wrench, Settings, ReceiptText, NotebookText, Bug, ShoppingCart,
   FileQuestion, TrendingUp, Landmark, HardHat, Library, FileText, HandCoins,
@@ -69,7 +70,7 @@ export default function MobileBottomTabs() {
   const location = useLocation();
   const navigate = useNavigate();
   const params = useParams();
-  const { projects, create, clientsHook, tradesHook, notify, settings } = useApp();
+  const { projects, create, update, notify, settings } = useApp();
   const [showCreate, setShowCreate] = useState(false);
   const [showMore, setShowMore] = useState(false);
 
@@ -90,7 +91,36 @@ export default function MobileBottomTabs() {
     return location.pathname.startsWith(path);
   };
 
-  const handleNewQuote = () => {
+  const sortedProjects = [...projects].sort((a, b) => {
+    const ta = new Date(a.updatedAt || a.createdAt || 0).getTime();
+    const tb = new Date(b.updatedAt || b.createdAt || 0).getTime();
+    return tb - ta;
+  });
+  const activeProjects = sortedProjects.filter((p1) => String(p1.stage || p1.status || "").toLowerCase() === "active");
+
+  const resolveTargetProject = (requireActive = true) => {
+    if (project) {
+      const active = String(project.stage || project.status || "").toLowerCase() === "active";
+      if (!requireActive || active) return project;
+    }
+    if (requireActive) return activeProjects[0] || null;
+    return sortedProjects[0] || null;
+  };
+
+  const openProjectCreateFlow = (path, label, requireActive = true) => {
+    const target = resolveTargetProject(requireActive);
+    if (!target) {
+      notify(requireActive ? "Create or convert a project to an active job first" : "Create a project first", "info");
+      navigate("/projects");
+      setShowCreate(false);
+      return;
+    }
+    navigate(`/projects/${target.id}/${path}?create=1`);
+    notify(`${label} flow opened`);
+    setShowCreate(false);
+  };
+
+  const handleNewEstimate = () => {
     const p = create({
       marginPct: settings.defaultMargin ?? 18,
       contingencyPct: settings.defaultContingency ?? 5,
@@ -101,36 +131,30 @@ export default function MobileBottomTabs() {
     setShowCreate(false);
   };
 
-  const handleNewClient = () => {
-    const c = clientsHook.create();
-    navigate(`/clients/${c.id}`);
-    notify("New client created");
-    setShowCreate(false);
-  };
-
-  const handleNewTrade = () => {
-    const t = tradesHook.create();
-    navigate(`/trades/${t.id}`);
-    notify("New trade created");
-    setShowCreate(false);
-  };
-
-  const handleNewVariation = () => {
-    if (isProject) {
-      navigate(`/projects/${projectId}/variations`);
-      notify("Go to Variations to create");
-    }
+  const handleNewJob = () => {
+    const p = create({
+      marginPct: settings.defaultMargin ?? 18,
+      contingencyPct: settings.defaultContingency ?? 5,
+      validDays: settings.defaultValidDays ?? 30,
+    });
+    update(p.id, (pr) => {
+      applyConvertToJobBaseline(pr);
+      return pr;
+    });
+    navigate(`/projects/${p.id}/overview`);
+    notify("New job created");
     setShowCreate(false);
   };
 
   const createActions = [
-    { label: "New Quote", Ic: PenLine, action: handleNewQuote, color: _.ac },
-    { label: "New Client", Ic: Users, action: handleNewClient, color: _.green },
-    { label: "New Trade", Ic: Building2, action: handleNewTrade, color: _.amber },
+    { label: "New Estimate", Ic: FileText, action: handleNewEstimate, color: _.ac },
+    { label: "New Job", Ic: HardHat, action: handleNewJob, color: _.green },
+    { label: "New Invoice", Ic: ReceiptText, action: () => openProjectCreateFlow("invoices", "Invoice"), color: _.red },
+    { label: "New Purchase Order", Ic: ShoppingCart, action: () => openProjectCreateFlow("procurement", "Purchase Order"), color: _.amber },
+    { label: "New Variation", Ic: ClipboardList, action: () => openProjectCreateFlow("variations", "Variation"), color: _.violet },
+    { label: "New Site Diary Entry", Ic: NotebookText, action: () => openProjectCreateFlow("site-diary", "Site diary entry"), color: _.blue },
+    { label: "New Defect", Ic: Bug, action: () => openProjectCreateFlow("defects", "Defect"), color: _.red },
   ];
-  if (isProject && projectIsJob) {
-    createActions.push({ label: "New Variation", Ic: ClipboardList, action: handleNewVariation, color: _.violet });
-  }
 
   const navTo = (path) => {
     if (isProject && projectId) {

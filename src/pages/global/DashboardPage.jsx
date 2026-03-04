@@ -5,6 +5,7 @@ import _ from "../../theme/tokens.js";
 import { fmt, pName, stCol, badge, ds } from "../../theme/styles.js";
 import { normaliseStage } from "../../lib/lifecycle.js";
 import { calc } from "../../lib/calc.js";
+import { applyConvertToJobBaseline } from "../../lib/costEngine.js";
 import Card from "../../components/ui/Card.jsx";
 import PageHero from "../../components/ui/PageHero.jsx";
 import {
@@ -12,8 +13,12 @@ import {
   ArrowRight,
   ClipboardList,
   DollarSign,
+  FileText,
   FileWarning,
   FolderKanban,
+  HardHat,
+  ReceiptText,
+  ShoppingCart,
 } from "lucide-react";
 
 function toTimestamp(value, fallback = 0) {
@@ -97,7 +102,7 @@ function buildRecentActivity(projects, clients) {
 }
 
 export default function DashboardPage() {
-  const { projects, clients } = useApp();
+  const { projects, clients, create, update, notify } = useApp();
   const navigate = useNavigate();
 
   const projectCalcs = useMemo(
@@ -129,6 +134,33 @@ export default function DashboardPage() {
       .slice(0, 8),
     [projects],
   );
+  const primaryActiveProject = activeProjects[0]?.pr || null;
+
+  const quickCreateEstimate = () => {
+    const p = create();
+    navigate(`/estimates/${p.id}/overview`);
+    notify("New estimate created");
+  };
+
+  const quickCreateJob = () => {
+    const p = create();
+    update(p.id, (pr) => {
+      applyConvertToJobBaseline(pr);
+      return pr;
+    });
+    navigate(`/projects/${p.id}/overview`);
+    notify("New job created");
+  };
+
+  const openProjectCreateFlow = (path, label) => {
+    if (!primaryActiveProject) {
+      notify("Create or convert an active project first", "info");
+      navigate("/projects");
+      return;
+    }
+    navigate(`/projects/${primaryActiveProject.id}/${path}?create=1`);
+    notify(`${label} flow opened`);
+  };
 
   const kpiCards = [
     { label: "Active Projects", value: activeProjects.length, sub: "Projects in delivery", link: "/projects", icon: FolderKanban, color: _.blue },
@@ -169,6 +201,27 @@ export default function DashboardPage() {
           </Card>
         ))}
       </div>
+
+      <Card title="Quick Actions">
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <button type="button" onClick={quickCreateEstimate} style={quickActionBtn}>
+            <FileText size={14} />
+            Create Estimate
+          </button>
+          <button type="button" onClick={quickCreateJob} style={quickActionBtn}>
+            <HardHat size={14} />
+            Create Job
+          </button>
+          <button type="button" onClick={() => openProjectCreateFlow("invoices", "Invoice")} style={quickActionBtn}>
+            <ReceiptText size={14} />
+            Create Invoice
+          </button>
+          <button type="button" onClick={() => openProjectCreateFlow("procurement", "Purchase Order")} style={quickActionBtn}>
+            <ShoppingCart size={14} />
+            Create Purchase Order
+          </button>
+        </div>
+      </Card>
 
       <div className="layout-grid-12">
         <Card className="col-6" title="Recent Activity" style={{ minHeight: 280 }}>
@@ -280,6 +333,20 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+const quickActionBtn = {
+  border: `1px solid ${_.line}`,
+  background: _.surface,
+  borderRadius: 8,
+  padding: "9px 12px",
+  fontSize: 14,
+  color: _.ink,
+  cursor: "pointer",
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 8,
+  fontWeight: 600,
+};
 
 function SnapshotRow({ label, value, tone }) {
   return (

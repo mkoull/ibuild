@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useProject } from "../../context/ProjectContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
 import _ from "../../theme/tokens.js";
@@ -77,10 +78,17 @@ export default function DefectsPage() {
   const { project: p, update: up, log } = useProject();
   const { mobile, notify, trades, settings, addNotification } = useApp();
   const [createOpen, setCreateOpen] = useState(false);
+  const [searchParams] = useSearchParams();
   const [editOpen, setEditOpen] = useState(false);
   const [editingId, setEditingId] = useState("");
   const [form, setForm] = useState(emptyForm);
   const [viewMode, setViewMode] = useState("table");
+
+  useEffect(() => {
+    if (searchParams.get("create") === "1") {
+      setCreateOpen(true);
+    }
+  }, [searchParams]);
 
   const defects = useMemo(() => {
     return (p.defects || []).map((d, idx) => normalizeDefect(d, idx));
