@@ -75,7 +75,7 @@ export default function MobileBottomTabs() {
   const [showCreate, setShowCreate] = useState(false);
   const [showMore, setShowMore] = useState(false);
 
-  const projectId = params.id || params.estimateId || params.jobId || null;
+  const projectId = params.id || params.estimateId || null;
   const isProject = !!projectId;
   const project = isProject ? projects.find((p) => p.id === projectId) : null;
   const projectIsJob = project && isJob(project.stage || project.status);

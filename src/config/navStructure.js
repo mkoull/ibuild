@@ -21,7 +21,7 @@ export const NAV_STRUCTURE = {
   activeMap: {
     dashboard:  ["/dashboard"],
     pipeline:   ["/pipeline", "/clients", "/leads", "/quotes"],
-    projects:   ["/projects", "/estimates", "/jobs"],
+    projects:   ["/projects", "/estimates"],
     finance:    ["/finance", "/invoices", "/bills", "/payments"],
     site:       ["/site", "/documents", "/site-diary", "/defects"],
     settings:   ["/settings", "/rate-library", "/cost-library", "/trades"],

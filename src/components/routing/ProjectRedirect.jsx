@@ -11,7 +11,7 @@ export default function ProjectRedirect() {
   if (!project) return <Navigate to="/estimates" replace />;
 
   const stage = project.stage || project.status || "Lead";
-  const base = isQuote(stage) ? `/estimates/${id}` : `/jobs/${id}`;
+  const base = isQuote(stage) ? `/estimates/${id}` : `/projects/${id}`;
   const sub = rest || "";
   const target = sub ? `${base}/${sub}` : base;
 

@@ -82,7 +82,7 @@ export default function JobsListPage() {
             const nextMs = getNextMilestone(pr);
 
             return (
-              <div key={pr.id} onClick={() => navigate(`/jobs/${pr.id}/overview`)} style={{
+              <div key={pr.id} onClick={() => navigate(`/projects/${pr.id}/overview`)} style={{
                 display: "grid", gridTemplateColumns: mobile ? "1fr auto 32px" : "1fr 100px 120px 100px 80px 32px", gap: _.s2,
                 padding: `${_.s3}px ${_.s1}px`, borderBottom: `1px solid ${_.line}`, cursor: "pointer",
                 alignItems: "center", borderRadius: _.rXs, transition: `background ${_.tr}`,

@@ -30,24 +30,24 @@ function lifecycleIndex(stage) {
 }
 
 export default function WorkspaceShell({ workspaceType }) {
-  const { id, estimateId, jobId } = useParams();
+  const { id, estimateId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
   const { find, clients, update } = useProjectsCtx();
   const { notify, currentUser } = useApp();
-  const entityId = estimateId || jobId || id;
+  const entityId = estimateId || id;
   const isEstimate = workspaceType === "estimate";
 
   const project = find(entityId);
   const totals = useMemo(() => project ? calc(project) : null, [project]);
 
-  if (!project) return <Navigate to={isEstimate ? "/estimates" : "/jobs"} replace />;
+  if (!project) return <Navigate to={isEstimate ? "/estimates" : "/projects"} replace />;
 
   const stage = project.stage || project.status || "Lead";
   const isActiveStage = String(stage).toLowerCase() === "active";
 
   const breadcrumbLabel = isEstimate ? "Estimates" : "Jobs";
-  const breadcrumbTo = isEstimate ? "/estimates" : "/jobs";
+  const breadcrumbTo = isEstimate ? "/estimates" : "/projects";
 
   const projectNumber = isEstimate
     ? (project.estimateNumber || "")

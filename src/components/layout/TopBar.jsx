@@ -104,7 +104,7 @@ export default function TopBar() {
     }
   }
 
-  const currentWorkspaceProjectId = params.id || params.estimateId || params.jobId || "";
+  const currentWorkspaceProjectId = params.id || params.estimateId || "";
   const currentWorkspaceProject = currentWorkspaceProjectId
     ? projects.find((p) => p.id === currentWorkspaceProjectId)
     : null;
