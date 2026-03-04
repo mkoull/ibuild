@@ -18,8 +18,10 @@ export function getNextStepForProject(project, totals) {
   const hasScope = T.items > 0;
   const proposal = project.proposal;
   const hasProposal = proposal && proposal.status === "Generated";
-  const milestones = project.schedule || [];
-  const hasSchedule = milestones.some(m => m.plannedStart || m.planned);
+  const milestones = project?.schedule && typeof project.schedule === "object" && !Array.isArray(project.schedule)
+    ? (project.schedule.tasks || [])
+    : (project.schedule || []);
+  const hasSchedule = milestones.some((m) => m.startDate || m.plannedStart || m.planned);
 
   if (stage === "Lead") {
     if (!hasClient)

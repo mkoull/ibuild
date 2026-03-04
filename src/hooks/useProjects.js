@@ -6,7 +6,7 @@ import { shadowWriter } from "../lib/shadowWrite.js";
 import { getNextEstimateNumber } from "../config/workspaceTabs.js";
 
 const STORAGE_KEY = "ib_projects";
-const STORE_VERSION = 19;
+const STORE_VERSION = 20;
 const SAVE_DEBOUNCE_MS = 300;
 
 function hydrateProject(pr) {
@@ -389,6 +389,39 @@ function migrateProjects(data, fromVersion) {
         paidDate: inv.paidDate || inv.paidAt || "",
         status: normalizeInvoiceStatus(inv.status),
       }));
+    });
+    data = norm;
+  }
+  if (fromVersion <= 19) {
+    const norm = data && data.byId ? data : { byId: {}, allIds: [] };
+    Object.values(norm.byId).forEach((p) => {
+      if (p.schedule && typeof p.schedule === "object" && !Array.isArray(p.schedule) && Array.isArray(p.schedule.tasks)) {
+        p.schedule.tasks = p.schedule.tasks.map((task, idx) => ({
+          id: task.id || uid(),
+          name: task.name || "",
+          trade: task.trade || task.freeTextTrade || "",
+          startDate: task.startDate || task.plannedStart || "",
+          durationDays: Math.max(1, Number(task.durationDays) || 1),
+          endDate: task.endDate || task.plannedFinish || "",
+          dependencyTaskId: task.dependencyTaskId || (Array.isArray(task.dependsOn) ? task.dependsOn[0] || null : null),
+          order: Number.isFinite(Number(task.order)) ? Number(task.order) : idx,
+        }));
+      } else if (Array.isArray(p.schedule)) {
+        p.schedule = {
+          tasks: p.schedule.map((task, idx) => ({
+            id: task.id || uid(),
+            name: task.name || "",
+            trade: task.trade || task.freeTextTrade || "",
+            startDate: task.startDate || task.plannedStart || "",
+            durationDays: Math.max(1, Number(task.durationDays) || 1),
+            endDate: task.endDate || task.plannedFinish || "",
+            dependencyTaskId: task.dependencyTaskId || (Array.isArray(task.dependsOn) ? task.dependsOn[0] || null : null),
+            order: Number.isFinite(Number(task.order)) ? Number(task.order) : idx,
+          })),
+        };
+      } else {
+        p.schedule = { tasks: [] };
+      }
     });
     data = norm;
   }

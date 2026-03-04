@@ -28,7 +28,12 @@ function mkModule({ type, projectId = null, title = "", links = {}, status = "ac
 function hasProjectData(project, type) {
   if (!project) return false;
   if (type === "quote") return !!(project.scope && Object.keys(project.scope).length > 0);
-  if (type === "schedule") return Array.isArray(project.schedule) && project.schedule.length > 0;
+  if (type === "schedule") {
+    if (project.schedule && typeof project.schedule === "object" && Array.isArray(project.schedule.tasks)) {
+      return project.schedule.tasks.length > 0;
+    }
+    return Array.isArray(project.schedule) && project.schedule.length > 0;
+  }
   if (type === "costs") {
     return (Array.isArray(project.budget) && project.budget.length > 0)
       || (Array.isArray(project.commitments) && project.commitments.length > 0)

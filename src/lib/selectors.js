@@ -67,7 +67,10 @@ export function getPaidTotal(pr) {
 }
 
 export function getNextMilestone(pr) {
-  const ms = (pr.schedule || []).find(m => m.status ? m.status !== "complete" : !m.done);
+  const list = pr?.schedule && typeof pr.schedule === "object" && !Array.isArray(pr.schedule)
+    ? (pr.schedule.tasks || [])
+    : (pr.schedule || []);
+  const ms = list.find((m) => (m.status ? m.status !== "complete" : !m.done));
   return ms || null;
 }
 

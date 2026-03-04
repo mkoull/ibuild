@@ -13,7 +13,9 @@ import { fmt } from "../theme/styles.js";
  */
 export function getNextActions({ project: p, totals: T, primaryRoute, primaryReason }) {
   const stage = p.stage || p.status;
-  const milestones = p.schedule || [];
+  const milestones = p?.schedule && typeof p.schedule === "object" && !Array.isArray(p.schedule)
+    ? (p.schedule.tasks || [])
+    : (p.schedule || []);
   const nextMs = milestones.find(m => m.status ? m.status !== "complete" : !m.done);
   const pendingInvoices = (p.invoices || []).filter((i) => {
     const s = String(i.status || "").toLowerCase();
@@ -25,7 +27,7 @@ export function getNextActions({ project: p, totals: T, primaryRoute, primaryRea
   const hasScope = T.items > 0;
   const hasClient = !!(p.client || p.clientId);
   const hasProposal = p.proposal && p.proposal.status === "Generated";
-  const hasSchedule = milestones.some(m => m.plannedStart || m.planned);
+  const hasSchedule = milestones.some((m) => m.startDate || m.plannedStart || m.planned);
 
   const actions = [];
 
@@ -56,7 +58,10 @@ export function getNextActions({ project: p, totals: T, primaryRoute, primaryRea
   }
 
   if (stage === "Active" || stage === "Invoiced") {
-    if (nextMs) actions.push({ label: `Next milestone: ${nextMs.name}`, detail: nextMs.planned ? `Planned: ${nextMs.planned}` : "No date set", path: "schedule" });
+    if (nextMs) {
+      const plannedDate = nextMs.startDate || nextMs.planned || nextMs.plannedStart || "";
+      actions.push({ label: `Next milestone: ${nextMs.name}`, detail: plannedDate ? `Planned: ${plannedDate}` : "No date set", path: "schedule" });
+    }
     if (pendingAmount > 0 && primaryReason !== "outstanding_invoices")
       actions.push({ label: `Outstanding: ${fmt(pendingAmount)}`, detail: `${pendingInvoices.length} pending invoice${pendingInvoices.length !== 1 ? "s" : ""}`, path: "invoices" });
     if (openDefects.length > 0)
