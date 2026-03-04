@@ -34,7 +34,9 @@ const OverviewPage = lazy(() => import("./pages/project/OverviewPage.jsx"));
 const EstimateDetailsTab = lazy(() => import("./pages/project/EstimateDetailsTab.jsx"));
 const ScopePage = lazy(() => import("./pages/project/ScopePage.jsx"));
 const QuotePage = lazy(() => import("./pages/project/QuotePage.jsx"));
-const EstimateCostingsWrapper = lazy(() => import("./pages/project/EstimateCostingsWrapper.jsx"));
+const BuildSectionPage = lazy(() => import("./pages/project/BuildSectionPage.jsx"));
+const FinancialSectionPage = lazy(() => import("./pages/project/FinancialSectionPage.jsx"));
+const CloseoutSectionPage = lazy(() => import("./pages/project/CloseoutSectionPage.jsx"));
 const PlansAIPage = lazy(() => import("./pages/project/PlansAIPage.jsx"));
 const CostsPage = lazy(() => import("./pages/project/CostsPage.jsx"));
 const SchedulePage = lazy(() => import("./pages/project/SchedulePage.jsx"));
@@ -111,8 +113,12 @@ export default function App() {
                 }>
                   <Route index element={<Navigate to="overview" replace />} />
                   <Route path="overview" element={<EstimateDetailsTab />} />
+                  <Route path="estimate" element={<Navigate to="../scope" replace />} />
                   <Route path="scope" element={<ScopePage />} />
-                  <Route path="quote" element={<EstimateCostingsWrapper />} />
+                  <Route path="quote" element={<QuotePage />} />
+                  <Route path="build" element={<BuildSectionPage />} />
+                  <Route path="financial" element={<FinancialSectionPage />} />
+                  <Route path="closeout" element={<CloseoutSectionPage />} />
                   <Route path="schedule" element={<LockedTabGate><SchedulePage /></LockedTabGate>} />
                   <Route path="costs" element={<LockedTabGate><CostsPage /></LockedTabGate>} />
                   <Route path="variations" element={<LockedTabGate><VariationsPage /></LockedTabGate>} />
@@ -142,8 +148,12 @@ export default function App() {
                   <Route index element={<Navigate to="overview" replace />} />
                   <Route path="overview" element={<OverviewPage />} />
                   <Route path="overview/*" element={<Navigate to="../overview" replace />} />
+                  <Route path="estimate" element={<Navigate to="../scope" replace />} />
                   <Route path="scope" element={<ScopePage />} />
                   <Route path="quote" element={<QuotePage />} />
+                  <Route path="build" element={<BuildSectionPage />} />
+                  <Route path="financial" element={<FinancialSectionPage />} />
+                  <Route path="closeout" element={<CloseoutSectionPage />} />
                   <Route path="schedule" element={<LockedTabGate><SchedulePage /></LockedTabGate>} />
                   <Route path="costs" element={<LockedTabGate><CostsPage /></LockedTabGate>} />
                   <Route path="variations" element={<LockedTabGate><VariationsPage /></LockedTabGate>} />

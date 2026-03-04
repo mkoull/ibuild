@@ -5,13 +5,21 @@ import { useProjectsCtx } from "../../context/AppContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
 import { ProjectProvider } from "../../context/ProjectContext.jsx";
 import { calc } from "../../lib/calc.js";
-import { JOB_TABS, PROJECT_WORKFLOW_SECTIONS, displayStage, getProjectTabUrl } from "../../config/workspaceTabs.js";
+import { displayStage } from "../../config/workspaceTabs.js";
 import { applyConvertToJobBaseline, calculateTotals } from "../../lib/costEngine.js";
 import _ from "../../theme/tokens.js";
 import { fmt, pName, stCol, badge as badgeStyle } from "../../theme/styles.js";
 import Button from "../ui/Button.jsx";
 
 const LIFECYCLE_STEPS = ["Lead", "Quoted", "Approved", "Active", "Complete"];
+const WORKSPACE_SECTIONS = [
+  { key: "overview", label: "Overview", path: "overview", matches: ["overview"] },
+  { key: "estimate", label: "Estimate", path: "estimate", matches: ["estimate", "scope"] },
+  { key: "quote", label: "Quote", path: "quote", matches: ["quote", "quote-review"] },
+  { key: "build", label: "Build", path: "build", matches: ["build", "schedule", "procurement", "variations", "site-diary"] },
+  { key: "financial", label: "Financial", path: "financial", matches: ["financial", "costs", "invoices"] },
+  { key: "closeout", label: "Closeout", path: "closeout", matches: ["closeout", "defects", "documents"] },
+];
 
 function lifecycleIndex(stage) {
   const s = String(stage || "").toLowerCase();
@@ -35,7 +43,6 @@ export default function WorkspaceShell({ workspaceType }) {
   if (!project) return <Navigate to={isEstimate ? "/estimates" : "/jobs"} replace />;
 
   const stage = project.stage || project.status || "Lead";
-  const tabs = JOB_TABS;
   const isActiveStage = String(stage).toLowerCase() === "active";
 
   const breadcrumbLabel = isEstimate ? "Estimates" : "Jobs";
@@ -44,6 +51,8 @@ export default function WorkspaceShell({ workspaceType }) {
   const projectNumber = isEstimate
     ? (project.estimateNumber || "")
     : (project.jobNumber || project.estimateNumber || "");
+  const linkedClient = project.clientId ? clients.find((c) => c.id === project.clientId) : null;
+  const clientLabel = linkedClient?.displayName || project.client || "—";
 
   const displayName = project.name || pName(project, clients) || "Project";
   const displayStatus = displayStage(stage);
@@ -63,19 +72,13 @@ export default function WorkspaceShell({ workspaceType }) {
     : "Unknown";
   const stageIdx = lifecycleIndex(stage);
 
-  // Active tab detection (robust against nested routes)
+  // Active section detection (robust against legacy nested routes)
   const projectBase = isEstimate ? `/estimates/${entityId}` : `/projects/${entityId}`;
-  const resolvedActive = tabs.find((t) => {
-    const tabBase = `${projectBase}/${t.path}`;
-    return location.pathname === tabBase || location.pathname.startsWith(`${tabBase}/`);
-  })?.path || tabs.find((t) => !(t.isLocked?.(project)))?.path || "overview";
-  const activeTab = tabs.find((t) => t.path === resolvedActive) || tabs[0];
-  const activeSectionKey = PROJECT_WORKFLOW_SECTIONS.find((section) => (
-    section.tabs.includes(activeTab?.key)
-  ))?.key;
+  const activeLeaf = location.pathname.replace(`${projectBase}/`, "").split("/")[0] || "overview";
+  const activeSectionKey = WORKSPACE_SECTIONS.find((section) => section.matches.includes(activeLeaf))?.key || "overview";
   const showConvertPrimary = !isActiveStage;
-  const overviewUrl = isEstimate ? `${projectBase}/overview` : getProjectTabUrl(entityId, "overview");
-  const variationsUrl = isEstimate ? `${projectBase}/variations` : getProjectTabUrl(entityId, "variations");
+  const overviewUrl = `${projectBase}/overview`;
+  const variationsUrl = `${projectBase}/variations`;
 
   const convertToJob = () => {
     let converted = false;
@@ -186,71 +189,40 @@ export default function WorkspaceShell({ workspaceType }) {
         </Button>
       </div>
 
-      {/* ─── Workflow navigation ─── */}
+      {/* ─── Workspace section navigation ─── */}
       <div style={{
         display: "flex",
         gap: 8,
-        alignItems: "stretch",
+        alignItems: "center",
         borderBottom: "1px solid rgba(0,0,0,0.06)",
         overflowX: "auto",
         marginBottom: 24,
         paddingBottom: 10,
       }}>
-        {PROJECT_WORKFLOW_SECTIONS.map((section) => {
+        {WORKSPACE_SECTIONS.map((section) => {
           const sectionActive = section.key === activeSectionKey;
+          const sectionUrl = `${projectBase}/${section.path}`;
           return (
-            <div
+            <NavLink
               key={section.key}
+              to={sectionUrl}
               style={{
-                minWidth: 160,
+                minWidth: 118,
                 border: `1px solid ${sectionActive ? `${_.ac}55` : _.line}`,
                 borderRadius: _.rSm,
                 background: sectionActive ? `${_.ac}08` : _.surface,
-                padding: "8px 10px",
+                padding: "8px 12px",
                 boxShadow: sectionActive ? `inset 0 0 0 1px ${_.ac}22` : "none",
                 flexShrink: 0,
+                textDecoration: "none",
+                color: sectionActive ? _.ink : _.muted,
+                fontSize: 13,
+                fontWeight: sectionActive ? 700 : 600,
+                textAlign: "center",
               }}
             >
-              <div style={{
-                fontSize: 10,
-                letterSpacing: "0.06em",
-                textTransform: "uppercase",
-                color: sectionActive ? _.ac : _.muted,
-                fontWeight: 700,
-                marginBottom: 6,
-              }}>
-                {section.label}
-              </div>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                {section.tabs.map((tabKey) => {
-                  const tab = tabs.find((x) => x.key === tabKey);
-                  if (!tab) return null;
-                  const active = resolvedActive === tab.path;
-                  const tabUrl = isEstimate ? `${projectBase}/${tab.path}` : getProjectTabUrl(entityId, tab.key);
-                  return (
-                    <NavLink
-                      key={tab.key}
-                      to={tabUrl}
-                      style={{
-                        padding: "6px 10px",
-                        borderRadius: 6,
-                        cursor: "pointer",
-                        fontSize: 12,
-                        fontWeight: active ? 700 : 500,
-                        color: active ? _.ink : _.muted,
-                        background: active ? `${_.ac}18` : "transparent",
-                        border: `1px solid ${active ? `${_.ac}55` : "transparent"}`,
-                        whiteSpace: "nowrap",
-                        transition: "all 0.1s ease",
-                        textDecoration: "none",
-                      }}
-                    >
-                      {tab.label}
-                    </NavLink>
-                  );
-                })}
-              </div>
-            </div>
+              {section.label}
+            </NavLink>
           );
         })}
       </div>
@@ -288,8 +260,56 @@ export default function WorkspaceShell({ workspaceType }) {
           );
         })}
       </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 10, marginBottom: 18 }}>
+        <div style={metaCellStyle}>
+          <div style={metaLabelStyle}>Project</div>
+          <div style={metaValueStyle}>{displayName}</div>
+        </div>
+        <div style={metaCellStyle}>
+          <div style={metaLabelStyle}>Status</div>
+          <div style={metaValueStyle}>{displayStatus}</div>
+        </div>
+        <div style={metaCellStyle}>
+          <div style={metaLabelStyle}>Contract Value</div>
+          <div style={metaValueStyle}>{fmt(total)}</div>
+        </div>
+        <div style={metaCellStyle}>
+          <div style={metaLabelStyle}>Margin</div>
+          <div style={metaValueStyle}>{marginPct.toFixed(1)}%</div>
+        </div>
+        <div style={metaCellStyle}>
+          <div style={metaLabelStyle}>Client</div>
+          <div style={metaValueStyle}>{clientLabel}</div>
+        </div>
+      </div>
 
       <Outlet />
     </ProjectProvider>
   );
 }
+
+const metaCellStyle = {
+  border: `1px solid ${_.line}`,
+  borderRadius: _.rSm,
+  background: _.surface,
+  padding: "10px 12px",
+  minWidth: 0,
+};
+
+const metaLabelStyle = {
+  fontSize: 11,
+  color: _.muted,
+  textTransform: "uppercase",
+  letterSpacing: "0.05em",
+  fontWeight: 600,
+  marginBottom: 4,
+};
+
+const metaValueStyle = {
+  fontSize: 14,
+  color: _.ink,
+  fontWeight: 600,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+};
