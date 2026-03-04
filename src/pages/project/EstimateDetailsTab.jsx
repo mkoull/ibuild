@@ -9,7 +9,7 @@ import { ArrowRight, CheckCircle2, MapPin } from "lucide-react";
 import Button from "../../components/ui/Button.jsx";
 import { calculateTotals, normalizeCategories } from "../../lib/costEngine.js";
 
-const CARD = { background: "#fff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 8, padding: 16 };
+const CARD = { background: "#fff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 10, padding: 20 };
 const CARD_HEADER = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 };
 const CARD_TITLE = { fontSize: 15, fontWeight: 500, color: _.body, margin: 0 };
 const LBL = { fontSize: 12, color: _.muted, display: "block", marginBottom: 6 };
@@ -138,31 +138,48 @@ export default function EstimateDetailsTab() {
       </div>
 
       {activeStep === "project" && (
-        <div style={CARD}>
-          <div style={CARD_HEADER}>
-            <h3 style={CARD_TITLE}>Project Details</h3>
-            <span style={{ fontSize: 12, color: _.muted }}>{displayStage(stage)}</span>
+        <div className="layout-grid-12">
+          <div className="col-8" style={CARD}>
+            <div style={CARD_HEADER}>
+              <h3 style={CARD_TITLE}>Project Details</h3>
+              <span style={{ fontSize: 12, color: _.muted }}>{displayStage(stage)}</span>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "1fr 1fr", gap: 12 }}>
+              <div>
+                <label style={LBL}>Project Name</label>
+                <input style={inputStyle} value={p.name || ""} onChange={(e) => up((pr) => { pr.name = e.target.value; return pr; })} />
+              </div>
+              <div>
+                <label style={LBL}>Build Type</label>
+                <input style={inputStyle} value={p.buildType || p.type || ""} onChange={(e) => up((pr) => { pr.buildType = e.target.value; pr.type = e.target.value; return pr; })} />
+              </div>
+              <div>
+                <label style={LBL}>Created</label>
+                <input readOnly style={{ ...inputStyle, color: _.muted }} value={createdAt} />
+              </div>
+              <div>
+                <label style={LBL}>Estimate #</label>
+                <input readOnly style={{ ...inputStyle, color: _.muted }} value={safeText(p.estimateNumber)} />
+              </div>
+            </div>
+            <div style={{ marginTop: 12, display: "flex", justifyContent: "flex-end" }}>
+              <Button onClick={goNext} icon={ArrowRight}>Next Step</Button>
+            </div>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "1fr 1fr", gap: 12 }}>
-            <div>
-              <label style={LBL}>Project Name</label>
-              <input style={inputStyle} value={p.name || ""} onChange={(e) => up((pr) => { pr.name = e.target.value; return pr; })} />
+          <div className="col-4" style={CARD}>
+            <h3 style={{ ...CARD_TITLE, marginBottom: 8 }}>Work Location</h3>
+            <div style={{ fontSize: 14, color: _.ink, marginBottom: 8 }}>{safeText(address)}</div>
+            {mapsHref ? (
+              <a href={mapsHref} target="_blank" rel="noreferrer" style={{ fontSize: 13, color: _.ac, textDecoration: "none", display: "inline-block", marginBottom: 10 }}>
+                Open in Maps
+              </a>
+            ) : (
+              <div style={{ fontSize: 13, color: _.muted, marginBottom: 10 }}>Open in Maps</div>
+            )}
+            <div style={{ height: 180, background: _.well, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <MapPin size={20} color={_.muted} />
+              <span style={{ fontSize: 13, color: _.muted }}>{address || "Map preview"}</span>
             </div>
-            <div>
-              <label style={LBL}>Build Type</label>
-              <input style={inputStyle} value={p.buildType || p.type || ""} onChange={(e) => up((pr) => { pr.buildType = e.target.value; pr.type = e.target.value; return pr; })} />
-            </div>
-            <div>
-              <label style={LBL}>Created</label>
-              <input readOnly style={{ ...inputStyle, color: _.muted }} value={createdAt} />
-            </div>
-            <div>
-              <label style={LBL}>Estimate #</label>
-              <input readOnly style={{ ...inputStyle, color: _.muted }} value={safeText(p.estimateNumber)} />
-            </div>
-          </div>
-          <div style={{ marginTop: 12, display: "flex", justifyContent: "flex-end" }}>
-            <Button onClick={goNext} icon={ArrowRight}>Next Step</Button>
           </div>
         </div>
       )}
@@ -263,24 +280,8 @@ export default function EstimateDetailsTab() {
         </div>
       )}
 
-      <div style={{ ...CARD, display: "grid", gridTemplateColumns: mobile ? "1fr" : "1fr 1fr", gap: 20 }}>
-        <div>
-          <h3 style={{ ...CARD_TITLE, marginBottom: 8 }}>Work Location</h3>
-          <div style={{ fontSize: 14, color: _.ink, marginBottom: 8 }}>{safeText(address)}</div>
-          {mapsHref ? (
-            <a href={mapsHref} target="_blank" rel="noreferrer" style={{ fontSize: 13, color: _.ac, textDecoration: "none", display: "inline-block", marginBottom: 10 }}>
-              Open in Maps
-            </a>
-          ) : (
-            <div style={{ fontSize: 13, color: _.muted, marginBottom: 10 }}>Open in Maps</div>
-          )}
-          <div style={{ height: 180, background: _.well, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-            <MapPin size={20} color={_.muted} />
-            <span style={{ fontSize: 13, color: _.muted }}>{address || "Map preview"}</span>
-          </div>
-        </div>
-        <div>
-          <h3 style={{ ...CARD_TITLE, marginBottom: 8 }}>Notes</h3>
+      <div style={{ ...CARD }}>
+        <h3 style={{ ...CARD_TITLE, marginBottom: 8 }}>Notes</h3>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
@@ -291,7 +292,6 @@ export default function EstimateDetailsTab() {
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
             <Button variant="secondary" onClick={handleSaveNotes}>Save Notes</Button>
           </div>
-        </div>
       </div>
     </div>
   );

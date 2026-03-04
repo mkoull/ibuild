@@ -5,9 +5,9 @@ export default function Card({ title, subtitle, icon: Icon, children, style, hea
     <div style={{
       background: _.surface,
       border: `1px solid ${accent ? `${_.ac}30` : _.line}`,
-      borderRadius: _.r,
+      borderRadius: 10,
       boxShadow: accent ? _.shadowElevated : _.sh1,
-      padding: _.s4,
+      padding: 20,
       transition: `transform ${_.tr}, box-shadow ${_.tr}, border-color ${_.tr}`,
       ...(interactive ? { cursor: "pointer" } : {}),
       ...style,
@@ -30,7 +30,7 @@ export default function Card({ title, subtitle, icon: Icon, children, style, hea
               </div>
             )}
             <div>
-              {title && <div style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.semi, color: _.ink }}>{title}</div>}
+              {title && <div style={{ fontSize: 16, fontWeight: _.fontWeight.semi, color: _.ink }}>{title}</div>}
               {subtitle && <div style={{ fontSize: _.fontSize.sm, color: _.muted, marginTop: 1 }}>{subtitle}</div>}
             </div>
           </div>

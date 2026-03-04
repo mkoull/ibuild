@@ -37,13 +37,13 @@ export default function GlobalShell() {
           overflowY: "auto",
           WebkitOverflowScrolling: "touch",
         }}>
-          <div style={{
-            maxWidth: 1440, margin: "0 auto",
-            paddingTop: mobile ? "var(--mobile-header-h)" : 32,
-            paddingLeft: mobile ? 16 : 40,
-            paddingRight: mobile ? 16 : 40,
-            paddingBottom: mobile ? "var(--app-bottom-pad)" : 80,
-          }}>
+          <div
+            className="app-content-container"
+            style={{
+              paddingTop: mobile ? "calc(var(--mobile-header-h) + var(--content-pad))" : "var(--content-pad)",
+              paddingBottom: mobile ? "var(--app-bottom-pad)" : "var(--content-pad)",
+            }}
+          >
             <Outlet />
           </div>
         </main>
