@@ -9,6 +9,7 @@ import { calc } from "../../lib/calc.js";
 import { canTransition, isQuote, isJob, needsQuoteToJobConversion } from "../../lib/lifecycle.js";
 import { usePageBottomBar } from "../../hooks/usePageBottomBar.js";
 import { applyConvertToJobBaseline, calculateTotals, normalizeCategories } from "../../lib/costEngine.js";
+import { exportPrintPdf } from "../../lib/pdfExport.js";
 import Card from "../../components/ui/Card.jsx";
 import Modal from "../../components/ui/Modal.jsx";
 import Button from "../../components/ui/Button.jsx";
@@ -20,7 +21,7 @@ const QUOTE_STATUSES = ["Draft", "Sent", "Accepted", "Rejected"];
 
 export default function QuotePage() {
   const { project: p, update: up, T, client, log, transitionStage } = useProject();
-  const { clients, clientsHook, rateLibrary, mobile, notify } = useApp();
+  const { clients, clientsHook, rateLibrary, mobile, notify, settings } = useApp();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -303,45 +304,39 @@ export default function QuotePage() {
 
   const exportQuotePdf = () => {
     if (!quoteDoc) return;
-    const quoteLines = (quoteDoc.categories || [])
-      .map((cat) => `<tr><td>${cat.name}</td><td style="text-align:right;">${cat.itemCount}</td></tr>`)
-      .join("");
-    const w = window.open("", "_blank");
-    if (!w) {
+    const ok = exportPrintPdf({
+      title: "Quote",
+      companyName: settings?.companyName || "",
+      projectName: quoteDoc.projectName || p.name || "",
+      clientName: quoteDoc.clientName || clientName || "",
+      dateLabel: quoteDoc.quoteDate || ds(),
+      sections: [
+        {
+          title: "Scope Summary",
+          type: "table",
+          headers: ["Category", "Items"],
+          rows: (quoteDoc.categories || []).map((cat) => [cat.name, String(cat.itemCount || 0)]),
+        },
+        {
+          title: "Pricing Summary",
+          type: "table",
+          headers: ["Item", "Value"],
+          rows: [
+            ["Total Cost", fmt(quoteDoc.pricing?.totalCost || 0)],
+            ["Margin %", `${Number(quoteDoc.pricing?.marginPercent || 0).toFixed(2)}%`],
+            ["Total Quote Price", fmt(quoteDoc.pricing?.totalQuotePrice || 0)],
+          ],
+        },
+        {
+          title: "Terms",
+          type: "text",
+          text: quoteDoc.terms || "Terms to be agreed.",
+        },
+      ],
+    });
+    if (!ok) {
       notify("Pop-up blocked — please allow pop-ups for this site", "error");
-      return;
     }
-    w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${quoteDoc.projectName} Quote</title><style>
-      @page { size: A4; margin: 14mm; }
-      body { font-family: Inter, Arial, sans-serif; color:#0f172a; font-size:12px; }
-      h1 { font-size:20px; margin:0 0 8px; }
-      .section { margin: 16px 0; }
-      .label { font-size:11px; color:#64748b; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:6px; }
-      table { width:100%; border-collapse:collapse; }
-      th,td { border-bottom:1px solid #e2e8f0; padding:8px 4px; }
-      th { text-align:left; color:#64748b; font-size:11px; text-transform:uppercase; }
-      .totals { border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px; }
-      .row { display:flex; justify-content:space-between; margin:4px 0; font-variant-numeric:tabular-nums; }
-      .grand { font-weight:700; font-size:16px; border-top:2px solid #0f172a; padding-top:8px; margin-top:8px; }
-    </style></head><body>
-      <h1>Quote</h1>
-      <div><strong>Client:</strong> ${quoteDoc.clientName || "—"}</div>
-      <div><strong>Project:</strong> ${quoteDoc.projectName || "—"}</div>
-      <div><strong>Date:</strong> ${quoteDoc.quoteDate || ds()}</div>
-      <div class="section">
-        <div class="label">Scope Summary</div>
-        <table><thead><tr><th>Category</th><th style="text-align:right;">Items</th></tr></thead><tbody>${quoteLines}</tbody></table>
-      </div>
-      <div class="section totals">
-        <div class="label">Pricing Summary</div>
-        <div class="row"><span>Total Cost</span><strong>${fmt(quoteDoc.pricing?.totalCost || 0)}</strong></div>
-        <div class="row"><span>Margin %</span><strong>${Number(quoteDoc.pricing?.marginPercent || 0).toFixed(2)}%</strong></div>
-        <div class="row grand"><span>Total Quote Price</span><span>${fmt(quoteDoc.pricing?.totalQuotePrice || 0)}</span></div>
-      </div>
-      <div class="section"><div class="label">Terms</div><div>${quoteDoc.terms || "Terms to be agreed."}</div></div>
-    </body></html>`);
-    w.document.close();
-    setTimeout(() => w.print(), 500);
   };
 
   // ─── Send Quote (Lead → Quoted) ───
@@ -983,7 +978,7 @@ export default function QuotePage() {
 
                   <div style={{ display: "flex", gap: _.s2, flexWrap: "wrap" }}>
                     <Button onClick={generateQuoteDocument} icon={FileCheck}>{quoteDoc ? "Regenerate Quote" : "Generate Quote"}</Button>
-                    <Button variant="secondary" onClick={exportQuotePdf} disabled={!quoteDoc}>Export PDF</Button>
+                    <Button variant="secondary" onClick={exportQuotePdf} disabled={!quoteDoc}>Download Quote PDF</Button>
                     <Button variant="secondary" icon={Send} onClick={sendQuote}>Send Quote</Button>
                     <Button variant="secondary" onClick={markAccepted}>Mark Accepted</Button>
                     <Button variant="secondary" onClick={markRejected}>Mark Rejected</Button>

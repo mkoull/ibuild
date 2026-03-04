@@ -9,6 +9,7 @@ import Empty from "../../components/ui/Empty.jsx";
 import Table from "../../components/ui/Table.jsx";
 import _ from "../../theme/tokens.js";
 import { uid, ds, fmt, input, label, badge } from "../../theme/styles.js";
+import { exportPrintPdf } from "../../lib/pdfExport.js";
 import { ShoppingCart, Plus, Receipt, FilePlus2 } from "lucide-react";
 
 const PO_STATUSES = ["Draft", "Issued", "Received", "Billed"];
@@ -40,7 +41,7 @@ function newBillForm() {
 
 export default function PurchaseOrdersPage() {
   const { project: p, update } = useProject();
-  const { mobile, notify } = useApp();
+  const { mobile, notify, settings } = useApp();
   const [showPoModal, setShowPoModal] = useState(false);
   const [showBillModal, setShowBillModal] = useState(false);
   const [poForm, setPoForm] = useState(newPoForm);
@@ -181,6 +182,32 @@ export default function PurchaseOrdersPage() {
     notify("Supplier bill recorded");
   };
 
+  const exportPurchaseOrdersPdf = () => {
+    const ok = exportPrintPdf({
+      title: "Purchase Orders",
+      companyName: settings?.companyName || "",
+      projectName: p.name || "Project",
+      clientName: p.client || "",
+      dateLabel: ds(),
+      sections: [
+        {
+          title: "Purchase Order List",
+          type: "table",
+          headers: ["PO #", "Supplier", "Budget Item", "Amount", "Status", "Expected Delivery"],
+          rows: (purchaseOrders || []).map((po) => ([
+            po.number || "",
+            po.supplier || "",
+            budgetLabelById[po.budgetItemId] || "",
+            fmt(po.amount || 0),
+            po.status || "Draft",
+            po.expectedDeliveryDate || "—",
+          ])),
+        },
+      ],
+    });
+    if (!ok) notify("Pop-up blocked — please allow pop-ups for this site", "error");
+  };
+
   return (
     <Section>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: _.s3, marginBottom: _.s5, flexWrap: "wrap" }}>
@@ -193,6 +220,7 @@ export default function PurchaseOrdersPage() {
         <div style={{ display: "flex", gap: _.s2, flexWrap: "wrap" }}>
           <Button icon={Plus} onClick={() => setShowPoModal(true)}>Create Purchase Order</Button>
           <Button variant="secondary" icon={Receipt} onClick={() => setShowBillModal(true)} disabled={purchaseOrders.length === 0}>Record Bill</Button>
+          <Button variant="secondary" onClick={exportPurchaseOrdersPdf} disabled={purchaseOrders.length === 0}>Download Purchase Order PDF</Button>
         </div>
       </div>
 

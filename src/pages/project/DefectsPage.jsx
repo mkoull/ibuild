@@ -3,6 +3,7 @@ import { useProject } from "../../context/ProjectContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
 import _ from "../../theme/tokens.js";
 import { input, label, badge, uid } from "../../theme/styles.js";
+import { exportPrintPdf } from "../../lib/pdfExport.js";
 import Section from "../../components/ui/Section.jsx";
 import Empty from "../../components/ui/Empty.jsx";
 import Button from "../../components/ui/Button.jsx";
@@ -74,7 +75,7 @@ async function filesToDataUrls(fileList) {
 
 export default function DefectsPage() {
   const { project: p, update: up, log } = useProject();
-  const { mobile, notify, trades } = useApp();
+  const { mobile, notify, trades, settings } = useApp();
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editingId, setEditingId] = useState("");
@@ -207,6 +208,33 @@ export default function DefectsPage() {
     notify("Defect deleted");
   };
 
+  const exportDefectsPdf = () => {
+    const ok = exportPrintPdf({
+      title: "Defect List",
+      companyName: settings?.companyName || "",
+      projectName: p.name || "Project",
+      clientName: p.client || "",
+      dateLabel: toIsoDate(),
+      sections: [
+        {
+          title: "Defects",
+          type: "table",
+          headers: ["Defect #", "Title", "Location", "Trade", "Priority", "Status", "Due Date"],
+          rows: defects.map((d) => ([
+            d.number,
+            d.title,
+            d.location || "—",
+            d.trade || "—",
+            d.priority,
+            d.status,
+            d.dueDate || "—",
+          ])),
+        },
+      ],
+    });
+    if (!ok) notify("Pop-up blocked — please allow pop-ups for this site", "error");
+  };
+
   return (
     <Section>
       <h1 style={{ fontSize: mobile ? _.fontSize["3xl"] : _.fontSize["4xl"], fontWeight: _.fontWeight.bold, letterSpacing: _.letterSpacing.tight, marginBottom: 4 }}>
@@ -256,7 +284,10 @@ export default function DefectsPage() {
             Kanban
           </Button>
         </div>
-        <Button icon={Plus} onClick={() => setCreateOpen(true)}>Create Defect</Button>
+        <div style={{ display: "flex", gap: _.s2, flexWrap: "wrap" }}>
+          <Button icon={Plus} onClick={() => setCreateOpen(true)}>Create Defect</Button>
+          <Button variant="secondary" onClick={exportDefectsPdf} disabled={defects.length === 0}>Export Defect List PDF</Button>
+        </div>
       </div>
 
       {defects.length === 0 ? (

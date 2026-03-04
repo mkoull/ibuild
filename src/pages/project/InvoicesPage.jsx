@@ -3,6 +3,7 @@ import { useProject } from "../../context/ProjectContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
 import _ from "../../theme/tokens.js";
 import { fmt, input, label, badge, uid } from "../../theme/styles.js";
+import { exportPrintPdf } from "../../lib/pdfExport.js";
 import Section from "../../components/ui/Section.jsx";
 import Empty from "../../components/ui/Empty.jsx";
 import Button from "../../components/ui/Button.jsx";
@@ -34,7 +35,7 @@ function isOverdue(inv) {
 
 export default function InvoicesPage() {
   const { project: p, update: up, T, log } = useProject();
-  const { mobile, notify } = useApp();
+  const { mobile, notify, settings } = useApp();
   const [createOpen, setCreateOpen] = useState(false);
   const [invoiceForm, setInvoiceForm] = useState({
     description: "",
@@ -143,6 +144,33 @@ export default function InvoicesPage() {
     notify(`Invoice marked ${status}`);
   };
 
+  const exportInvoicesPdf = () => {
+    const ok = exportPrintPdf({
+      title: "Invoices",
+      companyName: settings?.companyName || "",
+      projectName: p.name || "Project",
+      clientName: p.client || "",
+      dateLabel: toIsoDate(),
+      sections: [
+        {
+          title: "Invoice List",
+          type: "table",
+          headers: ["Invoice #", "Date", "Description", "Amount", "Status", "Due Date", "Paid Date"],
+          rows: invoices.map((inv) => ([
+            inv.number || inv.id || "",
+            inv.invoiceDate || inv.issuedDate || "",
+            inv.description || inv.title || "",
+            fmt(inv.amount || 0),
+            String(inv.status || "Draft"),
+            inv.dueDate || "—",
+            inv.paidDate || "—",
+          ])),
+        },
+      ],
+    });
+    if (!ok) notify("Pop-up blocked — please allow pop-ups for this site", "error");
+  };
+
   return (
     <Section>
       <h1 style={{ fontSize: mobile ? _.fontSize["3xl"] : _.fontSize["4xl"], fontWeight: _.fontWeight.bold, letterSpacing: _.letterSpacing.tight, marginBottom: 4 }}>
@@ -183,7 +211,10 @@ export default function InvoicesPage() {
         <div style={{ fontSize: _.fontSize.sm, color: _.muted }}>
           Outstanding Balance: <strong style={{ color: outstandingBalance > 0 ? _.red : _.green }}>{fmt(outstandingBalance)}</strong>
         </div>
-        <Button icon={Plus} onClick={() => setCreateOpen(true)}>Create Invoice</Button>
+        <div style={{ display: "flex", gap: _.s2, flexWrap: "wrap" }}>
+          <Button icon={Plus} onClick={() => setCreateOpen(true)}>Create Invoice</Button>
+          <Button variant="secondary" onClick={exportInvoicesPdf} disabled={invoices.length === 0}>Download Invoice PDF</Button>
+        </div>
       </div>
 
       {invoices.length === 0 ? (
