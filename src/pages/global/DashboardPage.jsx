@@ -1,248 +1,291 @@
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext.jsx";
 import _ from "../../theme/tokens.js";
 import { fmt, pName, stCol, badge, ds } from "../../theme/styles.js";
-import { selectCalc, getNextMilestone } from "../../lib/selectors.js";
 import { normaliseStage } from "../../lib/lifecycle.js";
-import {
-  getPipelineValue, getQuoteProjects, getJobProjects,
-  getAwaitingAcceptance,
-  getOutstandingReceivables, getJobsInProgress,
-  getOverrunJobs,
-} from "../../lib/metrics.js";
-import Section from "../../components/ui/Section.jsx";
+import { calc } from "../../lib/calc.js";
 import Card from "../../components/ui/Card.jsx";
 import PageHero from "../../components/ui/PageHero.jsx";
-import { ArrowRight, AlertCircle, Clock, DollarSign, FileText, Hammer, TrendingUp, Check } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowRight,
+  ClipboardList,
+  DollarSign,
+  FileWarning,
+  FolderKanban,
+} from "lucide-react";
 
-const SEED_TRADES = [
-  { name: "Concreter", costCodes: ["SLAB", "CONCRETE"] },
-  { name: "Carpenter / Framer", costCodes: ["FRAME", "FIX"] },
-  { name: "Electrician", costCodes: ["ELEC-RI", "ELEC-FO"] },
-  { name: "Plumber", costCodes: ["PLUMB-RI", "PLUMB-FO"] },
-  { name: "Roofer", costCodes: ["ROOF"] },
-  { name: "Plasterer", costCodes: ["PLASTER"] },
-  { name: "Painter", costCodes: ["PAINT-INT", "PAINT-EXT"] },
-  { name: "Tiler", costCodes: ["TILE"] },
-  { name: "Landscaper", costCodes: ["LAND"] },
-  { name: "Bricklayer", costCodes: ["BRICK"] },
-];
+function toTimestamp(value, fallback = 0) {
+  if (!value) return fallback;
+  const t = new Date(value).getTime();
+  return Number.isFinite(t) ? t : fallback;
+}
 
-export default function DashboardPage() {
-  const { projects, clients, trades, tradesHook, mobile, notify } = useApp();
-  const navigate = useNavigate();
+function buildRecentActivity(projects, clients) {
+  const events = [];
 
-  const pipelineValue = getPipelineValue(projects);
-  const quoteProjects = getQuoteProjects(projects);
-  const jobProjects = getJobProjects(projects);
-  const awaiting = getAwaitingAcceptance(projects);
-  const receivables = getOutstandingReceivables(projects);
-  const inProgress = getJobsInProgress(projects);
-  const activeContractValue = inProgress.reduce((sum, pr) => sum + (selectCalc(pr).curr || 0), 0);
-  const activeMarginValue = inProgress.reduce((sum, pr) => {
-    const t = selectCalc(pr);
-    return sum + ((t.curr || 0) - (t.budgetTotal || 0));
-  }, 0);
+  projects.forEach((pr) => {
+    const projectName = pName(pr, clients);
+    const projectPath = `/projects/${pr.id}/overview`;
 
-  const kpis = [
-    { label: "Active Jobs", value: inProgress.length > 0 ? `${inProgress.length}` : "\u2014", sub: null, color: _.green, Ic: Hammer },
-    { label: "Contract Value", value: activeContractValue > 0 ? fmt(activeContractValue) : "\u2014", sub: `${inProgress.length} active job${inProgress.length !== 1 ? "s" : ""}`, color: _.blue, Ic: DollarSign },
-    { label: "Margin", value: activeMarginValue !== 0 ? fmt(activeMarginValue) : "\u2014", sub: "Active job margin", color: activeMarginValue >= 0 ? _.green : _.red, Ic: TrendingUp },
-    { label: "Pipeline Value", value: pipelineValue > 0 ? fmt(pipelineValue) : "\u2014", sub: `${quoteProjects.length} quote${quoteProjects.length !== 1 ? "s" : ""}`, color: _.amber, Ic: TrendingUp },
-    { label: "Awaiting Acceptance", value: awaiting.count > 0 ? `${awaiting.count}` : "\u2014", sub: awaiting.value > 0 ? fmt(awaiting.value) : null, color: _.violet, Ic: FileText },
-    { label: "Outstanding Receivables", value: receivables.value > 0 ? fmt(receivables.value) : "\u2014", sub: receivables.count > 0 ? `${receivables.count} job${receivables.count !== 1 ? "s" : ""}` : null, color: _.red, Ic: DollarSign },
-  ];
+    (pr.invoices || [])
+      .filter((inv) => String(inv.status || "").toLowerCase() === "paid")
+      .forEach((inv) => {
+        events.push({
+          id: `${pr.id}-invoice-${inv.id || inv.number || Math.random()}`,
+          icon: DollarSign,
+          color: _.green,
+          text: `${projectName} — Invoice paid`,
+          at: toTimestamp(inv.paidDate || inv.updatedAt || inv.issuedDate, toTimestamp(pr.updatedAt || pr.createdAt)),
+          path: `/projects/${pr.id}/invoices`,
+        });
+      });
 
-  const overruns = getOverrunJobs(projects);
+    (pr.variations || [])
+      .filter((v) => String(v.status || "").toLowerCase() === "approved")
+      .forEach((v) => {
+        events.push({
+          id: `${pr.id}-variation-${v.id || v.number || Math.random()}`,
+          icon: ClipboardList,
+          color: _.blue,
+          text: `${projectName} — Variation approved`,
+          at: toTimestamp(v.updatedAt || v.approvedAt || v.createdAt, toTimestamp(pr.updatedAt || pr.createdAt)),
+          path: `/projects/${pr.id}/variations`,
+        });
+      });
 
-  // ─── Needs Attention ───
-  const attention = [];
-  overruns.forEach(pr => {
-    const t = selectCalc(pr);
-    const over = t.actualsTotal - t.budgetTotal;
-    attention.push({ text: `${pName(pr, clients)} — Budget overrun by ${fmt(over)}`, icon: AlertCircle, color: _.red, id: pr.id });
-  });
-  awaiting.projects.forEach(pr => {
-    attention.push({ text: `${pName(pr, clients)} — Awaiting acceptance`, icon: FileText, color: _.violet, id: pr.id });
-  });
-  receivables.projects.forEach(pr => {
-    const os = selectCalc(pr).outstanding;
-    attention.push({ text: `${pName(pr, clients)} — ${fmt(os)} outstanding`, icon: AlertCircle, color: _.red, id: pr.id });
-  });
-  jobProjects.forEach(pr => {
-    const ms = getNextMilestone(pr);
-    if (ms && ms.planned) {
-      const d = new Date(ms.planned);
-      const now = new Date(); now.setHours(0, 0, 0, 0);
-      const diff = Math.ceil((d - now) / (1000 * 60 * 60 * 24));
-      if (diff <= 7) {
-        attention.push({ text: `${pName(pr, clients)} — ${ms.name} ${diff < 0 ? "overdue" : diff === 0 ? "today" : `in ${diff}d`}`, icon: Clock, color: diff < 0 ? _.red : _.amber, id: pr.id });
-      }
-      const nextClaim = (pr.paymentSchedule || []).find(c => c.status === "Planned" && c.dueOn === "milestone" && c.milestoneIdx != null);
-      if (nextClaim && diff <= 7 && diff >= 0) {
-        attention.push({ text: `${pName(pr, clients)} — Claim "${nextClaim.label}" due (milestone soon)`, icon: DollarSign, color: _.amber, id: pr.id });
-      }
+    (pr.procurement?.purchaseOrders || [])
+      .filter((po) => String(po.status || "").toLowerCase() === "issued")
+      .forEach((po) => {
+        events.push({
+          id: `${pr.id}-po-${po.id || po.number || Math.random()}`,
+          icon: FolderKanban,
+          color: _.amber,
+          text: `${projectName} — PO issued`,
+          at: toTimestamp(po.updatedAt || po.createdAt, toTimestamp(pr.updatedAt || pr.createdAt)),
+          path: `/projects/${pr.id}/procurement`,
+        });
+      });
+
+    (pr.defects || []).forEach((d) => {
+      events.push({
+        id: `${pr.id}-defect-${d.id || d.number || Math.random()}`,
+        icon: FileWarning,
+        color: _.red,
+        text: `${projectName} — Defect created`,
+        at: toTimestamp(d.createdAt || d.updatedAt, toTimestamp(pr.updatedAt || pr.createdAt)),
+        path: `/projects/${pr.id}/defects`,
+      });
+    });
+
+    if (events.length === 0 && Array.isArray(pr.activity)) {
+      pr.activity.slice(0, 2).forEach((a, idx) => {
+        events.push({
+          id: `${pr.id}-activity-${idx}`,
+          icon: AlertCircle,
+          color: _.muted,
+          text: `${projectName} — ${a.action || "Updated project"}`,
+          at: toTimestamp(a.time || a.date, toTimestamp(pr.updatedAt || pr.createdAt)),
+          path: projectPath,
+        });
+      });
     }
   });
 
-  const tableProjects = projects.slice(0, 20);
+  return events.sort((a, b) => b.at - a.at).slice(0, 12);
+}
+
+export default function DashboardPage() {
+  const { projects, clients } = useApp();
+  const navigate = useNavigate();
+
+  const projectCalcs = useMemo(
+    () => projects.map((pr) => ({ pr, t: calc(pr) })),
+    [projects],
+  );
+
+  const activeProjects = projectCalcs.filter(({ pr }) => String(pr.stage || pr.status || "").toLowerCase() === "active");
+  const outstandingInvoices = projectCalcs.reduce((sum, { t }) => sum + Number(t.outstanding || 0), 0);
+  const pendingVariations = projects.reduce(
+    (sum, pr) => sum + (pr.variations || []).filter((v) => ["pending", "sent"].includes(String(v.status || "").toLowerCase())).length,
+    0,
+  );
+  const openDefects = projects.reduce(
+    (sum, pr) => sum + (pr.defects || []).filter((d) => !["completed", "closed"].includes(String(d.status || "").toLowerCase())).length,
+    0,
+  );
+
+  const totalContractValue = activeProjects.reduce((sum, { t }) => sum + Number(t.curr || 0), 0);
+  const budgetTotal = activeProjects.reduce((sum, { t }) => sum + Number(t.budgetTotal || 0), 0);
+  const actualTotal = activeProjects.reduce((sum, { t }) => sum + Number(t.combinedActuals || 0), 0);
+  const projectedMargin = activeProjects.reduce((sum, { t }) => sum + Number(t.forecastMarginNew || t.forecastMargin || 0), 0);
+  const budgetUsedPct = budgetTotal > 0 ? Math.min(100, (actualTotal / budgetTotal) * 100) : 0;
+
+  const recentActivity = useMemo(() => buildRecentActivity(projects, clients), [projects, clients]);
+  const recentProjects = useMemo(
+    () => [...projects]
+      .sort((a, b) => toTimestamp(b.updatedAt || b.createdAt) - toTimestamp(a.updatedAt || a.createdAt))
+      .slice(0, 8),
+    [projects],
+  );
+
+  const kpiCards = [
+    { label: "Active Projects", value: activeProjects.length, sub: "Projects in delivery", link: "/projects", icon: FolderKanban, color: _.blue },
+    { label: "Outstanding Invoices", value: fmt(outstandingInvoices), sub: "Across all projects", link: "/finance/invoices", icon: DollarSign, color: _.red },
+    { label: "Pending Variations", value: pendingVariations, sub: "Awaiting approval", link: "/projects", icon: ClipboardList, color: _.amber },
+    { label: "Open Defects", value: openDefects, sub: "Action required", link: "/site/defects", icon: FileWarning, color: _.violet },
+  ];
 
   return (
-    <Section>
+    <div style={{ display: "grid", gap: 16 }}>
       <PageHero
-        icon={TrendingUp}
-        title="Dashboard"
+        title="Project Command Centre"
         subtitle={`${projects.length} project${projects.length !== 1 ? "s" : ""} · ${ds()}`}
-        actions={<button onClick={() => navigate("/projects")} style={{ border: "none", background: "transparent", cursor: "pointer", color: _.ac, fontSize: _.fontSize.sm, fontWeight: _.fontWeight.semi }}>View all projects</button>}
+        actions={(
+          <button
+            onClick={() => navigate("/projects")}
+            style={{ border: "none", background: "transparent", cursor: "pointer", color: _.ac, fontSize: 14, fontWeight: 600 }}
+          >
+            View all projects
+          </button>
+        )}
       />
 
-      {/* KPI Row */}
-      <div style={{ display: "grid", gridTemplateColumns: mobile ? "repeat(2, 1fr)" : `repeat(${kpis.length}, 1fr)`, gap: mobile ? _.s2 : _.s3, marginBottom: mobile ? _.s6 : _.s8 }}>
-        {kpis.map(k => (
-          <Card key={k.label} icon={k.Ic} subtitle={k.label} accent={k.value !== "—"} style={{ padding: mobile ? _.s3 : _.s5 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: _.s3 }}>
-              <span style={{ width: 8, height: 8, borderRadius: 8, background: k.color }} />
-            </div>
-            <div style={{ fontSize: mobile ? _.fontSize.xl : _.fontSize["2xl"], fontWeight: _.fontWeight.bold, color: k.value === "\u2014" ? _.faint : _.ink, fontVariantNumeric: "tabular-nums", lineHeight: _.lineHeight.heading }}>{k.value}</div>
-            {k.sub && <div style={{ fontSize: _.fontSize.sm, color: _.muted, marginTop: _.s1 }}>{k.sub}</div>}
+      <div className="layout-grid-12">
+        {kpiCards.map((kpi) => (
+          <Card
+            key={kpi.label}
+            className="col-3"
+            icon={kpi.icon}
+            subtitle={kpi.label}
+            interactive
+            onClick={() => navigate(kpi.link)}
+            style={{ padding: 16 }}
+          >
+            <div style={{ width: 8, height: 8, borderRadius: "50%", background: kpi.color, marginBottom: 10 }} />
+            <div style={{ fontSize: 24, fontWeight: 700, color: _.ink, fontVariantNumeric: "tabular-nums" }}>{kpi.value}</div>
+            <div style={{ fontSize: 12, color: _.muted, marginTop: 6 }}>{kpi.sub}</div>
           </Card>
         ))}
       </div>
 
-      {/* First-run onboarding checklist */}
-      {(clients.length === 0 || trades.length === 0 || projects.length === 0) && (
-        <Card style={{ marginBottom: mobile ? _.s6 : _.s8, padding: mobile ? _.s4 : _.s6 }}>
-          <div style={{ fontSize: _.fontSize.lg, fontWeight: _.fontWeight.semi, color: _.ink, marginBottom: _.s3 }}>Getting started</div>
-          <div style={{ fontSize: _.fontSize.sm, color: _.muted, marginBottom: _.s5 }}>Complete these steps to set up your workspace.</div>
-          {[
-            { done: clients.length > 0, text: "Add a client", action: () => navigate("/clients"), label: "Clients" },
-            { done: trades.length > 0, text: "Add a trade", action: () => navigate("/trades"), label: "Trades" },
-            { done: projects.length > 0, text: "Create your first quote", action: () => navigate("/quotes"), label: "Quotes" },
-          ].map(step => (
-            <div key={step.text} onClick={step.done ? undefined : step.action} style={{
-              display: "flex", alignItems: "center", gap: _.s3, padding: `${_.s3}px 0`,
-              borderBottom: `1px solid ${_.line}`, cursor: step.done ? "default" : "pointer",
-              opacity: step.done ? 0.5 : 1,
-            }}>
-              <div style={{
-                width: 22, height: 22, borderRadius: 11, border: `2px solid ${step.done ? _.green : _.line2}`,
-                background: step.done ? _.green : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-              }}>
-                {step.done && <Check size={12} color="#fff" strokeWidth={3} />}
-              </div>
-              <span style={{ fontSize: _.fontSize.base, color: step.done ? _.muted : _.ink, fontWeight: _.fontWeight.medium, textDecoration: step.done ? "line-through" : "none" }}>{step.text}</span>
-              {!step.done && <ArrowRight size={14} color={_.ac} style={{ marginLeft: "auto" }} />}
-            </div>
-          ))}
-          {trades.length === 0 && (
-            <button onClick={() => {
-              SEED_TRADES.forEach(t => tradesHook.create({ name: t.name, businessName: t.name, costCodes: t.costCodes }));
-              notify("Sample trades added — you can edit or remove them from Trades");
-            }} style={{
-              marginTop: _.s4, padding: `${_.s2}px ${_.s4}px`, background: "transparent", border: `1.5px dashed ${_.line2}`,
-              borderRadius: _.rSm, fontSize: _.fontSize.sm, color: _.muted, cursor: "pointer", fontFamily: "inherit",
-              transition: `all ${_.tr}`,
-            }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = _.ac; e.currentTarget.style.color = _.ac; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = _.line2; e.currentTarget.style.color = _.muted; }}
-            >
-              + Add sample trades & cost codes (optional, removable)
-            </button>
+      <div className="layout-grid-12">
+        <Card className="col-6" title="Recent Activity" style={{ minHeight: 280 }}>
+          {recentActivity.length === 0 && (
+            <div style={{ fontSize: 14, color: _.muted }}>No activity yet.</div>
           )}
-        </Card>
-      )}
-
-      {/* Needs Attention */}
-      <div style={{ marginBottom: mobile ? _.s6 : _.s8 }}>
-        <div style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.semi, color: _.ink, marginBottom: _.s3, paddingLeft: _.s2, borderLeft: `3px solid ${_.amber}` }}>Needs Attention</div>
-        {attention.length === 0 ? (
-          <div style={{ padding: `${_.s4}px 0`, fontSize: _.fontSize.base, color: _.faint }}>No urgent items</div>
-        ) : (
-          <Card style={{ padding: 0 }} accent>
-            {attention.slice(0, 8).map((a, i) => (
-              <div key={`${a.id}-${i}`} onClick={() => navigate(`/projects/${a.id}/overview`)} style={{
-                padding: `${_.s3}px ${_.s4}px`, display: "flex", alignItems: "center", gap: _.s3, cursor: "pointer",
-                borderBottom: i < Math.min(attention.length, 8) - 1 ? `1px solid ${_.line}` : "none",
-                transition: `background ${_.tr}`,
-              }}
-                onMouseEnter={e => e.currentTarget.style.background = _.well}
-                onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+          <div style={{ display: "grid", gap: 8 }}>
+            {recentActivity.slice(0, 8).map((event) => (
+              <button
+                key={event.id}
+                type="button"
+                onClick={() => navigate(event.path)}
+                style={{
+                  border: `1px solid ${_.line}`,
+                  borderRadius: 8,
+                  background: _.surface,
+                  padding: "10px 12px",
+                  textAlign: "left",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  cursor: "pointer",
+                }}
               >
-                <a.icon size={14} color={a.color} style={{ flexShrink: 0 }} />
-                <span style={{ fontSize: _.fontSize.base, color: _.body, lineHeight: _.lineHeight.body }}>{a.text}</span>
-              </div>
+                <event.icon size={14} color={event.color} />
+                <span style={{ fontSize: 14, color: _.body, flex: 1 }}>{event.text}</span>
+                <span style={{ fontSize: 12, color: _.muted }}>{new Date(event.at).toLocaleDateString("en-AU")}</span>
+              </button>
             ))}
-          </Card>
-        )}
-      </div>
-
-      <div style={{ height: 1, background: _.line, marginBottom: mobile ? _.s6 : _.s8 }} />
-
-      {/* Condensed Projects Table */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: _.s3, paddingLeft: _.s2, borderLeft: `3px solid ${_.ac}` }}>
-        <div style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.semi, color: _.ink }}>All Projects</div>
-        <button onClick={() => navigate("/projects")} style={{ fontSize: _.fontSize.sm, color: _.ac, background: "none", border: "none", cursor: "pointer", fontWeight: _.fontWeight.semi, fontFamily: "inherit", display: "flex", alignItems: "center", gap: 4 }}>
-          View all <ArrowRight size={12} />
-        </button>
-      </div>
-
-      {tableProjects.length === 0 && (
-        <div style={{ padding: _.s7, textAlign: "center", color: _.muted, fontSize: _.fontSize.md, border: `1.5px dashed ${_.line2}`, borderRadius: _.r }}>
-          No projects yet
-        </div>
-      )}
-
-      {tableProjects.length > 0 && (
-        <>
-          <div style={{
-            display: "grid", gridTemplateColumns: mobile ? "1fr auto" : "1fr 100px 120px 100px 80px", gap: _.s2,
-            padding: `${_.s2}px 0`, borderBottom: `2px solid ${_.ink}`,
-            fontSize: _.fontSize.xs, color: _.muted, fontWeight: _.fontWeight.semi, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase",
-          }}>
-            <span>Project</span>
-            {!mobile && <><span style={{ textAlign: "right" }}>Value</span><span>Next Milestone</span><span style={{ textAlign: "right" }}>Outstanding</span></>}
-            <span style={{ textAlign: "center" }}>Stage</span>
           </div>
+        </Card>
 
-          {tableProjects.map(pr => {
-            const T = selectCalc(pr);
-            const stage = normaliseStage(pr.stage || pr.status);
-            const value = T.curr > 0 ? T.curr : null;
-            const outstanding = T.outstanding > 0 ? T.outstanding : null;
-            const nextMs = getNextMilestone(pr);
+        <Card className="col-6" title="Financial Snapshot" style={{ minHeight: 280 }}>
+          <div style={{ display: "grid", gap: 12 }}>
+            <SnapshotRow label="Total Contract Value" value={fmt(totalContractValue)} />
+            <SnapshotRow label="Budget vs Actual" value={`${fmt(budgetTotal)} / ${fmt(actualTotal)}`} />
+            <div style={{ height: 10, background: _.well, borderRadius: 999, overflow: "hidden" }}>
+              <div style={{ width: `${budgetUsedPct}%`, height: "100%", background: budgetUsedPct > 100 ? _.red : _.ac }} />
+            </div>
+            <SnapshotRow label="Projected Margin" value={fmt(projectedMargin)} tone={projectedMargin >= 0 ? _.green : _.red} />
+          </div>
+        </Card>
+      </div>
 
-            return (
-              <div key={pr.id} onClick={() => navigate(`/projects/${pr.id}/overview`)} style={{
-                display: "grid", gridTemplateColumns: mobile ? "1fr auto" : "1fr 100px 120px 100px 80px", gap: _.s2,
-                padding: `${_.s3}px ${_.s1}px`, borderBottom: `1px solid ${_.line}`, cursor: "pointer",
-                alignItems: "center", borderRadius: _.rXs, transition: `background ${_.tr}`,
-              }}
-                onMouseEnter={e => e.currentTarget.style.background = _.well}
-                onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-              >
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.medium, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{pName(pr, clients)}</div>
-                  <div style={{ fontSize: _.fontSize.sm, color: _.muted, marginTop: 1 }}>{pr.buildType || pr.type}</div>
-                </div>
-                {!mobile && (
-                  <>
-                    <span style={{ textAlign: "right", fontSize: _.fontSize.base, fontWeight: _.fontWeight.semi, fontVariantNumeric: "tabular-nums" }}>
-                      {value ? fmt(value) : "\u2014"}
-                    </span>
-                    <span style={{ fontSize: _.fontSize.sm, color: nextMs ? _.body : _.faint, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {nextMs ? nextMs.name : "\u2014"}
-                    </span>
-                    <span style={{ textAlign: "right", fontSize: _.fontSize.base, fontWeight: _.fontWeight.medium, fontVariantNumeric: "tabular-nums", color: outstanding ? _.red : _.faint }}>
-                      {outstanding ? fmt(outstanding) : "\u2014"}
-                    </span>
-                  </>
-                )}
-                <div style={{ textAlign: "center" }}><span style={badge(stCol(stage))}>{stage}</span></div>
-              </div>
-            );
-          })}
-        </>
-      )}
-    </Section>
+      <Card title="Recent Projects" headerRight={(
+        <button
+          type="button"
+          onClick={() => navigate("/projects")}
+          style={{ border: "none", background: "transparent", color: _.ac, cursor: "pointer", fontSize: 12, fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 4 }}
+        >
+          Open Projects <ArrowRight size={12} />
+        </button>
+      )}>
+        {recentProjects.length === 0 && (
+          <div style={{ fontSize: 14, color: _.muted }}>No projects yet.</div>
+        )}
+        {recentProjects.length > 0 && (
+          <div style={{ display: "grid", gap: 8 }}>
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "1.4fr 1fr 0.7fr 0.9fr",
+              gap: 8,
+              fontSize: 12,
+              color: _.muted,
+              textTransform: "uppercase",
+              letterSpacing: "0.04em",
+              padding: "0 8px",
+            }}>
+              <span>Project</span>
+              <span>Client</span>
+              <span>Status</span>
+              <span style={{ textAlign: "right" }}>Contract</span>
+            </div>
+            {recentProjects.map((pr) => {
+              const t = calc(pr);
+              const stage = normaliseStage(pr.stage || pr.status);
+              const linkedClient = pr.clientId ? clients.find((c) => c.id === pr.clientId) : null;
+              const clientName = linkedClient?.displayName || pr.client || "—";
+              return (
+                <button
+                  key={pr.id}
+                  type="button"
+                  onClick={() => navigate(`/projects/${pr.id}/overview`)}
+                  style={{
+                    border: `1px solid ${_.line}`,
+                    borderRadius: 8,
+                    background: _.surface,
+                    padding: "10px 8px",
+                    textAlign: "left",
+                    display: "grid",
+                    gridTemplateColumns: "1.4fr 1fr 0.7fr 0.9fr",
+                    gap: 8,
+                    alignItems: "center",
+                    cursor: "pointer",
+                  }}
+                >
+                  <span style={{ fontSize: 14, color: _.ink, fontWeight: 600 }}>{pName(pr, clients)}</span>
+                  <span style={{ fontSize: 14, color: _.body }}>{clientName}</span>
+                  <span><span style={badge(stCol(stage))}>{stage}</span></span>
+                  <span style={{ textAlign: "right", fontSize: 14, color: _.ink, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>
+                    {fmt(t.curr || 0)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+function SnapshotRow({ label, value, tone }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+      <span style={{ fontSize: 14, color: _.muted }}>{label}</span>
+      <span style={{ fontSize: 16, color: tone || _.ink, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{value}</span>
+    </div>
   );
 }
