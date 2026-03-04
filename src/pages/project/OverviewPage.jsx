@@ -230,7 +230,12 @@ export default function OverviewPage() {
   }, 0);
   const remainingBudgetValue = budgetValue - actualCostValue;
   const projectedMarginValue = contractDisplay - actualCostValue;
-  const totalClaimed = Number((p.claims || []).reduce((sum, c) => sum + (Number(c.amount) || 0), 0));
+  const totalClaimed = Number((p.invoices || [])
+    .filter((inv) => {
+      const s = String(inv.status || "").toLowerCase();
+      return s !== "draft" && s !== "void";
+    })
+    .reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0));
   const totalPaid = Number((p.invoices || [])
     .filter((inv) => String(inv.status || "").toLowerCase() === "paid")
     .reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0));

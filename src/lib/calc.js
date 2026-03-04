@@ -141,9 +141,14 @@ export function calc(p) {
   const curr = Number.isFinite(contractValue) && contractValue > 0 ? contractValue : (scopeResult.orig + varResult.aV);
   const invResult = calcInvoicing(p.invoices);
   const budgetResult = calcBudget(p.budget, p.commitments, p.actuals, p.costAllowances, p.supplierBills, p.procurement, curr);
-  const claims = p.claims || [];
-  const totalClaimed = claims.reduce((t, c) => t + (Number(c.amount) || 0), 0);
-  const totalPaid = (p.invoices || [])
+  const invoices = p.invoices || [];
+  const totalClaimed = invoices
+    .filter((inv) => {
+      const s = String(inv.status || "").toLowerCase();
+      return s !== "draft" && s !== "void";
+    })
+    .reduce((t, inv) => t + (Number(inv.amount) || 0), 0);
+  const totalPaid = invoices
     .filter((inv) => String(inv.status || "").toLowerCase() === "paid")
     .reduce((t, inv) => t + (Number(inv.amount) || 0), 0);
   const remainingToClaim = curr - totalClaimed;
