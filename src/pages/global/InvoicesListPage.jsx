@@ -115,7 +115,15 @@ export default function InvoicesListPage() {
       <div style={{ height: 1, background: _.line, marginBottom: mobile ? _.s6 : _.s8 }} />
       <div style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.semi, color: _.ink, marginBottom: _.s3, paddingLeft: _.s2, borderLeft: `3px solid ${_.amber}` }}>All Invoices</div>
 
-      {filtered.length === 0 && <Empty icon={ReceiptText} text={search ? "No matching invoices" : "No invoices yet"} />}
+      {filtered.length === 0 && (
+        <Empty
+          icon={ReceiptText}
+          title={search ? "No matching invoices" : "No invoices yet"}
+          text={search ? "Try a different search term." : "Create an invoice from a project workspace to see it here."}
+          action={!search ? () => navigate("/projects") : undefined}
+          actionText="Open Projects"
+        />
+      )}
 
       {filtered.length > 0 && (
         <Card style={{ padding: 0 }}>

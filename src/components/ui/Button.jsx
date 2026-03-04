@@ -1,21 +1,21 @@
 import _ from "../../theme/tokens.js";
 
 const base = {
-  padding: "9px 18px", border: "none", borderRadius: _.rSm,
+  padding: "8px 16px", border: "none", borderRadius: _.rSm,
   fontSize: _.fontSize.base, fontWeight: _.fontWeight.semi, cursor: "pointer", transition: `all ${_.tr}`,
-  display: "inline-flex", alignItems: "center", gap: 6, fontFamily: "inherit",
+  display: "inline-flex", alignItems: "center", gap: 8, fontFamily: "inherit",
   outline: "none", lineHeight: _.lineHeight.snug,
 };
 
 const variants = {
   primary: { ...base, background: _.ac, color: "#fff" },
-  secondary: { ...base, background: _.surface, color: _.body, border: `1.5px solid ${_.line}` },
-  ghost: { ...base, background: "transparent", color: _.body, padding: "9px 12px" },
+  secondary: { ...base, background: _.surface, color: _.body, border: `1px solid ${_.line}` },
+  ghost: { ...base, background: "transparent", color: _.body, padding: "8px 12px" },
   danger: { ...base, background: _.red, color: "#fff" },
 };
 
 const sizes = {
-  sm: { padding: "6px 12px", fontSize: _.fontSize.sm },
+  sm: { padding: "6px 10px", fontSize: _.fontSize.sm },
   md: {},
 };
 

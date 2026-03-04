@@ -87,7 +87,15 @@ export default function DefectsListPage() {
       <div style={{ height: 1, background: _.line, marginBottom: mobile ? _.s6 : _.s8 }} />
       <div style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.semi, color: _.ink, marginBottom: _.s3, paddingLeft: _.s2, borderLeft: `3px solid ${_.red}` }}>All Defects</div>
 
-      {filtered.length === 0 && <Empty icon={Bug} text={search ? "No matching defects" : "No defects recorded"} />}
+      {filtered.length === 0 && (
+        <Empty
+          icon={Bug}
+          title={search ? "No matching defects" : "No defects recorded"}
+          text={search ? "Try a different keyword, location, or assignee." : "Add defects in a project workspace to start your punch list."}
+          action={!search ? () => navigate("/projects") : undefined}
+          actionText="Open Projects"
+        />
+      )}
 
       {filtered.length > 0 && (
         <Card style={{ padding: 0 }}>

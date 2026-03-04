@@ -11,6 +11,7 @@ import Empty from "../../components/ui/Empty.jsx";
 import SearchInput from "../../components/ui/SearchInput.jsx";
 import Modal from "../../components/ui/Modal.jsx";
 import Button from "../../components/ui/Button.jsx";
+import LoadingSpinner from "../../components/ui/LoadingSpinner.jsx";
 import { FolderOpen, Trash2, ArrowRight, Plus } from "lucide-react";
 import { getWorkspaceUrl } from "../../config/workspaceTabs.js";
 
@@ -135,28 +136,19 @@ export default function ProjectsListPage() {
 
         <div style={{ flex: 1 }} />
 
-        <button onClick={handleNew} style={{
-          display: "inline-flex", alignItems: "center", gap: 6,
-          padding: "8px 16px", borderRadius: 8,
-          background: _.ink, color: "#fff", border: "none",
-          fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-          transition: `background ${_.tr}`,
-        }}
-          onMouseEnter={e => e.currentTarget.style.background = "#1e293b"}
-          onMouseLeave={e => e.currentTarget.style.background = _.ink}
-        >
-          <Plus size={14} strokeWidth={2.5} />
+        <Button icon={Plus} onClick={handleNew} disabled={isRemote && remoteLoading}>
           {isRemote && remoteLoading ? "Loading..." : "New Project"}
-        </button>
+        </Button>
       </div>
 
       {/* ─── Empty state ─── */}
-      {filtered.length === 0 && (
+      {isRemote && remoteLoading && <LoadingSpinner />}
+      {!remoteLoading && filtered.length === 0 && (
         <Empty icon={FolderOpen} text={search ? "No matching projects" : "No projects yet"} action={!search ? handleNew : undefined} actionText="Create your first project" />
       )}
 
       {/* ─── Project list ─── */}
-      {filtered.length > 0 && (
+      {!remoteLoading && filtered.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
           {filtered.map(pr => {
             const stage = pr.stage || pr.status;

@@ -7,7 +7,7 @@ export default function Card({ title, subtitle, icon: Icon, children, style, hea
       border: `1px solid ${accent ? `${_.ac}30` : _.line}`,
       borderRadius: _.r,
       boxShadow: accent ? _.shadowElevated : _.sh1,
-      padding: _.s6,
+      padding: _.s4,
       transition: `transform ${_.tr}, box-shadow ${_.tr}, border-color ${_.tr}`,
       ...(interactive ? { cursor: "pointer" } : {}),
       ...style,

@@ -96,6 +96,7 @@ export default function PurchaseOrdersPage() {
       key: "actions",
       label: "Actions",
       width: "180px",
+      sortable: false,
       render: (r) => (
         <div style={{ display: "flex", justifyContent: "flex-end", gap: _.s1 }}>
           {PO_STATUSES.map((status) => (
