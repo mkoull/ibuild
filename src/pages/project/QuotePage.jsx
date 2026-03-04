@@ -14,7 +14,7 @@ import { isRequiredText, toPositiveNumber } from "../../lib/validation.js";
 import Card from "../../components/ui/Card.jsx";
 import Modal from "../../components/ui/Modal.jsx";
 import Button from "../../components/ui/Button.jsx";
-import { Check, ChevronRight, ChevronDown, Plus, ArrowRight, ArrowLeft, X, Library, Send, Search, UserPlus, FileCheck } from "lucide-react";
+import { Check, ChevronRight, ChevronDown, Plus, ArrowRight, ArrowLeft, X, Send, Search, UserPlus, FileCheck } from "lucide-react";
 
 const STEPS = ["details", "scope", "extras", "review"];
 const STEP_LABELS = { details: "Details", scope: "Scope", extras: "Extras", review: "Review" };
@@ -33,7 +33,8 @@ export default function QuotePage() {
   const [selectedCat, setSelectedCat] = useState("");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [editRow, setEditRow] = useState(null);
-  const [ratePickerCat, setRatePickerCat] = useState(null);
+  const [librarySearch, setLibrarySearch] = useState("");
+  const [pendingFocusKey, setPendingFocusKey] = useState("");
   const [delCat, setDelCat] = useState(null);
   const [clientOpen, setClientOpen] = useState(false);
   const [clientSearch, setClientSearch] = useState("");
@@ -48,6 +49,7 @@ export default function QuotePage() {
   const [pcInput, setPcInput] = useState({ description: "", amount: "" });
   const [qualInput, setQualInput] = useState("");
   const [termInput, setTermInput] = useState("");
+  const descInputRefs = useRef({});
 
   const stage = p.stage || p.status;
   const margin = p.marginPct ?? p.margin ?? 0;
@@ -93,10 +95,35 @@ export default function QuotePage() {
     return pr;
   });
 
-  const addC = cat => up(pr => {
-    pr.scope[cat].push({ item: "Custom Item", unit: "fixed", rate: 0, qty: 1, on: true, actual: 0, custom: true, _id: uid() });
-    return pr;
-  });
+  const addLineItem = (cat, seed = {}) => {
+    let insertedIdx = -1;
+    up((pr) => {
+      if (!pr.scope[cat]) pr.scope[cat] = [];
+      const row = {
+        item: seed.item || "",
+        type: seed.type || "Labour",
+        unit: seed.unit || "ea",
+        rate: toPositiveNumber(seed.rate, 0),
+        qty: toPositiveNumber(seed.qty, 1),
+        on: true,
+        actual: 0,
+        custom: true,
+        _id: uid(),
+        notes: seed.notes || "",
+        supplier: seed.supplier || "",
+        labourCost: toPositiveNumber(seed.labourCost, 0),
+        materialCost: toPositiveNumber(seed.materialCost, 0),
+        attachments: Array.isArray(seed.attachments) ? seed.attachments : [],
+      };
+      pr.scope[cat].push(row);
+      insertedIdx = pr.scope[cat].length - 1;
+      return pr;
+    });
+    if (insertedIdx >= 0) {
+      setPendingFocusKey(`${cat}:${insertedIdx}`);
+    }
+    return insertedIdx;
+  };
 
   const delI = (cat, idx) => up(pr => {
     pr.scope[cat].splice(idx, 1);
@@ -109,6 +136,26 @@ export default function QuotePage() {
     const rate = Number(item.rate) || 0;
     return qty * rate * (1 + (getRowMargin(item) / 100));
   };
+
+  useEffect(() => {
+    if (!pendingFocusKey) return;
+    const el = descInputRefs.current[pendingFocusKey];
+    if (el && typeof el.focus === "function") {
+      el.focus();
+      el.select?.();
+      setPendingFocusKey("");
+      return;
+    }
+    const t = setTimeout(() => {
+      const next = descInputRefs.current[pendingFocusKey];
+      if (next && typeof next.focus === "function") {
+        next.focus();
+        next.select?.();
+      }
+      setPendingFocusKey("");
+    }, 0);
+    return () => clearTimeout(t);
+  }, [pendingFocusKey, p.scope]);
 
   // ─── Client picker ───
   const filteredClients = useMemo(() => {
@@ -449,24 +496,43 @@ export default function QuotePage() {
     notify("Quote marked Accepted");
   };
 
-  // ─── Rate Library picker ───
-  const ratePickerItems = ratePickerCat ? (() => {
-    const cat = rateLibrary.categories.find(c => c.name.toLowerCase() === ratePickerCat.toLowerCase());
-    if (cat) return rateLibrary.getItemsByCategory(cat.id);
-    return rateLibrary.items.slice(0, 20);
-  })() : [];
+  const libraryMatches = useMemo(() => {
+    if (!selectedCat || !librarySearch.trim()) return [];
+    const q = librarySearch.toLowerCase().trim();
+    return (rateLibrary.items || [])
+      .filter((item) => {
+        const name = String(item.name || "").toLowerCase();
+        const categoryName = String(rateLibrary.categories.find((c) => c.id === item.categoryId)?.name || "").toLowerCase();
+        return name.includes(q) || categoryName.includes(q);
+      })
+      .slice(0, 8);
+  }, [librarySearch, rateLibrary.items, rateLibrary.categories, selectedCat]);
 
   const addFromLibrary = (item) => {
-    if (!ratePickerCat) return;
-    up(pr => {
-      if (!pr.scope[ratePickerCat]) pr.scope[ratePickerCat] = [];
-      pr.scope[ratePickerCat].push({
-        item: item.name, unit: item.unit, rate: item.unitRate,
-        qty: item.defaultQty || 1, on: true, actual: 0, _id: uid(),
-      });
-      return pr;
+    if (!selectedCat) return;
+    const insertedIdx = addLineItem(selectedCat, {
+      item: item.name,
+      unit: item.unit || "ea",
+      rate: Number(item.unitRate) || 0,
+      qty: Number(item.defaultQty) || 1,
+      labourCost: Number(item.labourCost) || 0,
+      materialCost: Number(item.materialCost) || 0,
     });
-    notify(`Added: ${item.name}`);
+    if (insertedIdx >= 0) {
+      notify(`Added: ${item.name}`);
+      setLibrarySearch("");
+    }
+  };
+
+  const filesToDataUrls = async (fileList) => {
+    const files = Array.from(fileList || []);
+    const mapped = files.map((file) => new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve({ name: file.name, type: file.type, dataUrl: String(reader.result || "") });
+      reader.onerror = () => reject(new Error("Failed to read file"));
+      reader.readAsDataURL(file);
+    }));
+    return Promise.all(mapped);
   };
 
   return (
@@ -774,12 +840,37 @@ export default function QuotePage() {
                         <div style={{ fontSize: _.fontSize.lg, fontWeight: _.fontWeight.semi, color: _.ink }}>{selectedCat}</div>
                         <div style={{ display: "flex", gap: _.s2 }}>
                           <Button size="sm" onClick={() => {
-                            addC(selectedCat);
-                            const nextIdx = (p.scope[selectedCat] || []).length;
-                            setEditRow({ cat: selectedCat, idx: nextIdx });
+                            addLineItem(selectedCat);
                           }} icon={Plus}>Add Line Item</Button>
-                          <Button size="sm" variant="secondary" onClick={() => setRatePickerCat(selectedCat)} icon={Library}>From Library</Button>
                         </div>
+                      </div>
+                      <div style={{ position: "relative", marginBottom: _.s2 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, border: `1px solid ${_.line}`, borderRadius: _.rSm, padding: "6px 10px", background: _.well }}>
+                          <Search size={13} color={_.muted} />
+                          <input
+                            style={{ border: "none", outline: "none", background: "transparent", width: "100%", fontSize: _.fontSize.base, color: _.ink, fontFamily: "inherit" }}
+                            value={librarySearch}
+                            onChange={(e) => setLibrarySearch(e.target.value)}
+                            placeholder="Search rate library..."
+                          />
+                        </div>
+                        {librarySearch.trim() && (
+                          <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 20, background: _.surface, border: `1px solid ${_.line}`, borderRadius: _.rSm, boxShadow: _.sh2, maxHeight: 220, overflowY: "auto" }}>
+                            {libraryMatches.length === 0 ? (
+                              <div style={{ padding: "10px 12px", fontSize: _.fontSize.sm, color: _.muted }}>No matching library items</div>
+                            ) : libraryMatches.map((item) => (
+                              <button
+                                key={item.id}
+                                type="button"
+                                onClick={() => addFromLibrary(item)}
+                                style={{ width: "100%", textAlign: "left", border: "none", background: "transparent", cursor: "pointer", padding: "9px 12px", borderBottom: `1px solid ${_.line}` }}
+                              >
+                                <div style={{ fontSize: _.fontSize.base, color: _.ink, fontWeight: _.fontWeight.medium }}>{item.name}</div>
+                                <div style={{ fontSize: _.fontSize.caption, color: _.muted }}>{item.unit || "ea"} · {fmt(Number(item.unitRate) || 0)}</div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       <div style={{ overflowX: "auto" }}>
                         <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 760 }}>
@@ -799,27 +890,81 @@ export default function QuotePage() {
                               return (
                                 <tr key={item._id} style={{ borderBottom: `1px solid ${_.line}`, cursor: "pointer" }} onClick={() => setEditRow({ cat: selectedCat, idx })}>
                                   <td style={{ padding: "8px 6px" }}>
-                                    <input style={{ ...input, width: "100%" }} value={item.item || ""} onChange={(e) => uI(selectedCat, idx, "item", e.target.value)} />
+                                    <input
+                                      ref={(el) => { descInputRefs.current[`${selectedCat}:${idx}`] = el; }}
+                                      style={{ ...input, width: "100%" }}
+                                      value={item.item || ""}
+                                      onClick={(e) => e.stopPropagation()}
+                                      onChange={(e) => uI(selectedCat, idx, "item", e.target.value)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                          e.preventDefault();
+                                          addLineItem(selectedCat);
+                                        }
+                                      }}
+                                    />
                                   </td>
                                   <td style={{ padding: "8px 6px" }}>
-                                    <input style={{ ...input, width: 110 }} value={item.type || "Labour"} onChange={(e) => uI(selectedCat, idx, "type", e.target.value)} />
+                                    <input
+                                      style={{ ...input, width: 110 }}
+                                      value={item.type || "Labour"}
+                                      onClick={(e) => e.stopPropagation()}
+                                      onChange={(e) => uI(selectedCat, idx, "type", e.target.value)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                          e.preventDefault();
+                                          addLineItem(selectedCat);
+                                        }
+                                      }}
+                                    />
                                   </td>
                                   <td style={{ padding: "8px 6px" }}>
-                                    <input type="number" style={{ ...input, width: 72 }} value={item.qty} onChange={(e) => uI(selectedCat, idx, "qty", parseFloat(e.target.value) || 0)} />
+                                    <input
+                                      type="number"
+                                      style={{ ...input, width: 72 }}
+                                      value={item.qty}
+                                      onClick={(e) => e.stopPropagation()}
+                                      onChange={(e) => uI(selectedCat, idx, "qty", parseFloat(e.target.value) || 0)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                          e.preventDefault();
+                                          addLineItem(selectedCat);
+                                        }
+                                      }}
+                                    />
                                   </td>
                                   <td style={{ padding: "8px 6px" }}>
-                                    <input type="number" style={{ ...input, width: 110 }} value={item.rate} onChange={(e) => uI(selectedCat, idx, "rate", parseFloat(e.target.value) || 0)} />
+                                    <input
+                                      type="number"
+                                      style={{ ...input, width: 110 }}
+                                      value={item.rate}
+                                      onClick={(e) => e.stopPropagation()}
+                                      onChange={(e) => uI(selectedCat, idx, "rate", parseFloat(e.target.value) || 0)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                          e.preventDefault();
+                                          addLineItem(selectedCat);
+                                        }
+                                      }}
+                                    />
                                   </td>
                                   <td style={{ padding: "8px 6px" }}>
                                     <input
                                       type="number"
                                       style={{ ...input, width: 120 }}
                                       value={sell.toFixed(2)}
+                                      onClick={(e) => e.stopPropagation()}
                                       onChange={(e) => {
                                         const sellVal = toPositiveNumber(e.target.value, 0);
                                         const denom = 1 + (lineMargin / 100);
                                         const nextRate = qty > 0 ? (sellVal / denom) / qty : 0;
                                         uI(selectedCat, idx, "rate", nextRate);
+                                      }}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                          e.preventDefault();
+                                          addLineItem(selectedCat);
+                                        }
                                       }}
                                     />
                                   </td>
@@ -828,7 +973,14 @@ export default function QuotePage() {
                                       type="number"
                                       style={{ ...input, width: 90 }}
                                       value={lineMargin}
+                                      onClick={(e) => e.stopPropagation()}
                                       onChange={(e) => uI(selectedCat, idx, "marginPct", toPositiveNumber(e.target.value, 0))}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                          e.preventDefault();
+                                          addLineItem(selectedCat);
+                                        }
+                                      }}
                                     />
                                   </td>
                                   <td style={{ padding: "8px 6px" }}>
@@ -1333,6 +1485,75 @@ export default function QuotePage() {
                         <input type="number" style={input} value={rowMargin} onChange={(e) => uI(cat, idx, "marginPct", toPositiveNumber(e.target.value, 0))} />
                       </div>
                     </div>
+                    <div style={{ marginTop: _.s2, borderTop: `1px solid ${_.line}`, paddingTop: _.s3 }}>
+                      <div style={{ fontSize: _.fontSize.caption, color: _.muted, textTransform: "uppercase", letterSpacing: _.letterSpacing.wide, marginBottom: _.s2 }}>
+                        Advanced
+                      </div>
+                      <div style={{ display: "grid", gap: _.s2 }}>
+                        <div>
+                          <label style={label}>Notes</label>
+                          <textarea
+                            style={{ ...input, minHeight: 70, resize: "vertical" }}
+                            value={item.notes || ""}
+                            onChange={(e) => uI(cat, idx, "notes", e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <label style={label}>Supplier</label>
+                          <input style={input} value={item.supplier || ""} onChange={(e) => uI(cat, idx, "supplier", e.target.value)} />
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: _.s2 }}>
+                          <div>
+                            <label style={label}>Labour Cost</label>
+                            <input type="number" style={input} value={item.labourCost || 0} onChange={(e) => uI(cat, idx, "labourCost", toPositiveNumber(e.target.value, 0))} />
+                          </div>
+                          <div>
+                            <label style={label}>Material Cost</label>
+                            <input type="number" style={input} value={item.materialCost || 0} onChange={(e) => uI(cat, idx, "materialCost", toPositiveNumber(e.target.value, 0))} />
+                          </div>
+                        </div>
+                        <div>
+                          <label style={label}>Attachments</label>
+                          <input
+                            type="file"
+                            multiple
+                            onChange={async (e) => {
+                              const files = await filesToDataUrls(e.target.files);
+                              up((pr) => {
+                                const row = pr.scope?.[cat]?.[idx];
+                                if (!row) return pr;
+                                if (!Array.isArray(row.attachments)) row.attachments = [];
+                                row.attachments.push(...files);
+                                return pr;
+                              });
+                            }}
+                          />
+                          {Array.isArray(item.attachments) && item.attachments.length > 0 && (
+                            <div style={{ marginTop: _.s2, display: "grid", gap: 4 }}>
+                              {item.attachments.map((f, attachmentIdx) => (
+                                <div key={`${f.name}-${attachmentIdx}`} style={{ fontSize: _.fontSize.sm, color: _.muted, display: "flex", justifyContent: "space-between", gap: _.s2 }}>
+                                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name || `Attachment ${attachmentIdx + 1}`}</span>
+                                  <button
+                                    type="button"
+                                    style={{ ...btnGhost, padding: "0 6px" }}
+                                    onClick={() => {
+                                      up((pr) => {
+                                        const row = pr.scope?.[cat]?.[idx];
+                                        if (!row || !Array.isArray(row.attachments)) return pr;
+                                        row.attachments.splice(attachmentIdx, 1);
+                                        return pr;
+                                      });
+                                    }}
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 );
               })()}
@@ -1366,35 +1587,6 @@ export default function QuotePage() {
           <Button variant="ghost" onClick={() => setNewClientModal(false)}>Cancel</Button>
           <Button onClick={createNewClient} icon={UserPlus}>Create & Select</Button>
         </div>
-      </Modal>
-
-      {/* Rate Library Picker Modal */}
-      <Modal open={!!ratePickerCat} onClose={() => setRatePickerCat(null)} title={`Add from Rate Library — ${ratePickerCat}`}>
-        {ratePickerItems.length === 0 ? (
-          <div style={{ padding: 16, textAlign: "center", color: _.muted, fontSize: _.fontSize.base }}>
-            No matching items in rate library. Add items via <span style={{ color: _.ac, cursor: "pointer" }} onClick={() => { setRatePickerCat(null); navigate("/rate-library"); }}>Rate Library</span>.
-          </div>
-        ) : (
-          <>
-            <div style={{ fontSize: _.fontSize.sm, color: _.muted, marginBottom: 12 }}>Click to add items to scope</div>
-            {ratePickerItems.map(item => (
-              <div key={item.id} onClick={() => addFromLibrary(item)} style={{
-                display: "flex", justifyContent: "space-between", alignItems: "center",
-                padding: "10px 0", borderBottom: `1px solid ${_.line}`, cursor: "pointer", transition: `background ${_.tr}`,
-              }}
-                onMouseEnter={e => e.currentTarget.style.background = _.well}
-                onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-              >
-                <div>
-                  <div style={{ fontSize: _.fontSize.base, fontWeight: _.fontWeight.medium, color: _.ink }}>{item.name}</div>
-                  <div style={{ fontSize: _.fontSize.sm, color: _.muted }}>{item.unit} · {fmt(item.unitRate)}</div>
-                </div>
-                <Plus size={14} color={_.ac} />
-              </div>
-            ))}
-          </>
-        )}
-        <div style={{ marginTop: 16 }}><Button variant="ghost" onClick={() => setRatePickerCat(null)}>Done</Button></div>
       </Modal>
 
       {/* Delete category modal */}
