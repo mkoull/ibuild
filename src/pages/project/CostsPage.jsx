@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useProject } from "../../context/ProjectContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
 import { commitmentRemaining } from "../../lib/calc.js";
-import { importSectionLevel, importItemLevel, importMissingLines, snapshotFromQuote, actualFromPercent, recalcAllowances, baselineBudgetTotal, mkAllocation, validateAllocations, autoSplitAllocations, createBudgetBaseline } from "../../lib/budgetEngine.js";
+import { importSectionLevel, importItemLevel, importMissingLines, snapshotFromQuote, recalcAllowances, baselineBudgetTotal, mkAllocation, validateAllocations, autoSplitAllocations, createBudgetBaseline } from "../../lib/budgetEngine.js";
 import _ from "../../theme/tokens.js";
 import { fmt, input, label, uid, ds } from "../../theme/styles.js";
 import Section from "../../components/ui/Section.jsx";
@@ -23,6 +23,19 @@ function TradeSelect({ value, onChange, trades }) {
       </select>
     </div>
   );
+}
+
+function varianceFromBudgetActual(budget, actual) {
+  return (Number(budget) || 0) - (Number(actual) || 0);
+}
+
+function varianceColor(budget, actual) {
+  const b = Number(budget) || 0;
+  const a = Number(actual) || 0;
+  if (b <= 0) return _.faint;
+  if (a > b) return _.red;
+  if (a >= b * 0.95) return _.amber;
+  return _.green;
 }
 
 const TABS = ["Job Control", "Trade Breakdown", "Cost Code", "Budget", "Commitments", "Actuals", "Report", "Scope Costs"];
@@ -50,13 +63,15 @@ export default function CostsPage() {
   const [quickAdd, setQuickAdd] = useState({ description: "", amount: "" });
   const [allocExpanded, setAllocExpanded] = useState(null);
   const [dismissQuoteLinkHint, setDismissQuoteLinkHint] = useState(false);
+  const [recordCostModal, setRecordCostModal] = useState(null);
+  const [recordCostForm, setRecordCostForm] = useState({ supplier: "", description: "", amount: "", date: "" });
 
   const budgetLines = p.workingBudget || p.budget || [];
   const commitments = p.commitments || [];
   const actuals = p.actuals || [];
   const bills = p.supplierBills || [];
 
-  const variance = T.combinedActuals - T.revisedBudget;
+  const variance = varianceFromBudgetActual(T.revisedBudget, T.combinedActuals);
   const committedVar = T.revisedBudget - T.committedTotal;
   const activeModule = params.moduleId ? modulesHook.find(params.moduleId) : null;
   const linkedQuoteModuleId = activeModule?.links?.derivedFrom || activeModule?.links?.sourceOfTruth || null;
@@ -169,7 +184,7 @@ export default function CostsPage() {
         const budgetCost = parseFloat(editValues.budgetAmount) || 0;
         line.budgetCost = budgetCost;
         line.budgetAmount = budgetCost;
-        line.variance = (line.actualCost ?? line.actualAmount ?? 0) - budgetCost;
+        line.variance = varianceFromBudgetActual(budgetCost, (line.actualCost ?? line.actualAmount ?? 0));
       }
       if (editValues.costCode !== undefined) line.costCode = editValues.costCode;
       return pr;
@@ -183,7 +198,7 @@ export default function CostsPage() {
     if (!quickAdd.description || !amt) { notify("Description and amount required", "error"); return; }
     up(pr => {
       if (!pr.budget) pr.budget = [];
-      pr.budget.push({ id: uid(), costCode: "", label: quickAdd.description, description: quickAdd.description, sectionName, sellPrice: amt, costAllowance: amt, budgetCost: amt, budgetAmount: amt, actualCost: 0, variance: -amt, tradeId: "", source: "manual", actualAmount: 0, actualPct: null, allocations: [] });
+      pr.budget.push({ id: uid(), costCode: "", label: quickAdd.description, description: quickAdd.description, sectionName, sellPrice: amt, costAllowance: amt, budgetCost: amt, budgetAmount: amt, actualCost: 0, variance: amt, tradeId: "", source: "manual", actualAmount: 0, actualPct: null, allocations: [] });
       return pr;
     });
     log(`Budget line: ${quickAdd.description} (${fmt(amt)})`);
@@ -196,7 +211,7 @@ export default function CostsPage() {
     if (!budgetForm.labelText || !amt) { notify("Label and amount required", "error"); return; }
     up(pr => {
       if (!pr.budget) pr.budget = [];
-      pr.budget.push({ id: uid(), costCode: budgetForm.costCode, label: budgetForm.labelText, description: budgetForm.labelText, sectionName: budgetForm.sectionName, sellPrice: amt, costAllowance: amt, budgetCost: amt, budgetAmount: amt, actualCost: 0, variance: -amt, tradeId: budgetForm.tradeId, source: "manual", actualAmount: 0, actualPct: null, allocations: [] });
+      pr.budget.push({ id: uid(), costCode: budgetForm.costCode, label: budgetForm.labelText, description: budgetForm.labelText, sectionName: budgetForm.sectionName, sellPrice: amt, costAllowance: amt, budgetCost: amt, budgetAmount: amt, actualCost: 0, variance: amt, tradeId: budgetForm.tradeId, source: "manual", actualAmount: 0, actualPct: null, allocations: [] });
       return pr;
     });
     log(`Budget line: ${budgetForm.labelText} (${fmt(amt)})`);
@@ -275,32 +290,54 @@ export default function CostsPage() {
     notify("Baseline detached");
   };
 
-  const updateBudgetActual = (idx, rawValue) => {
-    const str = String(rawValue).trim();
+  const openRecordCost = (line, idx) => {
+    setRecordCostModal({ lineId: line.id, idx });
+    setRecordCostForm({
+      supplier: "",
+      description: line.label || line.description || "",
+      amount: "",
+      date: "",
+    });
+  };
+
+  const recordCostForLine = () => {
+    const amount = parseFloat(recordCostForm.amount);
+    if (!recordCostModal || !amount || amount <= 0) {
+      notify("Enter a valid amount", "error");
+      return;
+    }
     up(pr => {
-      const line = pr.budget[idx];
+      const line = (pr.budget || [])[recordCostModal.idx];
       if (!line) return pr;
-      if (str.endsWith("%")) {
-        const pct = parseFloat(str.slice(0, -1));
-        if (!isNaN(pct)) {
-          line.actualPct = pct;
-          const budgetCost = Number(line.budgetCost ?? line.budgetAmount) || 0;
-          const actualCost = actualFromPercent(budgetCost, pct);
-          line.actualCost = actualCost;
-          line.actualAmount = actualCost;
-          line.variance = actualCost - budgetCost;
-        }
-      } else {
-        const amt = parseFloat(str);
-        const budgetCost = Number(line.budgetCost ?? line.budgetAmount) || 0;
-        const actualCost = isNaN(amt) ? 0 : amt;
-        line.actualCost = actualCost;
-        line.actualAmount = actualCost;
-        line.variance = actualCost - budgetCost;
-        line.actualPct = null;
-      }
+      const date = recordCostForm.date || ds();
+      const description = recordCostForm.description || line.label || line.description || "Recorded cost";
+      const supplier = recordCostForm.supplier || "";
+      const currentActual = Number(line.actualCost ?? line.actualAmount) || 0;
+      const nextActual = currentActual + amount;
+      const budgetCost = Number(line.budgetCost ?? line.budgetAmount) || 0;
+
+      line.actualCost = nextActual;
+      line.actualAmount = nextActual;
+      line.variance = varianceFromBudgetActual(budgetCost, nextActual);
+
+      if (!Array.isArray(pr.actuals)) pr.actuals = [];
+      pr.actuals.push({
+        id: uid(),
+        costCode: line.costCode || "",
+        description,
+        amount,
+        tradeId: line.tradeId || "",
+        date,
+        source: "Manual",
+        supplier,
+        linkedBudgetLineId: line.id || null,
+      });
       return pr;
     });
+    notify("Cost recorded");
+    log(`Cost recorded: ${recordCostForm.description || "Budget item"} (${fmt(amount)})`);
+    setRecordCostModal(null);
+    setRecordCostForm({ supplier: "", description: "", amount: "", date: "" });
   };
 
   const addCommitment = () => {
@@ -420,8 +457,8 @@ export default function CostsPage() {
         </Card>
         <Card style={{ padding: mobile ? _.s3 : _.s4 }}>
           <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Variance</div>
-          <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: T.revisedBudget > 0 ? (variance <= 0 ? _.green : _.red) : _.faint }}>
-            {T.revisedBudget > 0 ? `${variance >= 0 ? "+" : ""}${fmt(variance)}` : "—"}
+          <div style={{ fontSize: _.fontSize.xl, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: varianceColor(T.revisedBudget, T.combinedActuals) }}>
+            {T.revisedBudget > 0 ? fmt(variance) : "—"}
           </div>
         </Card>
       </div>
@@ -500,7 +537,7 @@ export default function CostsPage() {
                 <span style={{ textAlign: "right" }}>Variance</span>
               </div>
               {jobControlGroups.map(grp => {
-                const v = grp.budget - grp.actual;
+                const v = varianceFromBudgetActual(grp.budget, grp.actual);
                 const isExp = jcExpanded === grp.sectionName;
                 return (
                   <div key={grp.sectionName}>
@@ -525,8 +562,8 @@ export default function CostsPage() {
                           <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{grp.actual > 0 ? fmt(grp.actual) : "—"}</span>
                         </>
                       )}
-                      <span style={{ textAlign: "right", fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: grp.budget > 0 ? (v >= 0 ? _.green : _.red) : _.faint }}>
-                        {grp.budget > 0 ? `${v >= 0 ? "+" : ""}${fmt(v)}` : "—"}
+                      <span style={{ textAlign: "right", fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: varianceColor(grp.budget, grp.actual) }}>
+                        {grp.budget > 0 ? fmt(v) : "—"}
                       </span>
                     </div>
                     {isExp && (
@@ -537,7 +574,7 @@ export default function CostsPage() {
                             {grp.lines.map(b => {
                               const budgetCost = (b.budgetCost ?? b.budgetAmount) || 0;
                               const actualCost = (b.actualCost ?? b.actualAmount) || 0;
-                              const lineVar = actualCost - budgetCost;
+                              const lineVar = varianceFromBudgetActual(budgetCost, actualCost);
                               return (
                                 <div key={b.id} style={{ display: "grid", gridTemplateColumns: mobile ? "1fr auto" : "1fr 90px 90px", gap: _.s2, fontSize: _.fontSize.sm, padding: "3px 0", alignItems: "center" }}>
                                   <div style={{ display: "flex", gap: _.s2, alignItems: "center" }}>
@@ -545,8 +582,8 @@ export default function CostsPage() {
                                     {b.source === "variation" && <span style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, padding: "0 5px", borderRadius: _.rFull, background: `${_.amber}14`, color: _.amber }}>VO</span>}
                                   </div>
                                   {!mobile && <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", fontWeight: _.fontWeight.semi }}>{fmt(budgetCost)}</span>}
-                                  <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", fontWeight: _.fontWeight.semi, color: actualCost > 0 ? (lineVar <= 0 ? _.green : _.red) : _.faint }}>
-                                    {actualCost > 0 ? `${lineVar >= 0 ? "+" : ""}${fmt(lineVar)}` : fmt(budgetCost)}
+                                  <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", fontWeight: _.fontWeight.semi, color: actualCost > 0 ? varianceColor(budgetCost, actualCost) : _.faint }}>
+                                    {actualCost > 0 ? fmt(lineVar) : fmt(budgetCost)}
                                   </span>
                                 </div>
                               );
@@ -589,7 +626,7 @@ export default function CostsPage() {
                     <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmt(T.combinedActuals)}</span>
                   </>
                 )}
-                <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", color: variance <= 0 ? _.green : _.red }}>{variance >= 0 ? "+" : ""}{fmt(variance)}</span>
+                <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", color: varianceColor(T.revisedBudget, T.combinedActuals) }}>{fmt(variance)}</span>
               </div>
             </>
           )}
@@ -610,7 +647,7 @@ export default function CostsPage() {
                 <span style={{ textAlign: "right" }}>% Complete</span>
               </div>
               {tradeBreakdown.map(row => {
-                const v = row.actual - row.budget;
+                const v = varianceFromBudgetActual(row.budget, row.actual);
                 const pctComplete = row.budget > 0 ? Math.min(100, Math.max(0, (row.actual / row.budget) * 100)) : 0;
                 const isExpanded = expandedTrade === row.tradeId;
                 return (
@@ -633,10 +670,10 @@ export default function CostsPage() {
                           <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{row.budget > 0 ? fmt(row.budget) : "—"}</span>
                           <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", color: _.amber }}>{row.committed > 0 ? fmt(row.committed) : "—"}</span>
                           <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{row.actual > 0 ? fmt(row.actual) : "—"}</span>
-                          <span style={{ textAlign: "right", fontWeight: _.fontWeight.semi, fontVariantNumeric: "tabular-nums", color: v <= 0 ? _.green : _.red }}>{v >= 0 ? "+" : ""}{fmt(v)}</span>
+                          <span style={{ textAlign: "right", fontWeight: _.fontWeight.semi, fontVariantNumeric: "tabular-nums", color: varianceColor(row.budget, row.actual) }}>{fmt(v)}</span>
                         </>
                       )}
-                      <span style={{ textAlign: "right", fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: row.budget > 0 ? (v <= 0 ? _.green : _.red) : _.faint }}>
+                      <span style={{ textAlign: "right", fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: row.budget > 0 ? varianceColor(row.budget, row.actual) : _.faint }}>
                         {row.budget > 0 ? `${pctComplete.toFixed(0)}%` : "—"}
                       </span>
                     </div>
@@ -694,7 +731,7 @@ export default function CostsPage() {
                     <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmt(T.actualsTotal)}</span>
                   </>
                 )}
-                <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", color: variance <= 0 ? _.green : _.red }}>{variance >= 0 ? "+" : ""}{fmt(variance)}</span>
+                <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", color: varianceColor(T.revisedBudget, T.combinedActuals) }}>{fmt(variance)}</span>
               </div>
             </>
           )}
@@ -714,7 +751,7 @@ export default function CostsPage() {
                 <span style={{ textAlign: "right" }}>Variance</span>
               </div>
               {costCodeBreakdown.map(row => {
-                const v = row.actual - row.budget;
+                const v = varianceFromBudgetActual(row.budget, row.actual);
                 const isExpanded = expandedCode === row.costCode;
                 return (
                   <div key={row.costCode}>
@@ -737,8 +774,8 @@ export default function CostsPage() {
                           <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{row.actual > 0 ? fmt(row.actual) : "—"}</span>
                         </>
                       )}
-                      <span style={{ textAlign: "right", fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: row.budget > 0 ? (v <= 0 ? _.green : _.red) : _.faint }}>
-                        {row.budget > 0 ? `${v >= 0 ? "+" : ""}${fmt(v)}` : "—"}
+                      <span style={{ textAlign: "right", fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", color: row.budget > 0 ? varianceColor(row.budget, row.actual) : _.faint }}>
+                        {row.budget > 0 ? fmt(v) : "—"}
                       </span>
                     </div>
                     {isExpanded && (
@@ -941,7 +978,7 @@ export default function CostsPage() {
                           const i = b._idx;
                           const budgetCost = (b.budgetCost ?? b.budgetAmount) || 0;
                           const actualCost = (b.actualCost ?? b.actualAmount) || 0;
-                          const lineVar = actualCost - budgetCost;
+                              const lineVar = varianceFromBudgetActual(budgetCost, actualCost);
                           const srcTag = b.source === "quote_import" ? { text: "Quote", color: _.muted }
                             : b.source === "variation" ? { text: "VO", color: _.amber }
                             : null;
@@ -972,18 +1009,15 @@ export default function CostsPage() {
                                 )
                               )}
                               {!mobile && (
-                                <input
-                                  style={{ width: "100%", padding: "3px 6px", background: _.well, border: `1px solid ${_.line}`, borderRadius: 5, color: _.ink, fontSize: _.fontSize.sm, textAlign: "right", outline: "none" }}
-                                  placeholder="0"
-                                  defaultValue={b.actualPct != null ? `${b.actualPct}%` : (actualCost || "")}
-                                  onBlur={e => updateBudgetActual(i, e.target.value)}
-                                  onKeyDown={e => { if (e.key === "Enter") e.target.blur(); }}
-                                />
+                                <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", fontSize: _.fontSize.sm }}>
+                                  {actualCost > 0 ? fmt(actualCost) : "—"}
+                                </span>
                               )}
-                              <span style={{ textAlign: "right", fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", fontSize: _.fontSize.sm, color: actualCost > 0 ? (lineVar <= 0 ? _.green : _.red) : _.faint }}>
-                                {actualCost > 0 ? `${lineVar >= 0 ? "+" : ""}${fmt(lineVar)}` : (mobile ? fmt(budgetCost) : "—")}
+                              <span style={{ textAlign: "right", fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums", fontSize: _.fontSize.sm, color: actualCost > 0 ? varianceColor(budgetCost, actualCost) : _.faint }}>
+                                {actualCost > 0 ? fmt(lineVar) : (mobile ? fmt(budgetCost) : "—")}
                               </span>
                               <div style={{ display: "flex", gap: 2, justifyContent: "center" }}>
+                                <div onClick={() => openRecordCost(b, i)} style={{ cursor: "pointer", color: _.ac, display: "flex", transition: `color ${_.tr}` }} title="Record Cost"><Plus size={12} /></div>
                                 <div onClick={() => setAllocExpanded(allocExpanded === b.id ? null : b.id)} style={{ cursor: "pointer", color: (b.allocations || []).length > 0 ? _.ac : _.faint, display: "flex", transition: `color ${_.tr}` }} title="Split across trades"><Split size={12} /></div>
                                 <div onClick={() => setDeleteModal({ type: "budget", idx: i })} style={{ cursor: "pointer", color: _.faint, display: "flex", transition: `color ${_.tr}` }} onMouseEnter={e => e.currentTarget.style.color = _.red} onMouseLeave={e => e.currentTarget.style.color = _.faint}><X size={13} /></div>
                               </div>
@@ -1166,7 +1200,7 @@ export default function CostsPage() {
           <div style={{ fontSize: _.fontSize.caption, color: _.muted, fontWeight: _.fontWeight.semi, letterSpacing: _.letterSpacing.wider, textTransform: "uppercase", marginBottom: _.s4 }}>Job Cost Summary</div>
           {(() => {
             const combined = T.combinedActuals != null ? T.combinedActuals : T.actualsTotal;
-            const reportVariance = combined - T.revisedBudget;
+            const reportVariance = varianceFromBudgetActual(T.revisedBudget, combined);
             const kpis = [
               { label: "Contract Value", value: fmt(T.curr), color: _.ink },
               { label: "Sell Price Total", value: fmt(T.sellPriceTotal), color: T.sellPriceTotal > 0 ? _.ink : _.faint },
@@ -1180,7 +1214,7 @@ export default function CostsPage() {
               { label: "Forecast Cost", value: fmt(T.forecastCost), color: _.ink },
               { label: "Forecast Margin", value: fmt(T.forecastMarginNew), color: T.forecastMarginNew >= 0 ? _.green : _.red },
               { label: "Margin %", value: `${T.marginPctNew.toFixed(1)}%`, color: T.marginPctNew >= 0 ? _.green : _.red },
-              { label: "Variance", value: `${reportVariance >= 0 ? "+" : ""}${fmt(reportVariance)}`, color: reportVariance <= 0 ? _.green : _.red },
+              { label: "Variance", value: fmt(reportVariance), color: varianceColor(T.revisedBudget, combined) },
             ];
             return (
               <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "1fr 1fr", gap: _.s3, marginBottom: _.s6 }}>
@@ -1232,6 +1266,55 @@ export default function CostsPage() {
           })}
         </div>
       )}
+
+      {/* Record Cost modal */}
+      <Modal open={!!recordCostModal} onClose={() => setRecordCostModal(null)} title="Record Cost" width={460}>
+        <div style={{ display: "grid", gap: _.s3 }}>
+          <div>
+            <label style={label}>Supplier</label>
+            <input
+              style={input}
+              value={recordCostForm.supplier}
+              onChange={(e) => setRecordCostForm((f) => ({ ...f, supplier: e.target.value }))}
+              placeholder="Supplier name"
+            />
+          </div>
+          <div>
+            <label style={label}>Description</label>
+            <input
+              style={input}
+              value={recordCostForm.description}
+              onChange={(e) => setRecordCostForm((f) => ({ ...f, description: e.target.value }))}
+              placeholder="Cost description"
+            />
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: _.s3 }}>
+            <div>
+              <label style={label}>Amount *</label>
+              <input
+                type="number"
+                style={input}
+                value={recordCostForm.amount}
+                onChange={(e) => setRecordCostForm((f) => ({ ...f, amount: e.target.value }))}
+                placeholder="0.00"
+              />
+            </div>
+            <div>
+              <label style={label}>Date</label>
+              <input
+                type="date"
+                style={{ ...input, cursor: "pointer" }}
+                value={recordCostForm.date}
+                onChange={(e) => setRecordCostForm((f) => ({ ...f, date: e.target.value }))}
+              />
+            </div>
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: _.s2, justifyContent: "flex-end", marginTop: _.s5 }}>
+          <Button variant="ghost" onClick={() => setRecordCostModal(null)}>Cancel</Button>
+          <Button onClick={recordCostForLine}>Record Cost</Button>
+        </div>
+      </Modal>
 
       {/* Delete modal */}
       <Modal open={!!deleteModal} onClose={() => setDeleteModal(null)} title="Delete Item" width={400}>
