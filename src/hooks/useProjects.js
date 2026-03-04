@@ -452,7 +452,7 @@ function normalizeInvoiceStatus(status) {
 
 function normalizeVariationStatus(status) {
   const s = String(status || "Draft").toLowerCase();
-  if (s === "pending" || s === "sent") return "Pending";
+  if (s === "pending" || s === "sent") return "Sent";
   if (s === "approved") return "Approved";
   if (s === "rejected") return "Rejected";
   return "Draft";

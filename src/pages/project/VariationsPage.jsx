@@ -12,6 +12,7 @@ import { ClipboardList, Plus, Send, Check, XCircle } from "lucide-react";
 
 const STATUS_COLOR = {
   Draft: _.muted,
+  Sent: _.amber,
   Pending: _.amber,
   Approved: _.green,
   Rejected: _.red,
@@ -38,12 +39,16 @@ export default function VariationsPage() {
   const [form, setForm] = useState({ title: "", description: "", costImpact: "", sellImpact: "", _err: false });
 
   const variations = Array.isArray(p.variations) ? p.variations : [];
+  const isPendingStatus = (status) => {
+    const s = String(status || "").toLowerCase();
+    return s === "sent" || s === "pending";
+  };
   const approvedValue = useMemo(
     () => variations.filter((v) => v.status === "Approved").reduce((t, v) => t + toNum(v.sellImpact), 0),
     [variations],
   );
   const pendingValue = useMemo(
-    () => variations.filter((v) => v.status === "Pending").reduce((t, v) => t + toNum(v.sellImpact), 0),
+    () => variations.filter((v) => isPendingStatus(v.status)).reduce((t, v) => t + toNum(v.sellImpact), 0),
     [variations],
   );
 
@@ -79,7 +84,7 @@ export default function VariationsPage() {
       if (!v) return pr;
       const previous = v.status;
       v.status = status;
-      if (status === "Pending") v.submittedAt = new Date().toISOString();
+      if (status === "Sent") v.submittedAt = new Date().toISOString();
       if (status === "Rejected") v.rejectedAt = new Date().toISOString();
       if (status === "Approved" && previous !== "Approved") {
         applyApprovedVariation(pr, v);
@@ -102,11 +107,11 @@ export default function VariationsPage() {
 
       <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "1fr 1fr", gap: _.s3, marginBottom: _.s6 }}>
         <div style={{ border: `1px solid ${_.line}`, borderRadius: _.r, padding: _.s4, background: _.surface }}>
-          <div style={{ fontSize: _.fontSize.caption, color: _.muted, textTransform: "uppercase", letterSpacing: _.letterSpacing.wider, marginBottom: _.s2 }}>Approved</div>
+          <div style={{ fontSize: _.fontSize.caption, color: _.muted, textTransform: "uppercase", letterSpacing: _.letterSpacing.wider, marginBottom: _.s2 }}>Approved Variations</div>
           <div style={{ fontSize: _.fontSize["2xl"], fontWeight: _.fontWeight.bold, color: _.green }}>{fmt(approvedValue)}</div>
         </div>
         <div style={{ border: `1px solid ${_.line}`, borderRadius: _.r, padding: _.s4, background: _.surface }}>
-          <div style={{ fontSize: _.fontSize.caption, color: _.muted, textTransform: "uppercase", letterSpacing: _.letterSpacing.wider, marginBottom: _.s2 }}>Pending</div>
+          <div style={{ fontSize: _.fontSize.caption, color: _.muted, textTransform: "uppercase", letterSpacing: _.letterSpacing.wider, marginBottom: _.s2 }}>Pending Variations</div>
           <div style={{ fontSize: _.fontSize["2xl"], fontWeight: _.fontWeight.bold, color: _.amber }}>{fmt(pendingValue)}</div>
         </div>
       </div>
@@ -116,7 +121,7 @@ export default function VariationsPage() {
         <>
           <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr auto" : "110px 1fr 120px 120px 110px 220px", gap: _.s2, padding: `${_.s2}px 0`, borderBottom: `2px solid ${_.ink}`, fontSize: _.fontSize.xs, color: _.muted, fontWeight: _.fontWeight.semi, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase" }}>
             <span>Variation #</span>
-            <span>Title</span>
+            <span>Description</span>
             {!mobile && (
               <>
                 <span style={{ textAlign: "right" }}>Cost Impact</span>
@@ -140,8 +145,8 @@ export default function VariationsPage() {
                   <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", fontWeight: _.fontWeight.semi }}>{fmt(v.sellImpact || 0)}</span>
                   <div style={{ textAlign: "center" }}><span style={badge(STATUS_COLOR[v.status] || _.muted)}>{v.status || "Draft"}</span></div>
                   <div style={{ display: "flex", justifyContent: "flex-end", gap: 6 }}>
-                    {v.status === "Draft" && <Button size="sm" variant="secondary" icon={Send} onClick={() => setStatus(v.id, "Pending")}>Submit</Button>}
-                    {v.status === "Pending" && (
+                    {v.status === "Draft" && <Button size="sm" variant="secondary" icon={Send} onClick={() => setStatus(v.id, "Sent")}>Send</Button>}
+                    {isPendingStatus(v.status) && (
                       <>
                         <Button size="sm" variant="secondary" icon={Check} onClick={() => setStatus(v.id, "Approved")}>Approve</Button>
                         <Button size="sm" variant="ghost" icon={XCircle} onClick={() => setStatus(v.id, "Rejected")}>Reject</Button>

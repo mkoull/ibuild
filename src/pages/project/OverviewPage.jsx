@@ -214,7 +214,10 @@ export default function OverviewPage() {
   const contractMarginValue = stageIsJob ? (contractDisplay - budgetCost) : (T.curr - T.sub);
   const contractMarginPct = contractDisplay > 0 ? (contractMarginValue / contractDisplay) * 100 : 0;
   const pendingVariationValue = (p.variations || [])
-    .filter((v) => String(v.status) === "Pending")
+    .filter((v) => {
+      const s = String(v.status || "").toLowerCase();
+      return s === "sent" || s === "pending";
+    })
     .reduce((t, v) => t + (Number(v.sellImpact) || 0), 0);
   const budgetFromJobCategories = (p?.job?.budget?.categories || []).reduce((sum, cat) => {
     return sum + (cat.items || []).reduce((s, item) => s + (Number(item.costTotal) || 0), 0);
