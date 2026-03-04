@@ -10,7 +10,7 @@ import Empty from "../../components/ui/Empty.jsx";
 import SearchInput from "../../components/ui/SearchInput.jsx";
 import Modal from "../../components/ui/Modal.jsx";
 import Button from "../../components/ui/Button.jsx";
-import { Plus, Users, PenLine, Trash2 } from "lucide-react";
+import { Plus, Building2, PenLine, Trash2 } from "lucide-react";
 
 export default function ClientsListPage() {
   const { clients, clientsHook, projects, update, mobile, notify } = useApp();
@@ -61,7 +61,7 @@ export default function ClientsListPage() {
 
       <SearchInput value={search} onChange={setSearch} placeholder="Search clients..." style={{ marginBottom: 24, maxWidth: 320 }} />
 
-      {filtered.length === 0 && <Empty icon={Users} text={search ? "No matching clients" : "No clients yet"} action={!search ? handleNew : undefined} actionText="Add Client" />}
+      {filtered.length === 0 && <Empty icon={Building2} text={search ? "No matching clients" : "No clients yet"} action={!search ? handleNew : undefined} actionText="Add Client" />}
 
       {filtered.map(cl => {
         const clientProjects = projects.filter(p => p.clientId === cl.id || (p.client && p.client.trim().toLowerCase() === (cl.displayName || "").trim().toLowerCase()));

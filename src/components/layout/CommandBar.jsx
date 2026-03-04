@@ -4,7 +4,7 @@ import { useApp } from "../../context/AppContext.jsx";
 import _ from "../../theme/tokens.js";
 import { pName } from "../../theme/styles.js";
 import {
-  Search, FolderOpen, Users, LayoutDashboard, Settings,
+  Search, FolderOpen, LayoutDashboard, Settings,
   ReceiptText, FileText, HandCoins, NotebookText, Bug, HardHat,
   TrendingUp, Landmark, Building2, Plus, ArrowRight,
 } from "lucide-react";
@@ -15,7 +15,7 @@ const NAV_ITEMS = [
   { label: "Dashboard",    to: "/dashboard",     Ic: LayoutDashboard, group: "Navigate" },
   { label: "Estimates",    to: "/estimates",     Ic: FileText,        group: "Navigate" },
   { label: "Jobs",         to: "/jobs",           Ic: HardHat,         group: "Navigate" },
-  { label: "Clients",      to: "/clients",       Ic: Users,           group: "Navigate" },
+  { label: "Clients",      to: "/clients",       Ic: Building2,       group: "Navigate" },
   { label: "Invoices",     to: "/invoices",       Ic: ReceiptText,     group: "Navigate" },
   { label: "Bills",        to: "/bills",          Ic: FileText,        group: "Navigate" },
   { label: "Payments",     to: "/payments",       Ic: HandCoins,       group: "Navigate" },

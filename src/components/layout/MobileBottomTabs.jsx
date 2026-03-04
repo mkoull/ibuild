@@ -8,7 +8,7 @@ import {
   LayoutDashboard, FolderOpen, MoreHorizontal, BarChart3, PenLine,
   DollarSign, Calendar, Plus, X, Building2, ClipboardList,
   Wrench, Settings, ReceiptText, NotebookText, Bug, ShoppingCart,
-  FileQuestion, TrendingUp, Landmark, HardHat, Library, FileText, HandCoins, Users,
+  FileQuestion, TrendingUp, Landmark, HardHat, Library, FileText, HandCoins,
 } from "lucide-react";
 import { isSubcontractor } from "../../lib/permissions.js";
 
@@ -30,7 +30,7 @@ const PROJECT_TABS = [
 
 const GLOBAL_MORE = [
   { type: "header", label: "Pipeline" },
-  { path: "/clients", label: "Clients", Ic: Users },
+  { path: "/clients", label: "Clients", Ic: Building2 },
   { path: "/estimates", label: "Estimates", Ic: FileText },
   { path: "/jobs", label: "Jobs", Ic: HardHat },
   { type: "header", label: "Finance" },
