@@ -22,6 +22,7 @@ const LOCKED_UNTIL_ACTIVE = new Set([
   "variations",
   "procurement",
   "invoices",
+  "documents",
   "site-diary",
   "defects",
 ]);

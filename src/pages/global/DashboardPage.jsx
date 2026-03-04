@@ -6,7 +6,7 @@ import { selectCalc, getNextMilestone } from "../../lib/selectors.js";
 import { normaliseStage } from "../../lib/lifecycle.js";
 import {
   getPipelineValue, getQuoteProjects, getJobProjects,
-  getAwaitingAcceptance, getActiveContractValue,
+  getAwaitingAcceptance,
   getOutstandingReceivables, getJobsInProgress,
   getOverrunJobs,
 } from "../../lib/metrics.js";
@@ -36,16 +36,21 @@ export default function DashboardPage() {
   const quoteProjects = getQuoteProjects(projects);
   const jobProjects = getJobProjects(projects);
   const awaiting = getAwaitingAcceptance(projects);
-  const activeContract = getActiveContractValue(projects);
   const receivables = getOutstandingReceivables(projects);
   const inProgress = getJobsInProgress(projects);
+  const activeContractValue = inProgress.reduce((sum, pr) => sum + (selectCalc(pr).curr || 0), 0);
+  const activeMarginValue = inProgress.reduce((sum, pr) => {
+    const t = selectCalc(pr);
+    return sum + ((t.curr || 0) - (t.budgetTotal || 0));
+  }, 0);
 
   const kpis = [
+    { label: "Active Jobs", value: inProgress.length > 0 ? `${inProgress.length}` : "\u2014", sub: null, color: _.green, Ic: Hammer },
+    { label: "Contract Value", value: activeContractValue > 0 ? fmt(activeContractValue) : "\u2014", sub: `${inProgress.length} active job${inProgress.length !== 1 ? "s" : ""}`, color: _.blue, Ic: DollarSign },
+    { label: "Margin", value: activeMarginValue !== 0 ? fmt(activeMarginValue) : "\u2014", sub: "Active job margin", color: activeMarginValue >= 0 ? _.green : _.red, Ic: TrendingUp },
     { label: "Pipeline Value", value: pipelineValue > 0 ? fmt(pipelineValue) : "\u2014", sub: `${quoteProjects.length} quote${quoteProjects.length !== 1 ? "s" : ""}`, color: _.amber, Ic: TrendingUp },
     { label: "Awaiting Acceptance", value: awaiting.count > 0 ? `${awaiting.count}` : "\u2014", sub: awaiting.value > 0 ? fmt(awaiting.value) : null, color: _.violet, Ic: FileText },
-    { label: "Active Contract Value", value: activeContract.value > 0 ? fmt(activeContract.value) : "\u2014", sub: `${activeContract.count} job${activeContract.count !== 1 ? "s" : ""}`, color: _.blue, Ic: Hammer },
     { label: "Outstanding Receivables", value: receivables.value > 0 ? fmt(receivables.value) : "\u2014", sub: receivables.count > 0 ? `${receivables.count} job${receivables.count !== 1 ? "s" : ""}` : null, color: _.red, Ic: DollarSign },
-    { label: "Jobs In Progress", value: inProgress.length > 0 ? `${inProgress.length}` : "\u2014", sub: null, color: _.green, Ic: Hammer },
   ];
 
   const overruns = getOverrunJobs(projects);

@@ -8,7 +8,7 @@ import { STAGES, DEFAULT_EXCLUSIONS, DEFAULT_ALLOWANCES, DEFAULT_PC_ITEMS, DEFAU
 import { calc } from "../../lib/calc.js";
 import { canTransition, isQuote, isJob, needsQuoteToJobConversion } from "../../lib/lifecycle.js";
 import { usePageBottomBar } from "../../hooks/usePageBottomBar.js";
-import { calculateTotals, normalizeCategories } from "../../lib/costEngine.js";
+import { applyConvertToJobBaseline, calculateTotals, normalizeCategories } from "../../lib/costEngine.js";
 import Card from "../../components/ui/Card.jsx";
 import Modal from "../../components/ui/Modal.jsx";
 import Button from "../../components/ui/Button.jsx";
@@ -254,12 +254,50 @@ export default function QuotePage() {
     notify("Quote generated");
   };
 
-  const updateQuoteStatus = (status) => {
+  const setQuoteDocumentStatus = (status) => {
     up((pr) => {
-      if (!pr.quoteDocument) return pr;
+      const cats = normalizeCategories((pr?.estimate && pr.estimate.categories) || pr.costCategories || []);
+      const totals = calculateTotals(cats);
+      if (!pr.quoteDocument) {
+        pr.quoteDocument = {
+          id: `QDOC-${uid()}`,
+          status: "Draft",
+          generatedAt: new Date().toISOString(),
+          quoteDate: ds(),
+          clientName: pr.client || "",
+          projectName: pr.name || "Project",
+          categories: cats.map((cat) => ({
+            id: cat.id,
+            name: cat.name,
+            itemCount: (cat.items || []).length,
+          })),
+          pricing: {
+            totalCost: totals.totalCost,
+            marginPercent: Number(pr.marginPct ?? pr.margin ?? 0),
+            totalQuotePrice: totals.totalSell > 0 ? totals.totalSell : 0,
+          },
+          terms: "This quote is valid for 30 days. Work proceeds after written acceptance and scheduling confirmation.",
+        };
+      }
       pr.quoteDocument.status = status;
       return pr;
     });
+  };
+
+  const updateQuoteStatus = (status) => {
+    if (status === "Sent") {
+      sendQuote();
+      return;
+    }
+    if (status === "Accepted") {
+      markAccepted();
+      return;
+    }
+    if (status === "Rejected") {
+      markRejected();
+      return;
+    }
+    setQuoteDocumentStatus(status);
     notify(`Quote marked ${status}`);
   };
 
@@ -308,11 +346,85 @@ export default function QuotePage() {
 
   // ─── Send Quote (Lead → Quoted) ───
   const sendQuote = () => {
+    if (!quoteReady) {
+      notify("Complete details and scope first", "error");
+      return;
+    }
     if (canTransition(stage, "Quoted")) {
       transitionStage("Quoted");
-      log("Quote sent to client");
-      navigate("../overview");
     }
+    setQuoteDocumentStatus("Sent");
+    log("Quote sent to client");
+    notify("Quote marked Sent");
+  };
+
+  const markRejected = () => {
+    if (canTransition(stage, "Quoted")) {
+      transitionStage("Quoted");
+    }
+    setQuoteDocumentStatus("Rejected");
+    log("Quote marked rejected");
+    notify("Quote marked Rejected");
+  };
+
+  const markAccepted = () => {
+    if (!quoteReady) {
+      notify("Complete details and scope first", "error");
+      return;
+    }
+    let converted = false;
+    up((pr) => {
+      const didConvert = applyConvertToJobBaseline(pr);
+      converted = didConvert || String(pr.stage || pr.status || "").toLowerCase() === "active";
+
+      const contractValue = Number(pr?.job?.contract?.currentContractValue || 0);
+      const budgetCost = Number(pr?.job?.budget?.totals?.totalCost || 0);
+      const marginValue = contractValue - budgetCost;
+      const marginPercent = contractValue > 0 ? (marginValue / contractValue) * 100 : 0;
+
+      if (pr.job) {
+        pr.job.id = pr.job.id || `JOB-${pr.id}`;
+        pr.job.name = pr.name || "Project";
+        pr.job.client = pr.client || "";
+        pr.job.contractValue = contractValue;
+        pr.job.margin = marginPercent;
+        pr.job.status = "Active";
+      }
+      pr.jobId = pr.jobId || (pr.job?.id || `JOB-${pr.id}`);
+      pr.jobNumber = pr.jobNumber || `J-${String(pr.id).slice(-6).toUpperCase()}`;
+
+      const cats = normalizeCategories((pr?.estimate && pr.estimate.categories) || pr.costCategories || []);
+      const totals = calculateTotals(cats);
+      if (!pr.quoteDocument) {
+        pr.quoteDocument = {
+          id: `QDOC-${uid()}`,
+          generatedAt: new Date().toISOString(),
+          quoteDate: ds(),
+          clientName: pr.client || "",
+          projectName: pr.name || "Project",
+          categories: cats.map((cat) => ({
+            id: cat.id,
+            name: cat.name,
+            itemCount: (cat.items || []).length,
+          })),
+          pricing: {
+            totalCost: totals.totalCost,
+            marginPercent: Number(pr.marginPct ?? pr.margin ?? 0),
+            totalQuotePrice: totals.totalSell > 0 ? totals.totalSell : 0,
+          },
+          terms: "This quote is valid for 30 days. Work proceeds after written acceptance and scheduling confirmation.",
+        };
+      }
+      pr.quoteDocument.status = "Accepted";
+      return pr;
+    });
+    log("Quote marked accepted");
+    if (converted) {
+      notify("Quote accepted and converted to active job");
+      navigate("../overview");
+      return;
+    }
+    notify("Quote marked Accepted");
   };
 
   // ─── Rate Library picker ───
@@ -872,6 +984,9 @@ export default function QuotePage() {
                   <div style={{ display: "flex", gap: _.s2, flexWrap: "wrap" }}>
                     <Button onClick={generateQuoteDocument} icon={FileCheck}>{quoteDoc ? "Regenerate Quote" : "Generate Quote"}</Button>
                     <Button variant="secondary" onClick={exportQuotePdf} disabled={!quoteDoc}>Export PDF</Button>
+                    <Button variant="secondary" icon={Send} onClick={sendQuote}>Send Quote</Button>
+                    <Button variant="secondary" onClick={markAccepted}>Mark Accepted</Button>
+                    <Button variant="secondary" onClick={markRejected}>Mark Rejected</Button>
                     <select
                       value={quoteDoc?.status || "Draft"}
                       onChange={(e) => updateQuoteStatus(e.target.value)}
@@ -988,10 +1103,7 @@ export default function QuotePage() {
                 {quoteReady && !proposalGenerated && (
                   <Button onClick={generateProposal} icon={ArrowRight}>Generate Proposal</Button>
                 )}
-                {quoteReady && proposalGenerated && stage === "Lead" && (
-                  <Button onClick={sendQuote} icon={Send}>Send Quote</Button>
-                )}
-                {quoteReady && proposalGenerated && stage !== "Lead" && (
+                {quoteReady && proposalGenerated && (
                   <Button onClick={generateProposal} variant="secondary" icon={ArrowRight}>Regenerate Proposal</Button>
                 )}
               </div>
