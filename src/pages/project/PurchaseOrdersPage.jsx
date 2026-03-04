@@ -25,6 +25,7 @@ function newPoForm() {
     budgetItemId: "",
     description: "",
     amount: "",
+    expectedDeliveryDate: "",
     status: "Draft",
   };
 }
@@ -58,12 +59,58 @@ export default function PurchaseOrdersPage() {
     return out;
   }, [budgetLines]);
 
+  const totalOrderedValue = useMemo(
+    () => purchaseOrders.reduce((sum, po) => sum + (Number(po.amount) || 0), 0),
+    [purchaseOrders],
+  );
+  const outstandingOrders = useMemo(
+    () => purchaseOrders.filter((po) => po.status !== "Billed").length,
+    [purchaseOrders],
+  );
+
+  const applyBilledToBudgetLine = (pr, po) => {
+    if (!po || !po.budgetItemId) return;
+    if (po._actualApplied) return;
+    const lines = pr.workingBudget || pr.budget || [];
+    const line = lines.find((b) => b.id === po.budgetItemId);
+    if (!line) return;
+    const budgetCost = Number(line.budgetCost ?? line.budgetAmount) || 0;
+    const amount = Number(po.amount) || 0;
+    const actualCost = (Number(line.actualCost ?? line.actualAmount) || 0) + amount;
+    line.budgetCost = budgetCost;
+    line.budgetAmount = budgetCost;
+    line.actualCost = actualCost;
+    line.actualAmount = actualCost;
+    line.variance = budgetCost - actualCost;
+    po._actualApplied = true;
+  };
+
   const columns = [
     { key: "number", label: "PO #", width: "120px", render: (r) => r.number || "—" },
     { key: "supplier", label: "Supplier", width: "1fr", render: (r) => r.supplier || "—" },
     { key: "budgetItem", label: "Budget Item", width: "1fr", render: (r) => budgetLabelById[r.budgetItemId] || "—" },
     { key: "amount", label: "Amount", width: "140px", align: "right", render: (r) => fmt(r.amount || 0) },
     { key: "status", label: "Status", width: "120px", render: (r) => <span style={badge(STATUS_COLORS[r.status] || _.muted)}>{r.status || "Draft"}</span> },
+    {
+      key: "actions",
+      label: "Actions",
+      width: "180px",
+      render: (r) => (
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: _.s1 }}>
+          {PO_STATUSES.map((status) => (
+            <Button
+              key={`${r.id}-${status}`}
+              size="sm"
+              variant={r.status === status ? "secondary" : "ghost"}
+              onClick={() => markStatus(r.id, status)}
+              disabled={r.status === status}
+            >
+              {status}
+            </Button>
+          ))}
+        </div>
+      ),
+    },
   ];
 
   const createPo = () => {
@@ -84,7 +131,9 @@ export default function PurchaseOrdersPage() {
         budgetItemId: poForm.budgetItemId,
         description: poForm.description.trim(),
         amount,
+        expectedDeliveryDate: poForm.expectedDeliveryDate || null,
         status: poForm.status || "Draft",
+        _actualApplied: false,
         createdAt: now,
       };
       pr.procurement.purchaseOrders.push(po);
@@ -100,6 +149,9 @@ export default function PurchaseOrdersPage() {
       const po = pr.procurement.purchaseOrders.find((x) => x.id === poId);
       if (!po) return;
       po.status = status;
+      if (status === "Billed") {
+        applyBilledToBudgetLine(pr, po);
+      }
     });
   };
 
@@ -122,17 +174,7 @@ export default function PurchaseOrdersPage() {
         date: billForm.date,
       });
       po.status = "Billed";
-      const lines = pr.workingBudget || pr.budget || [];
-      const line = lines.find((b) => b.id === po.budgetItemId);
-      if (line) {
-        const budgetCost = Number(line.budgetCost ?? line.budgetAmount) || 0;
-        const actualCost = (Number(line.actualCost ?? line.actualAmount) || 0) + amount;
-        line.budgetCost = budgetCost;
-        line.budgetAmount = budgetCost;
-        line.actualCost = actualCost;
-        line.actualAmount = actualCost;
-        line.variance = actualCost - budgetCost;
-      }
+      applyBilledToBudgetLine(pr, { ...po, amount });
     });
     setBillForm(newBillForm());
     setShowBillModal(false);
@@ -152,6 +194,27 @@ export default function PurchaseOrdersPage() {
           <Button icon={Plus} onClick={() => setShowPoModal(true)}>Create Purchase Order</Button>
           <Button variant="secondary" icon={Receipt} onClick={() => setShowBillModal(true)} disabled={purchaseOrders.length === 0}>Record Bill</Button>
         </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "repeat(3, 1fr)", gap: _.s3, marginBottom: _.s5 }}>
+        <Card style={{ padding: _.s4 }}>
+          <div style={{ fontSize: _.fontSize.xs, color: _.muted, fontWeight: _.fontWeight.semi, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>
+            Total POs
+          </div>
+          <div style={{ fontSize: _.fontSize["2xl"], fontWeight: _.fontWeight.bold, color: _.ink }}>{purchaseOrders.length}</div>
+        </Card>
+        <Card style={{ padding: _.s4 }}>
+          <div style={{ fontSize: _.fontSize.xs, color: _.muted, fontWeight: _.fontWeight.semi, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>
+            Outstanding Orders
+          </div>
+          <div style={{ fontSize: _.fontSize["2xl"], fontWeight: _.fontWeight.bold, color: _.amber }}>{outstandingOrders}</div>
+        </Card>
+        <Card style={{ padding: _.s4 }}>
+          <div style={{ fontSize: _.fontSize.xs, color: _.muted, fontWeight: _.fontWeight.semi, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>
+            Total Ordered Value
+          </div>
+          <div style={{ fontSize: _.fontSize["2xl"], fontWeight: _.fontWeight.bold, color: _.ink }}>{fmt(totalOrderedValue)}</div>
+        </Card>
       </div>
 
       {purchaseOrders.length === 0 ? (
@@ -175,6 +238,9 @@ export default function PurchaseOrdersPage() {
                 <div style={{ fontSize: _.fontSize.sm, color: _.body, marginBottom: _.s2 }}>{po.description || "No description"}</div>
                 <div style={{ fontSize: _.fontSize.sm, color: _.muted, marginBottom: _.s2 }}>
                   Linked budget: {budgetLabelById[po.budgetItemId] || "—"}
+                </div>
+                <div style={{ fontSize: _.fontSize.xs, color: _.muted, marginBottom: _.s2 }}>
+                  Expected delivery: {po.expectedDeliveryDate || "—"}
                 </div>
                 <div style={{ display: "flex", gap: _.s2, flexWrap: "wrap" }}>
                   {PO_STATUSES.map((status) => (
@@ -204,6 +270,10 @@ export default function PurchaseOrdersPage() {
           <div>
             <label style={label}>Amount *</label>
             <input type="number" style={input} value={poForm.amount} onChange={(e) => setPoForm((v) => ({ ...v, amount: e.target.value }))} />
+          </div>
+          <div>
+            <label style={label}>Expected Delivery Date</label>
+            <input type="date" style={{ ...input, cursor: "pointer" }} value={poForm.expectedDeliveryDate} onChange={(e) => setPoForm((v) => ({ ...v, expectedDeliveryDate: e.target.value }))} />
           </div>
           <div style={{ gridColumn: "1 / -1" }}>
             <label style={label}>Budget Item *</label>
