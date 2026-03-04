@@ -1,11 +1,11 @@
 import { useMemo } from "react";
-import { useParams, Outlet, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { useParams, Outlet, Navigate, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { useProjectsCtx } from "../../context/AppContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
 import { ProjectProvider } from "../../context/ProjectContext.jsx";
 import { calc } from "../../lib/calc.js";
-import { JOB_TABS, displayStage } from "../../config/workspaceTabs.js";
+import { JOB_TABS, displayStage, getProjectTabUrl } from "../../config/workspaceTabs.js";
 import { applyConvertToJobBaseline, calculateTotals } from "../../lib/costEngine.js";
 import _ from "../../theme/tokens.js";
 import { fmt, pName, stCol, badge as badgeStyle } from "../../theme/styles.js";
@@ -70,6 +70,8 @@ export default function WorkspaceShell({ workspaceType }) {
     return location.pathname === tabBase || location.pathname.startsWith(`${tabBase}/`);
   })?.path || tabs.find((t) => !(t.isLocked?.(project)))?.path || "overview";
   const showConvertPrimary = !isActiveStage;
+  const overviewUrl = isEstimate ? `${projectBase}/overview` : getProjectTabUrl(entityId, "overview");
+  const variationsUrl = isEstimate ? `${projectBase}/variations` : getProjectTabUrl(entityId, "variations");
 
   const convertToJob = () => {
     let converted = false;
@@ -82,7 +84,7 @@ export default function WorkspaceShell({ workspaceType }) {
       return;
     }
     notify("Project converted to job");
-    navigate(`${projectBase}/overview`);
+    navigate(overviewUrl);
   };
 
   return (
@@ -175,7 +177,7 @@ export default function WorkspaceShell({ workspaceType }) {
             </>
           )}
         </div>
-        <Button size="sm" onClick={showConvertPrimary ? convertToJob : () => navigate(`${projectBase}/variations`)}>
+        <Button size="sm" onClick={showConvertPrimary ? convertToJob : () => navigate(variationsUrl)}>
           {showConvertPrimary ? "Convert to Job" : "Add Variation"}
         </Button>
       </div>
@@ -188,11 +190,12 @@ export default function WorkspaceShell({ workspaceType }) {
       }}>
         {tabs.map(t => {
           const active = resolvedActive === t.path;
+          const tabUrl = isEstimate ? `${projectBase}/${t.path}` : getProjectTabUrl(entityId, t.key);
 
           return (
-            <div
+            <NavLink
               key={t.label}
-              onClick={() => navigate(`${projectBase}/${t.path}`)}
+              to={tabUrl}
               style={{
                 padding: "10px 16px",
                 cursor: "pointer",
@@ -203,6 +206,7 @@ export default function WorkspaceShell({ workspaceType }) {
                 marginBottom: -1,
                 whiteSpace: "nowrap",
                 transition: "all 0.1s ease",
+                textDecoration: "none",
               }}
               onMouseEnter={e => {
                 if (!active) e.currentTarget.style.color = _.body;
@@ -212,7 +216,7 @@ export default function WorkspaceShell({ workspaceType }) {
               }}
             >
               {t.label}
-            </div>
+            </NavLink>
           );
         })}
       </div>

@@ -140,20 +140,40 @@ export const ESTIMATE_TABS = [
   },
 ];
 
-/** Job workspace tabs */
-export const JOB_TABS = [
-  { label: "Overview", path: "overview", isLocked: () => false },
-  { label: "Scope", path: "scope", isLocked: () => false },
-  { label: "Quote", path: "quote", isLocked: () => false },
-  { label: "Schedule", path: "schedule", isLocked: (project) => !isActiveStage(project) },
-  { label: "Costs", path: "costs", isLocked: (project) => !isActiveStage(project) },
-  { label: "Variations", path: "variations", isLocked: (project) => !isActiveStage(project) },
-  { label: "Procurement", path: "procurement", isLocked: (project) => !isActiveStage(project) },
-  { label: "Invoices", path: "invoices", isLocked: (project) => !isActiveStage(project) },
-  { label: "Documents", path: "documents", isLocked: () => false },
-  { label: "Diary", path: "site-diary", isLocked: (project) => !isActiveStage(project) },
-  { label: "Defects", path: "defects", isLocked: (project) => !isActiveStage(project) },
+export const PROJECT_TAB_ROUTES = [
+  { key: "overview", path: "overview", label: "Overview" },
+  { key: "scope", path: "scope", label: "Scope" },
+  { key: "quote", path: "quote", label: "Quote" },
+  { key: "schedule", path: "schedule", label: "Schedule" },
+  { key: "costs", path: "costs", label: "Costs" },
+  { key: "variations", path: "variations", label: "Variations" },
+  { key: "procurement", path: "procurement", label: "Procurement" },
+  { key: "invoices", path: "invoices", label: "Invoices" },
+  { key: "documents", path: "documents", label: "Documents" },
+  { key: "diary", path: "site-diary", label: "Diary" },
+  { key: "defects", path: "defects", label: "Defects" },
 ];
+
+const PROJECT_TAB_PATH_BY_KEY = PROJECT_TAB_ROUTES.reduce((acc, tab) => {
+  acc[tab.key] = tab.path;
+  return acc;
+}, {});
+
+export function getProjectTabUrl(projectId, tabKey) {
+  const id = String(projectId || "").trim();
+  const path = PROJECT_TAB_PATH_BY_KEY[tabKey] || PROJECT_TAB_PATH_BY_KEY.overview;
+  return `/projects/${id}/${path}`;
+}
+
+/** Job workspace tabs */
+export const JOB_TABS = PROJECT_TAB_ROUTES.map((tab) => ({
+  key: tab.key,
+  label: tab.label,
+  path: tab.path,
+  isLocked: LOCKED_UNTIL_ACTIVE.has(tab.path)
+    ? (project) => !isActiveStage(project)
+    : () => false,
+}));
 
 export function isLifecycleTabLocked(path, project) {
   if (!LOCKED_UNTIL_ACTIVE.has(path)) return false;

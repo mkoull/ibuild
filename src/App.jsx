@@ -141,6 +141,7 @@ export default function App() {
                 }>
                   <Route index element={<Navigate to="overview" replace />} />
                   <Route path="overview" element={<OverviewPage />} />
+                  <Route path="overview/*" element={<Navigate to="../overview" replace />} />
                   <Route path="scope" element={<ScopePage />} />
                   <Route path="quote" element={<QuotePage />} />
                   <Route path="schedule" element={<LockedTabGate><SchedulePage /></LockedTabGate>} />
