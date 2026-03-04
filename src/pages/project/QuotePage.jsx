@@ -31,6 +31,8 @@ export default function QuotePage() {
 
   const [newCat, setNewCat] = useState("");
   const [selectedCat, setSelectedCat] = useState("");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [editRow, setEditRow] = useState(null);
   const [ratePickerCat, setRatePickerCat] = useState(null);
   const [delCat, setDelCat] = useState(null);
   const [clientOpen, setClientOpen] = useState(false);
@@ -59,7 +61,7 @@ export default function QuotePage() {
   const quoteDoc = p.quoteDocument || null;
   const estimateCategories = normalizeCategories((p?.estimate && p.estimate.categories) || p.costCategories || []);
   const estimateTotals = calculateTotals(estimateCategories);
-  usePageBottomBar(mobile && T.curr > 0 ? 64 : 0);
+  usePageBottomBar(mobile && T.curr > 0 ? (currentStep === "scope" ? 74 : 64) : 0);
 
   // Step completeness
   const stepDone = {
@@ -100,6 +102,13 @@ export default function QuotePage() {
     pr.scope[cat].splice(idx, 1);
     return pr;
   });
+
+  const getRowMargin = (item) => Number(item.marginPct ?? margin) || 0;
+  const getRowSell = (item) => {
+    const qty = Number(item.qty) || 0;
+    const rate = Number(item.rate) || 0;
+    return qty * rate * (1 + (getRowMargin(item) / 100));
+  };
 
   // ─── Client picker ───
   const filteredClients = useMemo(() => {
@@ -461,7 +470,7 @@ export default function QuotePage() {
   };
 
   return (
-    <div style={{ animation: "fadeUp 0.2s ease", maxWidth: 1280, margin: "0 auto" }}>
+    <div style={{ animation: "fadeUp 0.2s ease", width: "100%", maxWidth: "none" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: _.s2 }}>
         <h1 style={{ fontSize: mobile ? _.fontSize["3xl"] : _.fontSize["4xl"], fontWeight: _.fontWeight.bold, letterSpacing: _.letterSpacing.tight }}>Quote</h1>
         {mobile && T.curr > 0 && <span style={{ fontSize: _.fontSize["2xl"], fontWeight: _.fontWeight.bold, color: _.ink, letterSpacing: _.letterSpacing.tight, fontVariantNumeric: "tabular-nums" }}>{fmt(T.curr)}</span>}
@@ -490,7 +499,7 @@ export default function QuotePage() {
       </div>
 
       {/* Two-column: content + sidebar */}
-      <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "1fr 280px", gap: mobile ? 0 : 32, alignItems: "start" }}>
+      <div style={{ display: "grid", gridTemplateColumns: mobile || currentStep === "scope" ? "1fr" : "1fr 280px", gap: mobile ? 0 : 32, alignItems: "start" }}>
         <div>
           {/* ═══════════════ DETAILS STEP ═══════════════ */}
           {currentStep === "details" && (
@@ -654,13 +663,22 @@ export default function QuotePage() {
               </div>
               <div style={{
                 display: "grid",
-                gridTemplateColumns: mobile ? "1fr" : "220px minmax(0,1fr) 280px",
+                gridTemplateColumns: mobile ? "1fr" : `${sidebarCollapsed ? "84px" : "220px"} minmax(0,1fr)`,
                 gap: _.s3,
                 alignItems: "start",
               }}>
                 <Card style={{ padding: 12, maxHeight: mobile ? "none" : "70vh", overflowY: "auto" }}>
-                  <div style={{ fontSize: _.fontSize.caption, color: _.muted, textTransform: "uppercase", letterSpacing: _.letterSpacing.wide, marginBottom: _.s2 }}>
-                    Categories
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: _.s2 }}>
+                    {!sidebarCollapsed && (
+                      <div style={{ fontSize: _.fontSize.caption, color: _.muted, textTransform: "uppercase", letterSpacing: _.letterSpacing.wide }}>
+                        Categories
+                      </div>
+                    )}
+                    {!mobile && (
+                      <button type="button" onClick={() => setSidebarCollapsed((v) => !v)} style={{ ...btnGhost, padding: "4px 8px", marginLeft: "auto" }}>
+                        {sidebarCollapsed ? "Expand" : "Collapse"}
+                      </button>
+                    )}
                   </div>
                   {scopeCategories.length === 0 && (
                     <div style={{ fontSize: _.fontSize.sm, color: _.muted, padding: "10px 0" }}>
@@ -687,53 +705,61 @@ export default function QuotePage() {
                             cursor: "pointer",
                           }}
                         >
-                          <div style={{ fontSize: _.fontSize.base, fontWeight: _.fontWeight.semi, color: _.ink }}>{cat}</div>
-                          <div style={{ fontSize: _.fontSize.caption, color: _.muted }}>{catCount} items · {fmt(catTotal)}</div>
+                          <div style={{ fontSize: _.fontSize.base, fontWeight: _.fontWeight.semi, color: _.ink }}>
+                            {sidebarCollapsed ? (cat.slice(0, 2).toUpperCase() || "C") : cat}
+                          </div>
+                          {!sidebarCollapsed && (
+                            <div style={{ fontSize: _.fontSize.caption, color: _.muted }}>{catCount} items · {fmt(catTotal)}</div>
+                          )}
                         </button>
                       );
                     })}
                   </div>
                   <div style={{ display: "grid", gap: 8, marginTop: _.s3 }}>
-                    <input
-                      style={{ ...input, width: "100%" }}
-                      value={newCat}
-                      onChange={(e) => setNewCat(e.target.value)}
-                      placeholder="Add category"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && newCat.trim()) {
+                    {!sidebarCollapsed && (
+                      <input
+                        style={{ ...input, width: "100%" }}
+                        value={newCat}
+                        onChange={(e) => setNewCat(e.target.value)}
+                        placeholder="Add category"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && newCat.trim()) {
+                            const name = newCat.trim();
+                            up((pr) => {
+                              if (!pr.scope[name]) pr.scope[name] = [];
+                              return pr;
+                            });
+                            setSelectedCat(name);
+                            setNewCat("");
+                          }
+                        }}
+                      />
+                    )}
+                    {!sidebarCollapsed && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => {
                           const name = newCat.trim();
+                          if (!name) {
+                            notify("Enter a category name", "error");
+                            return;
+                          }
+                          if (p.scope[name]) {
+                            notify("Category already exists", "error");
+                            return;
+                          }
                           up((pr) => {
-                            if (!pr.scope[name]) pr.scope[name] = [];
+                            pr.scope[name] = [];
                             return pr;
                           });
                           setSelectedCat(name);
                           setNewCat("");
-                        }
-                      }}
-                    />
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => {
-                        const name = newCat.trim();
-                        if (!name) {
-                          notify("Enter a category name", "error");
-                          return;
-                        }
-                        if (p.scope[name]) {
-                          notify("Category already exists", "error");
-                          return;
-                        }
-                        up((pr) => {
-                          pr.scope[name] = [];
-                          return pr;
-                        });
-                        setSelectedCat(name);
-                        setNewCat("");
-                      }}
-                    >
-                      Add Category
-                    </Button>
+                        }}
+                      >
+                        Add Category
+                      </Button>
+                    )}
                   </div>
                 </Card>
 
@@ -747,7 +773,11 @@ export default function QuotePage() {
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: _.s3, flexWrap: "wrap", gap: _.s2 }}>
                         <div style={{ fontSize: _.fontSize.lg, fontWeight: _.fontWeight.semi, color: _.ink }}>{selectedCat}</div>
                         <div style={{ display: "flex", gap: _.s2 }}>
-                          <Button size="sm" onClick={() => addC(selectedCat)} icon={Plus}>Add Line Item</Button>
+                          <Button size="sm" onClick={() => {
+                            addC(selectedCat);
+                            const nextIdx = (p.scope[selectedCat] || []).length;
+                            setEditRow({ cat: selectedCat, idx: nextIdx });
+                          }} icon={Plus}>Add Line Item</Button>
                           <Button size="sm" variant="secondary" onClick={() => setRatePickerCat(selectedCat)} icon={Library}>From Library</Button>
                         </div>
                       </div>
@@ -755,7 +785,7 @@ export default function QuotePage() {
                         <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 760 }}>
                           <thead>
                             <tr style={{ textAlign: "left", borderBottom: `1px solid ${_.line}` }}>
-                              {["Description", "Type", "Qty", "UOM", "Unit Cost", "Markup %", "Tax", "Total", ""].map((h) => (
+                              {["Description", "Type", "Qty", "Unit Cost", "Sell Price", "Margin %", ""].map((h) => (
                                 <th key={h} style={{ fontSize: _.fontSize.xs, color: _.muted, fontWeight: _.fontWeight.semi, padding: "8px 6px", whiteSpace: "nowrap" }}>{h}</th>
                               ))}
                             </tr>
@@ -764,12 +794,10 @@ export default function QuotePage() {
                             {(p.scope[selectedCat] || []).map((item, idx) => {
                               const qty = Number(item.qty) || 0;
                               const rate = Number(item.rate) || 0;
-                              const mark = Number(item.markupPct) || 0;
-                              const exTotal = qty * rate * (1 + mark / 100);
-                              const taxPct = String(item.tax || "GST") === "GST" ? 10 : 0;
-                              const lineTotal = exTotal * (1 + taxPct / 100);
+                              const lineMargin = getRowMargin(item);
+                              const sell = getRowSell(item);
                               return (
-                                <tr key={item._id} style={{ borderBottom: `1px solid ${_.line}` }}>
+                                <tr key={item._id} style={{ borderBottom: `1px solid ${_.line}`, cursor: "pointer" }} onClick={() => setEditRow({ cat: selectedCat, idx })}>
                                   <td style={{ padding: "8px 6px" }}>
                                     <input style={{ ...input, width: "100%" }} value={item.item || ""} onChange={(e) => uI(selectedCat, idx, "item", e.target.value)} />
                                   </td>
@@ -780,25 +808,31 @@ export default function QuotePage() {
                                     <input type="number" style={{ ...input, width: 72 }} value={item.qty} onChange={(e) => uI(selectedCat, idx, "qty", parseFloat(e.target.value) || 0)} />
                                   </td>
                                   <td style={{ padding: "8px 6px" }}>
-                                    <input style={{ ...input, width: 80 }} value={item.unit || "ea"} onChange={(e) => uI(selectedCat, idx, "unit", e.target.value)} />
-                                  </td>
-                                  <td style={{ padding: "8px 6px" }}>
                                     <input type="number" style={{ ...input, width: 110 }} value={item.rate} onChange={(e) => uI(selectedCat, idx, "rate", parseFloat(e.target.value) || 0)} />
                                   </td>
                                   <td style={{ padding: "8px 6px" }}>
-                                    <input type="number" style={{ ...input, width: 92 }} value={item.markupPct || 0} onChange={(e) => uI(selectedCat, idx, "markupPct", parseFloat(e.target.value) || 0)} />
-                                  </td>
-                                  <td style={{ padding: "8px 6px" }}>
-                                    <select style={{ ...input, width: 86 }} value={item.tax || "GST"} onChange={(e) => uI(selectedCat, idx, "tax", e.target.value)}>
-                                      <option value="GST">GST</option>
-                                      <option value="Exempt">Exempt</option>
-                                    </select>
+                                    <input
+                                      type="number"
+                                      style={{ ...input, width: 120 }}
+                                      value={sell.toFixed(2)}
+                                      onChange={(e) => {
+                                        const sellVal = toPositiveNumber(e.target.value, 0);
+                                        const denom = 1 + (lineMargin / 100);
+                                        const nextRate = qty > 0 ? (sellVal / denom) / qty : 0;
+                                        uI(selectedCat, idx, "rate", nextRate);
+                                      }}
+                                    />
                                   </td>
                                   <td style={{ padding: "8px 6px", fontWeight: _.fontWeight.semi, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
-                                    {fmt(lineTotal)}
+                                    <input
+                                      type="number"
+                                      style={{ ...input, width: 90 }}
+                                      value={lineMargin}
+                                      onChange={(e) => uI(selectedCat, idx, "marginPct", toPositiveNumber(e.target.value, 0))}
+                                    />
                                   </td>
                                   <td style={{ padding: "8px 6px" }}>
-                                    <button type="button" onClick={() => delI(selectedCat, idx)} style={{ ...btnGhost, padding: "4px 8px" }}>
+                                    <button type="button" onClick={(e) => { e.stopPropagation(); delI(selectedCat, idx); }} style={{ ...btnGhost, padding: "4px 8px" }}>
                                       <X size={12} />
                                     </button>
                                   </td>
@@ -819,25 +853,6 @@ export default function QuotePage() {
                     </>
                   )}
                 </Card>
-
-                {!mobile && (
-                  <Card style={{ padding: 16, position: "sticky", top: 0 }}>
-                    <div style={{ fontSize: _.fontSize.caption, color: _.muted, textTransform: "uppercase", letterSpacing: _.letterSpacing.wide, marginBottom: _.s2 }}>Totals</div>
-                    <div style={{ fontSize: _.fontSize["2xl"], fontWeight: _.fontWeight.bold, color: _.ink, fontVariantNumeric: "tabular-nums", marginBottom: _.s2 }}>{fmt(T.curr)}</div>
-                    {[
-                      ["Total cost", fmt(T.sub)],
-                      ["Sell", fmt(T.curr)],
-                      ["Margin %", `${Number(margin || 0).toFixed(2)}%`],
-                      ["GST", fmt(T.gst)],
-                    ].map(([labelText, valueText]) => (
-                      <div key={labelText} style={{ display: "flex", justifyContent: "space-between", fontSize: _.fontSize.base, color: _.body, padding: "4px 0" }}>
-                        <span>{labelText}</span>
-                        <span style={{ fontWeight: _.fontWeight.semi, fontVariantNumeric: "tabular-nums" }}>{valueText}</span>
-                      </div>
-                    ))}
-                    <Button style={{ marginTop: _.s3, width: "100%" }} onClick={() => setStep("review")} icon={ArrowRight}>Review Quote</Button>
-                  </Card>
-                )}
               </div>
 
               {/* Nav */}
@@ -1183,7 +1198,7 @@ export default function QuotePage() {
         </div>
 
         {/* RIGHT: Sticky sidebar (desktop only) */}
-        {!mobile && (
+        {!mobile && currentStep !== "scope" && (
           <div style={{ position: "sticky", top: 0 }}>
             <Card style={{ padding: 20 }}>
               <div style={{ marginBottom: 16 }}>
@@ -1213,20 +1228,128 @@ export default function QuotePage() {
         )}
       </div>
 
-      {/* Mobile: floating summary bar — sits above bottom tabs + safe area */}
-      {mobile && T.curr > 0 && (
+      {/* Scope totals bar */}
+      {currentStep === "scope" && (
         <div style={{
-          position: "fixed", bottom: "var(--mobile-bottom-total)", left: 0, right: 0,
+          position: "fixed",
+          bottom: mobile ? "var(--mobile-bottom-total)" : 0,
+          left: 0,
+          right: 0,
           background: _.surface, borderTop: `1px solid ${_.line}`,
-          padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center",
+          padding: mobile ? "10px 16px" : "10px 24px",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
           boxShadow: "0 -2px 8px rgba(0,0,0,0.06)", zIndex: 45,
         }}>
-          <div>
-            <div style={{ fontSize: _.fontSize.caption, color: _.muted, fontWeight: _.fontWeight.semi }}>{T.items} items</div>
-            <div style={{ fontSize: _.fontSize.lg, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums" }}>{fmt(T.curr)}</div>
+          <div style={{ display: "flex", gap: mobile ? _.s3 : _.s6, alignItems: "center", flexWrap: "wrap" }}>
+            <div>
+              <div style={{ fontSize: _.fontSize.caption, color: _.muted, fontWeight: _.fontWeight.semi }}>Total Sell</div>
+              <div style={{ fontSize: _.fontSize.lg, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums" }}>{fmt(T.curr)}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: _.fontSize.caption, color: _.muted, fontWeight: _.fontWeight.semi }}>Margin %</div>
+              <div style={{ fontSize: _.fontSize.base, fontWeight: _.fontWeight.semi }}>{Number(margin || 0).toFixed(2)}%</div>
+            </div>
+            <div>
+              <div style={{ fontSize: _.fontSize.caption, color: _.muted, fontWeight: _.fontWeight.semi }}>GST</div>
+              <div style={{ fontSize: _.fontSize.base, fontWeight: _.fontWeight.semi, fontVariantNumeric: "tabular-nums" }}>{fmt(T.gst)}</div>
+            </div>
           </div>
-          {currentStep !== "review" && <Button size="sm" onClick={() => setStep("review")} icon={ArrowRight}>Review</Button>}
+          <Button size="sm" onClick={() => setStep("review")} icon={ArrowRight}>Review Quote</Button>
         </div>
+      )}
+
+      {/* Line item side drawer */}
+      {currentStep === "scope" && !!editRow && (
+        <>
+          <div
+            onClick={() => setEditRow(null)}
+            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.2)", zIndex: 70 }}
+          />
+          <div style={{
+            position: "fixed",
+            top: 0,
+            right: 0,
+            bottom: mobile ? "var(--mobile-bottom-total)" : 0,
+            width: mobile ? "100%" : 420,
+            background: _.surface,
+            borderLeft: `1px solid ${_.line}`,
+            boxShadow: "-6px 0 20px rgba(0,0,0,0.08)",
+            zIndex: 71,
+            display: "grid",
+            gridTemplateRows: "auto 1fr auto",
+          }}>
+            <div style={{ padding: "12px 14px", borderBottom: `1px solid ${_.line}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.semi, color: _.ink }}>Line Item</div>
+              <button type="button" onClick={() => setEditRow(null)} style={{ ...btnGhost, padding: "4px 8px" }}><X size={14} /></button>
+            </div>
+            <div style={{ padding: 14, overflowY: "auto" }}>
+              {(() => {
+                const cat = editRow.cat;
+                const idx = editRow.idx;
+                const item = p.scope?.[cat]?.[idx];
+                if (!item) return <div style={{ fontSize: _.fontSize.sm, color: _.muted }}>Line item not found.</div>;
+                const rowMargin = getRowMargin(item);
+                const rowSell = getRowSell(item);
+                return (
+                  <div style={{ display: "grid", gap: _.s3 }}>
+                    <div>
+                      <label style={label}>Description</label>
+                      <input style={input} value={item.item || ""} onChange={(e) => uI(cat, idx, "item", e.target.value)} />
+                    </div>
+                    <div>
+                      <label style={label}>Type</label>
+                      <input style={input} value={item.type || ""} onChange={(e) => uI(cat, idx, "type", e.target.value)} />
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: _.s2 }}>
+                      <div>
+                        <label style={label}>Qty</label>
+                        <input type="number" style={input} value={item.qty} onChange={(e) => uI(cat, idx, "qty", toPositiveNumber(e.target.value, 0))} />
+                      </div>
+                      <div>
+                        <label style={label}>Unit Cost</label>
+                        <input type="number" style={input} value={item.rate} onChange={(e) => uI(cat, idx, "rate", toPositiveNumber(e.target.value, 0))} />
+                      </div>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: _.s2 }}>
+                      <div>
+                        <label style={label}>Sell Price</label>
+                        <input
+                          type="number"
+                          style={input}
+                          value={rowSell.toFixed(2)}
+                          onChange={(e) => {
+                            const sellVal = toPositiveNumber(e.target.value, 0);
+                            const qty = Number(item.qty) || 0;
+                            const denom = 1 + (rowMargin / 100);
+                            const nextRate = qty > 0 ? (sellVal / denom) / qty : 0;
+                            uI(cat, idx, "rate", nextRate);
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label style={label}>Margin %</label>
+                        <input type="number" style={input} value={rowMargin} onChange={(e) => uI(cat, idx, "marginPct", toPositiveNumber(e.target.value, 0))} />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+            <div style={{ padding: "10px 14px", borderTop: `1px solid ${_.line}`, display: "flex", justifyContent: "space-between" }}>
+              <Button variant="danger" onClick={() => {
+                const cat = editRow.cat;
+                const idx = editRow.idx;
+                delI(cat, idx);
+                setEditRow(null);
+              }}>
+                Delete
+              </Button>
+              <Button variant="secondary" onClick={() => setEditRow(null)}>Done</Button>
+            </div>
+          </div>
+        </>
       )}
 
       {/* ─── New Client Modal ─── */}
