@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { Plus, Trash2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useProject } from "../../context/ProjectContext.jsx";
 import { uid } from "../../theme/styles.js";
 import _ from "../../theme/tokens.js";
@@ -11,6 +12,15 @@ const BOX = {
   border: `1px solid ${_.line}`,
   borderRadius: _.r,
 };
+
+const RESIDENTIAL_TEMPLATE = [
+  "Site Works",
+  "Framing",
+  "Electrical",
+  "Plumbing",
+  "Roofing",
+  "Internal Finishes",
+];
 
 function money(n) {
   const safe = Number.isFinite(Number(n)) ? Number(n) : 0;
@@ -24,6 +34,7 @@ function money(n) {
 
 export default function ScopePage() {
   const { project, update } = useProject();
+  const navigate = useNavigate();
   const isActive = String(project.stage || project.status || "").toLowerCase() === "active";
   const estimateCategories = normalizeCategories(project?.estimate?.categories || project.costCategories || []);
   const budgetCategories = normalizeCategories(project?.job?.budget?.categories || []);
@@ -34,12 +45,37 @@ export default function ScopePage() {
   const contractValue = Number(project?.job?.contract?.currentContractValue) || totals.totalSell;
   const baselineDate = project?.job?.baseline?.createdAt || project?.convertedAt || null;
   const noCategories = categories.length === 0;
+  const itemCount = categories.reduce((sum, cat) => sum + ((cat.items || []).length), 0);
+  const hasItems = itemCount > 0;
+  const workflowSteps = [
+    { key: "categories", label: "Step 1 — Add Categories", complete: categories.length > 0 },
+    { key: "items", label: "Step 2 — Add Cost Items", complete: hasItems },
+    { key: "margin", label: "Step 3 — Review Margin", complete: hasItems && totals.totalSell > 0 },
+    { key: "quote", label: "Step 4 — Generate Quote", complete: false },
+  ];
 
   const addCategory = () => {
     if (isActive) return;
     update((pr) => {
       if (!Array.isArray(pr.costCategories)) pr.costCategories = [];
       pr.costCategories.push({ id: uid(), name: `Category ${pr.costCategories.length + 1}`, items: [] });
+      pr.estimate = {
+        categories: normalizeCategories(pr.costCategories),
+        totals: calculateTotals(pr.costCategories),
+      };
+      return pr;
+    });
+  };
+
+  const applyResidentialTemplate = () => {
+    if (isActive) return;
+    update((pr) => {
+      if (!Array.isArray(pr.costCategories)) pr.costCategories = [];
+      const existing = new Set((pr.costCategories || []).map((c) => String(c.name || "").trim().toLowerCase()));
+      RESIDENTIAL_TEMPLATE.forEach((name) => {
+        if (existing.has(name.toLowerCase())) return;
+        pr.costCategories.push({ id: uid(), name, items: [] });
+      });
       pr.estimate = {
         categories: normalizeCategories(pr.costCategories),
         totals: calculateTotals(pr.costCategories),
@@ -124,15 +160,43 @@ export default function ScopePage() {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr minmax(260px, 320px)", gap: 16, alignItems: "start" }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        {!isActive && (
+          <div style={{ ...BOX, padding: 12 }}>
+            <div style={{ fontSize: 12, color: _.muted, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 8 }}>
+              Estimate Workflow
+            </div>
+            <div style={{ display: "grid", gap: 6 }}>
+              {workflowSteps.map((step) => (
+                <div key={step.key} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+                  <span style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    background: step.complete ? _.green : _.line2,
+                    boxShadow: step.complete ? `0 0 0 2px ${_.green}22` : "none",
+                  }} />
+                  <span style={{ color: step.complete ? _.ink : _.muted, fontWeight: step.complete ? 600 : 500 }}>{step.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <h2 style={{ fontSize: 18, margin: 0, color: _.ink }}>
             {isActive ? "Job Budget (from baseline)" : "Estimate Cost Engine"}
           </h2>
-          {!isActive && (
-            <Button size="sm" icon={Plus} onClick={addCategory}>
-              {noCategories ? "Add First Category" : "Add Category"}
-            </Button>
-          )}
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            {!isActive && hasItems && (
+              <Button size="sm" variant="secondary" onClick={() => navigate("../quote")}>
+                Generate Quote
+              </Button>
+            )}
+            {!isActive && (
+              <Button size="sm" icon={Plus} onClick={addCategory}>
+                {noCategories ? "Add First Category" : "Add Category"}
+              </Button>
+            )}
+          </div>
         </div>
         {isActive && (
           <div style={{ ...BOX, padding: 12, fontSize: 13, color: _.muted }}>
@@ -143,16 +207,24 @@ export default function ScopePage() {
         {noCategories && (
           <div style={{ ...BOX, padding: 20 }}>
             <div style={{ fontSize: 14, fontWeight: 600, color: _.ink, marginBottom: 8 }}>
-              No estimate categories yet.
+              Start building your estimate.
             </div>
             <div style={{ fontSize: 13, color: _.muted, display: "grid", gap: 4 }}>
-              <span>Step 1: Add a category</span>
-              <span>Step 2: Add cost items</span>
+              <span>Step 1: Add your first category.</span>
+              <span>Example categories:</span>
+              <span>Site Works</span>
+              <span>Framing</span>
+              <span>Electrical</span>
+              <span>Plumbing</span>
+              <span style={{ marginTop: 4 }}>Step 2: Add cost items</span>
               <span>Step 3: Generate quote</span>
             </div>
             {!isActive && (
-              <div style={{ marginTop: 12 }}>
+              <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
                 <Button size="sm" icon={Plus} onClick={addCategory}>Add First Category</Button>
+                <Button size="sm" variant="secondary" onClick={applyResidentialTemplate}>
+                  Residential Build Template
+                </Button>
               </div>
             )}
           </div>
