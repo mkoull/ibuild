@@ -5,7 +5,7 @@ const TAB_ASSERTIONS = [
   { key: "scope", label: "Scope", path: "scope" },
   { key: "quote", label: "Quote", path: "quote" },
   { key: "schedule", label: "Schedule", path: "schedule" },
-  { key: "costs", label: "Costs", path: "costs" },
+  { key: "costs", label: "Budget", path: "costs" },
   { key: "variations", label: "Variations", path: "variations" },
   { key: "procurement", label: "Procurement", path: "procurement" },
   { key: "invoices", label: "Invoices", path: "invoices" },

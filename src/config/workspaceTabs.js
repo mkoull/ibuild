@@ -145,13 +145,22 @@ export const PROJECT_TAB_ROUTES = [
   { key: "scope", path: "scope", label: "Scope" },
   { key: "quote", path: "quote", label: "Quote" },
   { key: "schedule", path: "schedule", label: "Schedule" },
-  { key: "costs", path: "costs", label: "Costs" },
+  { key: "costs", path: "costs", label: "Budget" },
   { key: "variations", path: "variations", label: "Variations" },
   { key: "procurement", path: "procurement", label: "Procurement" },
   { key: "invoices", path: "invoices", label: "Invoices" },
   { key: "documents", path: "documents", label: "Documents" },
   { key: "diary", path: "site-diary", label: "Diary" },
   { key: "defects", path: "defects", label: "Defects" },
+];
+
+export const PROJECT_WORKFLOW_SECTIONS = [
+  { key: "overview", label: "Overview", tabs: ["overview"] },
+  { key: "preconstruction", label: "Pre-Construction", tabs: ["scope", "quote"] },
+  { key: "jobsetup", label: "Job Setup", tabs: ["schedule", "costs"] },
+  { key: "construction", label: "Construction", tabs: ["procurement", "variations", "diary"] },
+  { key: "financial", label: "Financial", tabs: ["invoices"] },
+  { key: "closeout", label: "Close Out", tabs: ["defects", "documents"] },
 ];
 
 const PROJECT_TAB_PATH_BY_KEY = PROJECT_TAB_ROUTES.reduce((acc, tab) => {

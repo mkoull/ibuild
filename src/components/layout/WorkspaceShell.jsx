@@ -5,7 +5,7 @@ import { useProjectsCtx } from "../../context/AppContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
 import { ProjectProvider } from "../../context/ProjectContext.jsx";
 import { calc } from "../../lib/calc.js";
-import { JOB_TABS, displayStage, getProjectTabUrl } from "../../config/workspaceTabs.js";
+import { JOB_TABS, PROJECT_WORKFLOW_SECTIONS, displayStage, getProjectTabUrl } from "../../config/workspaceTabs.js";
 import { applyConvertToJobBaseline, calculateTotals } from "../../lib/costEngine.js";
 import _ from "../../theme/tokens.js";
 import { fmt, pName, stCol, badge as badgeStyle } from "../../theme/styles.js";
@@ -69,6 +69,10 @@ export default function WorkspaceShell({ workspaceType }) {
     const tabBase = `${projectBase}/${t.path}`;
     return location.pathname === tabBase || location.pathname.startsWith(`${tabBase}/`);
   })?.path || tabs.find((t) => !(t.isLocked?.(project)))?.path || "overview";
+  const activeTab = tabs.find((t) => t.path === resolvedActive) || tabs[0];
+  const activeSectionKey = PROJECT_WORKFLOW_SECTIONS.find((section) => (
+    section.tabs.includes(activeTab?.key)
+  ))?.key;
   const showConvertPrimary = !isActiveStage;
   const overviewUrl = isEstimate ? `${projectBase}/overview` : getProjectTabUrl(entityId, "overview");
   const variationsUrl = isEstimate ? `${projectBase}/variations` : getProjectTabUrl(entityId, "variations");
@@ -182,41 +186,71 @@ export default function WorkspaceShell({ workspaceType }) {
         </Button>
       </div>
 
-      {/* ─── Tab bar ─── */}
+      {/* ─── Workflow navigation ─── */}
       <div style={{
-        display: "flex", gap: 0,
+        display: "flex",
+        gap: 8,
+        alignItems: "stretch",
         borderBottom: "1px solid rgba(0,0,0,0.06)",
-        overflowX: "auto", marginBottom: 24,
+        overflowX: "auto",
+        marginBottom: 24,
+        paddingBottom: 10,
       }}>
-        {tabs.map(t => {
-          const active = resolvedActive === t.path;
-          const tabUrl = isEstimate ? `${projectBase}/${t.path}` : getProjectTabUrl(entityId, t.key);
-
+        {PROJECT_WORKFLOW_SECTIONS.map((section) => {
+          const sectionActive = section.key === activeSectionKey;
           return (
-            <NavLink
-              key={t.label}
-              to={tabUrl}
+            <div
+              key={section.key}
               style={{
-                padding: "10px 16px",
-                cursor: "pointer",
-                fontSize: 13,
-                fontWeight: active ? 600 : 400,
-                color: active ? _.ink : _.muted,
-                borderBottom: active ? `2px solid ${_.ac}` : "2px solid transparent",
-                marginBottom: -1,
-                whiteSpace: "nowrap",
-                transition: "all 0.1s ease",
-                textDecoration: "none",
-              }}
-              onMouseEnter={e => {
-                if (!active) e.currentTarget.style.color = _.body;
-              }}
-              onMouseLeave={e => {
-                if (!active) e.currentTarget.style.color = _.muted;
+                minWidth: 160,
+                border: `1px solid ${sectionActive ? `${_.ac}55` : _.line}`,
+                borderRadius: _.rSm,
+                background: sectionActive ? `${_.ac}08` : _.surface,
+                padding: "8px 10px",
+                boxShadow: sectionActive ? `inset 0 0 0 1px ${_.ac}22` : "none",
+                flexShrink: 0,
               }}
             >
-              {t.label}
-            </NavLink>
+              <div style={{
+                fontSize: 10,
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
+                color: sectionActive ? _.ac : _.muted,
+                fontWeight: 700,
+                marginBottom: 6,
+              }}>
+                {section.label}
+              </div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {section.tabs.map((tabKey) => {
+                  const tab = tabs.find((x) => x.key === tabKey);
+                  if (!tab) return null;
+                  const active = resolvedActive === tab.path;
+                  const tabUrl = isEstimate ? `${projectBase}/${tab.path}` : getProjectTabUrl(entityId, tab.key);
+                  return (
+                    <NavLink
+                      key={tab.key}
+                      to={tabUrl}
+                      style={{
+                        padding: "6px 10px",
+                        borderRadius: 6,
+                        cursor: "pointer",
+                        fontSize: 12,
+                        fontWeight: active ? 700 : 500,
+                        color: active ? _.ink : _.muted,
+                        background: active ? `${_.ac}18` : "transparent",
+                        border: `1px solid ${active ? `${_.ac}55` : "transparent"}`,
+                        whiteSpace: "nowrap",
+                        transition: "all 0.1s ease",
+                        textDecoration: "none",
+                      }}
+                    >
+                      {tab.label}
+                    </NavLink>
+                  );
+                })}
+              </div>
+            </div>
           );
         })}
       </div>

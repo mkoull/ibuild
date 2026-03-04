@@ -33,6 +33,7 @@ export default function ScopePage() {
   const baselineSell = Number(project?.job?.baseline?.totals?.totalSell) || 0;
   const contractValue = Number(project?.job?.contract?.currentContractValue) || totals.totalSell;
   const baselineDate = project?.job?.baseline?.createdAt || project?.convertedAt || null;
+  const noCategories = categories.length === 0;
 
   const addCategory = () => {
     if (isActive) return;
@@ -127,7 +128,11 @@ export default function ScopePage() {
           <h2 style={{ fontSize: 18, margin: 0, color: _.ink }}>
             {isActive ? "Job Budget (from baseline)" : "Estimate Cost Engine"}
           </h2>
-          {!isActive && <Button size="sm" icon={Plus} onClick={addCategory}>Add Category</Button>}
+          {!isActive && (
+            <Button size="sm" icon={Plus} onClick={addCategory}>
+              {noCategories ? "Add First Category" : "Add Category"}
+            </Button>
+          )}
         </div>
         {isActive && (
           <div style={{ ...BOX, padding: 12, fontSize: 13, color: _.muted }}>
@@ -135,9 +140,21 @@ export default function ScopePage() {
           </div>
         )}
 
-        {categories.length === 0 && (
-          <div style={{ ...BOX, padding: 20, color: _.muted }}>
-            No categories yet. Add a category to start building your estimate.
+        {noCategories && (
+          <div style={{ ...BOX, padding: 20 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: _.ink, marginBottom: 8 }}>
+              No estimate categories yet.
+            </div>
+            <div style={{ fontSize: 13, color: _.muted, display: "grid", gap: 4 }}>
+              <span>Step 1: Add a category</span>
+              <span>Step 2: Add cost items</span>
+              <span>Step 3: Generate quote</span>
+            </div>
+            {!isActive && (
+              <div style={{ marginTop: 12 }}>
+                <Button size="sm" icon={Plus} onClick={addCategory}>Add First Category</Button>
+              </div>
+            )}
           </div>
         )}
 
