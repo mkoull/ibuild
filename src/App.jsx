@@ -6,6 +6,8 @@ import LoadingSpinner from "./components/ui/LoadingSpinner.jsx";
 import GlobalShell from "./components/layout/GlobalShell.jsx";
 import WorkspaceShell from "./components/layout/WorkspaceShell.jsx";
 import LegacyJobRedirect from "./components/routing/LegacyJobRedirect.jsx";
+import AuthGate from "./components/guards/AuthGate.jsx";
+import SubcontractorRestricted from "./components/guards/SubcontractorRestricted.jsx";
 
 // Lazy-loaded global pages
 const DashboardPage = lazy(() => import("./pages/global/DashboardPage.jsx"));
@@ -28,6 +30,8 @@ const DefectsListPage = lazy(() => import("./pages/global/DefectsListPage.jsx"))
 const PipelineShell = lazy(() => import("./pages/sections/PipelineShell.jsx"));
 const FinanceShell = lazy(() => import("./pages/sections/FinanceShell.jsx"));
 const SiteShell = lazy(() => import("./pages/sections/SiteShell.jsx"));
+const LoginPage = lazy(() => import("./pages/auth/LoginPage.jsx"));
+const SubcontractorPortalPage = lazy(() => import("./pages/portal/SubcontractorPortalPage.jsx"));
 
 // Lazy-loaded project pages
 const OverviewPage = lazy(() => import("./pages/project/OverviewPage.jsx"));
@@ -64,10 +68,12 @@ export default function App() {
         <ErrorBoundary level="app">
           <Suspense fallback={<LoadingSpinner />}>
             <Routes>
-              <Route element={<GlobalShell />}>
+              <Route path="login" element={<LoginPage />} />
+              <Route element={<AuthGate><GlobalShell /></AuthGate>}>
                 {/* Redirect root to dashboard */}
                 <Route index element={<Navigate to="/dashboard" replace />} />
                 <Route path="dashboard" element={<DashboardPage />} />
+                <Route path="portal" element={<SubcontractorPortalPage />} />
                 <Route path="projects" element={<ProjectsListPage />} />
                 <Route path="estimates" element={<QuotesListPage />} />
                 <Route path="jobs" element={<JobsListPage />} />
@@ -77,9 +83,9 @@ export default function App() {
                   <Route path="leads" element={<QuotesListPage />} />
                   <Route path="quotes" element={<QuotesListPage />} />
                 </Route>
-                <Route path="finance" element={<FinanceShell />}>
+                <Route path="finance" element={<SubcontractorRestricted message="Finance is not available in the subcontractor portal."><FinanceShell /></SubcontractorRestricted>}>
                   <Route index element={<Navigate to="invoices" replace />} />
-                  <Route path="invoices" element={<InvoicesListPage />} />
+                  <Route path="invoices" element={<SubcontractorRestricted message="Invoices are hidden for subcontractor users."><InvoicesListPage /></SubcontractorRestricted>} />
                   <Route path="bills" element={<BillsListPage />} />
                   <Route path="payments" element={<PaymentsListPage />} />
                 </Route>
@@ -113,18 +119,18 @@ export default function App() {
                   </ErrorBoundary>
                 }>
                   <Route index element={<Navigate to="overview" replace />} />
-                  <Route path="overview" element={<EstimateDetailsTab />} />
-                  <Route path="estimate" element={<Navigate to="../scope" replace />} />
-                  <Route path="scope" element={<ScopePage />} />
-                  <Route path="quote" element={<QuotePage />} />
+                  <Route path="overview" element={<SubcontractorRestricted message="Estimate details are restricted for subcontractor users."><EstimateDetailsTab /></SubcontractorRestricted>} />
+                  <Route path="estimate" element={<SubcontractorRestricted message="Estimate data is restricted for subcontractor users."><Navigate to="../scope" replace /></SubcontractorRestricted>} />
+                  <Route path="scope" element={<SubcontractorRestricted message="Costing data is restricted for subcontractor users."><ScopePage /></SubcontractorRestricted>} />
+                  <Route path="quote" element={<SubcontractorRestricted message="Quote and pricing data is restricted for subcontractor users."><QuotePage /></SubcontractorRestricted>} />
                   <Route path="build" element={<BuildSectionPage />} />
-                  <Route path="financial" element={<FinancialSectionPage />} />
+                  <Route path="financial" element={<SubcontractorRestricted message="Financial data is restricted for subcontractor users."><FinancialSectionPage /></SubcontractorRestricted>} />
                   <Route path="closeout" element={<CloseoutSectionPage />} />
                   <Route path="schedule" element={<LockedTabGate><SchedulePage /></LockedTabGate>} />
-                  <Route path="costs" element={<LockedTabGate><CostsPage /></LockedTabGate>} />
+                  <Route path="costs" element={<SubcontractorRestricted message="Cost data is restricted for subcontractor users."><LockedTabGate><CostsPage /></LockedTabGate></SubcontractorRestricted>} />
                   <Route path="variations" element={<LockedTabGate><VariationsPage /></LockedTabGate>} />
                   <Route path="procurement" element={<LockedTabGate><PurchaseOrdersPage /></LockedTabGate>} />
-                  <Route path="invoices" element={<LockedTabGate><InvoicesPage /></LockedTabGate>} />
+                  <Route path="invoices" element={<SubcontractorRestricted message="Invoices are restricted for subcontractor users."><LockedTabGate><InvoicesPage /></LockedTabGate></SubcontractorRestricted>} />
                   <Route path="documents" element={<DocumentsPage />} />
                   <Route path="site-diary" element={<LockedTabGate><SiteDiaryPage /></LockedTabGate>} />
                   <Route path="defects" element={<LockedTabGate><DefectsPage /></LockedTabGate>} />
@@ -147,19 +153,19 @@ export default function App() {
                   </ErrorBoundary>
                 }>
                   <Route index element={<Navigate to="overview" replace />} />
-                  <Route path="overview" element={<OverviewPage />} />
+                  <Route path="overview" element={<SubcontractorRestricted message="Project financial overview is restricted for subcontractor users."><OverviewPage /></SubcontractorRestricted>} />
                   <Route path="overview/*" element={<Navigate to="../overview" replace />} />
-                  <Route path="estimate" element={<Navigate to="../scope" replace />} />
-                  <Route path="scope" element={<ScopePage />} />
-                  <Route path="quote" element={<QuotePage />} />
+                  <Route path="estimate" element={<SubcontractorRestricted message="Estimate data is restricted for subcontractor users."><Navigate to="../scope" replace /></SubcontractorRestricted>} />
+                  <Route path="scope" element={<SubcontractorRestricted message="Costing data is restricted for subcontractor users."><ScopePage /></SubcontractorRestricted>} />
+                  <Route path="quote" element={<SubcontractorRestricted message="Quote and pricing data is restricted for subcontractor users."><QuotePage /></SubcontractorRestricted>} />
                   <Route path="build" element={<BuildSectionPage />} />
-                  <Route path="financial" element={<FinancialSectionPage />} />
+                  <Route path="financial" element={<SubcontractorRestricted message="Financial data is restricted for subcontractor users."><FinancialSectionPage /></SubcontractorRestricted>} />
                   <Route path="closeout" element={<CloseoutSectionPage />} />
                   <Route path="schedule" element={<LockedTabGate><SchedulePage /></LockedTabGate>} />
-                  <Route path="costs" element={<LockedTabGate><CostsPage /></LockedTabGate>} />
+                  <Route path="costs" element={<SubcontractorRestricted message="Cost data is restricted for subcontractor users."><LockedTabGate><CostsPage /></LockedTabGate></SubcontractorRestricted>} />
                   <Route path="variations" element={<LockedTabGate><VariationsPage /></LockedTabGate>} />
                   <Route path="procurement" element={<LockedTabGate><PurchaseOrdersPage /></LockedTabGate>} />
-                  <Route path="invoices" element={<LockedTabGate><InvoicesPage /></LockedTabGate>} />
+                  <Route path="invoices" element={<SubcontractorRestricted message="Invoices are restricted for subcontractor users."><LockedTabGate><InvoicesPage /></LockedTabGate></SubcontractorRestricted>} />
                   <Route path="documents" element={<DocumentsPage />} />
                   <Route path="site-diary" element={<LockedTabGate><SiteDiaryPage /></LockedTabGate>} />
                   <Route path="defects" element={<LockedTabGate><DefectsPage /></LockedTabGate>} />

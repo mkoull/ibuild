@@ -25,6 +25,8 @@ export function normalizeScheduleTask(task, index = 0) {
     dependencyTaskId: task?.dependencyTaskId
       || (Array.isArray(task?.dependsOn) ? task.dependsOn[0] || null : null),
     order: Number.isFinite(Number(task?.order)) ? Number(task.order) : index,
+    status: task?.status || "Not started",
+    photos: Array.isArray(task?.photos) ? task.photos : [],
   };
 }
 
@@ -81,6 +83,8 @@ export function getDemoScheduleTasks() {
       startDate: today,
       durationDays: 3,
       dependencyTaskId: null,
+      status: "Not started",
+      photos: [],
     },
     {
       id: uid(),
@@ -89,6 +93,8 @@ export function getDemoScheduleTasks() {
       startDate: today,
       durationDays: 6,
       dependencyTaskId: null,
+      status: "Not started",
+      photos: [],
     },
     {
       id: uid(),
@@ -97,6 +103,8 @@ export function getDemoScheduleTasks() {
       startDate: today,
       durationDays: 4,
       dependencyTaskId: null,
+      status: "Not started",
+      photos: [],
     },
   ]);
 }

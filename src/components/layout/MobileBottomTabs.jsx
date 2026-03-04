@@ -8,8 +8,9 @@ import {
   LayoutDashboard, FolderOpen, MoreHorizontal, BarChart3, PenLine,
   DollarSign, Calendar, Plus, X, Building2, ClipboardList,
   Wrench, Settings, ReceiptText, NotebookText, Bug, ShoppingCart,
-  FileQuestion, TrendingUp, Landmark, HardHat, Library, FileText, HandCoins,
+  FileQuestion, TrendingUp, Landmark, HardHat, Library, FileText, HandCoins, Users,
 } from "lucide-react";
+import { isSubcontractor } from "../../lib/permissions.js";
 
 const GLOBAL_TABS = [
   { path: "/dashboard", label: "Home", Ic: LayoutDashboard },
@@ -70,7 +71,7 @@ export default function MobileBottomTabs() {
   const location = useLocation();
   const navigate = useNavigate();
   const params = useParams();
-  const { projects, create, update, notify, settings } = useApp();
+  const { projects, create, update, notify, settings, currentUser } = useApp();
   const [showCreate, setShowCreate] = useState(false);
   const [showMore, setShowMore] = useState(false);
 
@@ -78,8 +79,33 @@ export default function MobileBottomTabs() {
   const isProject = !!projectId;
   const project = isProject ? projects.find((p) => p.id === projectId) : null;
   const projectIsJob = project && isJob(project.stage || project.status);
-  const tabs = isProject ? PROJECT_TABS : GLOBAL_TABS;
-  const moreItems = isProject ? PROJECT_MORE : GLOBAL_MORE;
+  const subcontractor = isSubcontractor(currentUser);
+  const tabs = isProject
+    ? PROJECT_TABS
+    : (
+      subcontractor
+        ? [
+          { path: "/portal", label: "Portal", Ic: TrendingUp },
+          { path: "/projects", label: "Projects", Ic: FolderOpen },
+          null,
+          { path: "/site", label: "Site", Ic: HardHat },
+          { id: "more", label: "More", Ic: MoreHorizontal },
+        ]
+        : GLOBAL_TABS
+    );
+  const moreItems = isProject
+    ? PROJECT_MORE
+    : (
+      subcontractor
+        ? [
+          { type: "header", label: "Portal" },
+          { path: "/portal", label: "My Jobs", Ic: HardHat },
+          { path: "/projects", label: "All Projects", Ic: FolderOpen },
+          { path: "/site/defects", label: "Defects", Ic: Bug },
+          { path: "/site/diary", label: "Site Diary", Ic: NotebookText },
+        ]
+        : GLOBAL_MORE
+    );
 
   const isActive = (path) => {
     if (!path) return false;
@@ -194,7 +220,7 @@ export default function MobileBottomTabs() {
         }} />
       )}
 
-      {showCreate && (
+      {!subcontractor && showCreate && (
         <div style={{
           position: "fixed", bottom: "calc(var(--mobile-bottom-total) + 16px)", left: 16, right: 16, zIndex: 52,
           background: _.surface, borderRadius: 10, boxShadow: _.sh3,
@@ -275,7 +301,15 @@ export default function MobileBottomTabs() {
           if (item === null) {
             return (
               <div key="fab" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", minWidth: 56, position: "relative" }}>
-                <div onClick={() => { setShowCreate(v => !v); setShowMore(false); }} style={{
+                <div onClick={() => {
+                  if (subcontractor) {
+                    setShowMore(v => !v);
+                    setShowCreate(false);
+                    return;
+                  }
+                  setShowCreate(v => !v);
+                  setShowMore(false);
+                }} style={{
                   width: FAB_SIZE, height: FAB_SIZE, borderRadius: "50%",
                   background: showCreate ? _.ink : _.ac,
                   display: "flex", alignItems: "center", justifyContent: "center",
@@ -285,9 +319,9 @@ export default function MobileBottomTabs() {
                   transition: "background 0.15s, transform 0.15s",
                   transform: showCreate ? "rotate(45deg)" : "none",
                 }}>
-                  {showCreate
-                    ? <X size={24} color="#fff" strokeWidth={2.5} />
-                    : <Plus size={24} color="#fff" strokeWidth={2.5} />
+                  {subcontractor
+                    ? <MoreHorizontal size={22} color="#fff" strokeWidth={2.5} />
+                    : (showCreate ? <X size={24} color="#fff" strokeWidth={2.5} /> : <Plus size={24} color="#fff" strokeWidth={2.5} />)
                   }
                 </div>
               </div>

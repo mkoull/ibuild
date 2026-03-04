@@ -7,6 +7,7 @@ import { ProjectProvider } from "../../context/ProjectContext.jsx";
 import { calc } from "../../lib/calc.js";
 import { displayStage } from "../../config/workspaceTabs.js";
 import { applyConvertToJobBaseline, calculateTotals } from "../../lib/costEngine.js";
+import { isSubcontractor } from "../../lib/permissions.js";
 import _ from "../../theme/tokens.js";
 import { fmt, pName, stCol, badge as badgeStyle } from "../../theme/styles.js";
 import Button from "../ui/Button.jsx";
@@ -33,7 +34,7 @@ export default function WorkspaceShell({ workspaceType }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { find, clients, update } = useProjectsCtx();
-  const { notify } = useApp();
+  const { notify, currentUser } = useApp();
   const entityId = estimateId || jobId || id;
   const isEstimate = workspaceType === "estimate";
 
@@ -76,6 +77,9 @@ export default function WorkspaceShell({ workspaceType }) {
   const projectBase = isEstimate ? `/estimates/${entityId}` : `/projects/${entityId}`;
   const activeLeaf = location.pathname.replace(`${projectBase}/`, "").split("/")[0] || "overview";
   const activeSectionKey = WORKSPACE_SECTIONS.find((section) => section.matches.includes(activeLeaf))?.key || "overview";
+  const visibleSections = isSubcontractor(currentUser)
+    ? WORKSPACE_SECTIONS.filter((s) => ["build", "closeout"].includes(s.key))
+    : WORKSPACE_SECTIONS;
   const showConvertPrimary = !isActiveStage;
   const overviewUrl = `${projectBase}/overview`;
   const variationsUrl = `${projectBase}/variations`;
@@ -199,7 +203,7 @@ export default function WorkspaceShell({ workspaceType }) {
         marginBottom: 24,
         paddingBottom: 10,
       }}>
-        {WORKSPACE_SECTIONS.map((section) => {
+        {visibleSections.map((section) => {
           const sectionActive = section.key === activeSectionKey;
           const sectionUrl = `${projectBase}/${section.path}`;
           return (

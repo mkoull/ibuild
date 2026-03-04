@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useProject } from "../../context/ProjectContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
 import _ from "../../theme/tokens.js";
@@ -17,6 +17,9 @@ import {
   writeScheduleTasks,
 } from "../../lib/scheduleStore.js";
 import { isValidIsoDate } from "../../lib/validation.js";
+import { isSubcontractor } from "../../lib/permissions.js";
+
+const TASK_STATUSES = ["Not started", "In progress", "Completed"];
 
 const EMPTY_FORM = {
   id: null,
@@ -25,7 +28,22 @@ const EMPTY_FORM = {
   startDate: "",
   durationDays: 1,
   dependencyTaskId: "",
+  status: "Not started",
+  photos: [],
 };
+
+async function filesToDataUrls(fileList) {
+  const files = Array.from(fileList || []);
+  const urls = await Promise.all(files.map((file) => (
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    })
+  )));
+  return urls.filter(Boolean);
+}
 
 function getTimelineWindow(tasks) {
   const today = new Date().toISOString().split("T")[0];
@@ -37,14 +55,26 @@ function getTimelineWindow(tasks) {
 
 export default function SchedulePage() {
   const { project: p, update: up } = useProject();
-  const { mobile, notify } = useApp();
+  const { mobile, notify, currentUser } = useApp();
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
 
   const tasks = useMemo(() => readScheduleTasks(p), [p]);
+  const subcontractor = isSubcontractor(currentUser);
+  const assignedTradeNames = useMemo(
+    () => (Array.isArray(currentUser?.assignedTradeNames) ? currentUser.assignedTradeNames : []),
+    [currentUser],
+  );
   const timeline = useMemo(() => getTimelineWindow(tasks), [tasks]);
+
+  const isAssignedTask = useCallback((task) => {
+    if (!subcontractor) return true;
+    const trade = String(task?.trade || "").toLowerCase();
+    if (!trade) return false;
+    return assignedTradeNames.some((name) => trade.includes(String(name || "").toLowerCase()));
+  }, [assignedTradeNames, subcontractor]);
 
   const saveTasks = (nextTasks) => {
     up((pr) => {
@@ -60,6 +90,10 @@ export default function SchedulePage() {
   };
 
   const openEditModal = (task) => {
+    if (subcontractor && !isAssignedTask(task)) {
+      notify("You can only update your assigned tasks", "info");
+      return;
+    }
     setEditingTaskId(task.id);
     setForm({
       id: task.id,
@@ -68,6 +102,8 @@ export default function SchedulePage() {
       startDate: task.startDate || "",
       durationDays: Number(task.durationDays) || 1,
       dependencyTaskId: task.dependencyTaskId || "",
+      status: task.status || "Not started",
+      photos: Array.isArray(task.photos) ? task.photos : [],
     });
     setErrors({});
     setShowTaskModal(true);
@@ -98,6 +134,8 @@ export default function SchedulePage() {
       durationDays: Math.max(1, Number(form.durationDays) || 1),
       dependencyTaskId: form.dependencyTaskId || null,
       endDate: computeTaskEndDate(form.startDate, form.durationDays),
+      status: form.status || "Not started",
+      photos: Array.isArray(form.photos) ? form.photos : [],
     };
     const next = editingTaskId
       ? tasks.map((task) => (task.id === editingTaskId ? payload : task))
@@ -118,13 +156,35 @@ export default function SchedulePage() {
   };
 
   const recalculateDependencies = () => {
+    if (subcontractor) return;
     saveTasks(recalcScheduleFromDependencies(tasks));
     notify("Schedule recalculated from dependencies");
   };
 
   const seedDemoTasks = () => {
+    if (subcontractor) return;
     saveTasks(getDemoScheduleTasks());
     notify("Added demo schedule tasks");
+  };
+
+  const updateTaskStatus = (taskId, status) => {
+    saveTasks(tasks.map((t) => (t.id === taskId ? { ...t, status } : t)));
+    notify("Task status updated");
+  };
+
+  const appendTaskPhotos = async (taskId, fileList) => {
+    try {
+      const urls = await filesToDataUrls(fileList);
+      if (!urls.length) return;
+      saveTasks(tasks.map((t) => (
+        t.id === taskId
+          ? { ...t, photos: [...(Array.isArray(t.photos) ? t.photos : []), ...urls] }
+          : t
+      )));
+      notify("Task photos attached");
+    } catch {
+      notify("Unable to read task photo", "error");
+    }
   };
 
   const barStyle = (task) => {
@@ -160,11 +220,13 @@ export default function SchedulePage() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: _.s3, marginBottom: _.s5, flexWrap: "wrap" }}>
         <div>
           <h1 style={{ fontSize: mobile ? _.fontSize["3xl"] : _.fontSize["4xl"], fontWeight: _.fontWeight.bold, letterSpacing: _.letterSpacing.tight, marginBottom: 4 }}>Schedule</h1>
-          <div style={{ fontSize: _.fontSize.md, color: _.muted }}>Tasks, durations, dependencies, and timeline</div>
+          <div style={{ fontSize: _.fontSize.md, color: _.muted }}>
+            {subcontractor ? "View assigned tasks and update status/photos" : "Tasks, durations, dependencies, and timeline"}
+          </div>
         </div>
         <div style={{ display: "flex", gap: _.s2, flexWrap: "wrap" }}>
-          <Button variant="secondary" onClick={recalculateDependencies}>Recalculate from dependencies</Button>
-          <Button icon={Plus} onClick={openCreateModal}>Add Task</Button>
+          {!subcontractor && <Button variant="secondary" onClick={recalculateDependencies}>Recalculate from dependencies</Button>}
+          {!subcontractor && <Button icon={Plus} onClick={openCreateModal}>Add Task</Button>}
         </div>
       </div>
 
@@ -172,40 +234,70 @@ export default function SchedulePage() {
         <Empty
           icon={CalendarRange}
           title="No tasks yet"
-          text="Create tasks to build your project schedule, or add demo tasks to get started."
-          action={seedDemoTasks}
-          actionText="Add demo tasks"
+          text={subcontractor ? "No assigned tasks yet." : "Create tasks to build your project schedule, or add demo tasks to get started."}
+          action={subcontractor ? undefined : seedDemoTasks}
+          actionText={subcontractor ? undefined : "Add demo tasks"}
         >
-          <div style={{ marginTop: _.s2 }}>
-            <Button variant="ghost" onClick={openCreateModal}>Add Task</Button>
-          </div>
+          {!subcontractor && (
+            <div style={{ marginTop: _.s2 }}>
+              <Button variant="ghost" onClick={openCreateModal}>Add Task</Button>
+            </div>
+          )}
         </Empty>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "1.4fr 1fr", gap: _.s4 }}>
           <div style={{ border: `1px solid ${_.line}`, borderRadius: _.rSm, background: _.surface, overflowX: "auto" }}>
             <div style={{ minWidth: 860 }}>
-              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 1.4fr auto", gap: _.s2, padding: `${_.s2}px ${_.s3}px`, borderBottom: `2px solid ${_.ink}`, fontSize: _.fontSize.xs, color: _.muted, fontWeight: _.fontWeight.semi, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 1.2fr 1fr auto", gap: _.s2, padding: `${_.s2}px ${_.s3}px`, borderBottom: `2px solid ${_.ink}`, fontSize: _.fontSize.xs, color: _.muted, fontWeight: _.fontWeight.semi, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase" }}>
                 <span>Task</span>
                 <span>Trade</span>
                 <span>Start</span>
                 <span>Duration</span>
                 <span>End</span>
                 <span>Depends On</span>
+                <span>Status</span>
                 <span>Actions</span>
               </div>
               {tasks.map((task) => {
                 const dependsOn = tasks.find((t) => t.id === task.dependencyTaskId);
+                const canEditTask = isAssignedTask(task);
                 return (
-                  <div key={task.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 1.4fr auto", gap: _.s2, padding: `${_.s3}px ${_.s3}px`, borderBottom: `1px solid ${_.line}`, alignItems: "center" }}>
+                  <div key={task.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 1.2fr 1fr auto", gap: _.s2, padding: `${_.s3}px ${_.s3}px`, borderBottom: `1px solid ${_.line}`, alignItems: "center" }}>
                     <span style={{ fontWeight: _.fontWeight.medium, color: _.ink }}>{task.name || "—"}</span>
                     <span style={{ color: _.body }}>{task.trade || "—"}</span>
                     <span style={{ color: _.body }}>{task.startDate || "—"}</span>
                     <span style={{ color: _.body }}>{task.durationDays || 1}d</span>
                     <span style={{ color: _.body }}>{task.endDate || "—"}</span>
                     <span style={{ color: _.muted }}>{dependsOn?.name || "—"}</span>
+                    <span style={{ color: _.ink }}>{task.status || "Not started"}</span>
                     <div style={{ display: "flex", gap: _.s1 }}>
-                      <Button variant="ghost" size="sm" icon={Pencil} onClick={() => openEditModal(task)}>Edit</Button>
-                      <Button variant="ghost" size="sm" icon={Trash2} onClick={() => deleteTask(task.id)}>Delete</Button>
+                      {subcontractor ? (
+                        <>
+                          <select
+                            value={task.status || "Not started"}
+                            onChange={(e) => updateTaskStatus(task.id, e.target.value)}
+                            style={{ ...input, padding: "4px 6px", fontSize: 12, minWidth: 112 }}
+                            disabled={!canEditTask}
+                          >
+                            {TASK_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}
+                          </select>
+                          <label style={{ display: "inline-flex", alignItems: "center", cursor: canEditTask ? "pointer" : "not-allowed", color: canEditTask ? _.ac : _.muted, fontSize: 12 }}>
+                            Photo
+                            <input
+                              type="file"
+                              accept="image/*"
+                              style={{ display: "none" }}
+                              disabled={!canEditTask}
+                              onChange={(e) => appendTaskPhotos(task.id, e.target.files)}
+                            />
+                          </label>
+                        </>
+                      ) : (
+                        <>
+                          <Button variant="ghost" size="sm" icon={Pencil} onClick={() => openEditModal(task)}>Edit</Button>
+                          <Button variant="ghost" size="sm" icon={Trash2} onClick={() => deleteTask(task.id)}>Delete</Button>
+                        </>
+                      )}
                     </div>
                   </div>
                 );
@@ -274,6 +366,25 @@ export default function SchedulePage() {
               ))}
             </select>
             {errors.dependencyTaskId && <div style={{ marginTop: 4, fontSize: _.fontSize.sm, color: _.red }}>{errors.dependencyTaskId}</div>}
+          </div>
+          <div>
+            <label style={label}>Status</label>
+            <select style={{ ...input, cursor: "pointer" }} value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}>
+              {TASK_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={label}>Photos</label>
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={async (e) => {
+                const urls = await filesToDataUrls(e.target.files);
+                if (!urls.length) return;
+                setForm((f) => ({ ...f, photos: [...(Array.isArray(f.photos) ? f.photos : []), ...urls] }));
+              }}
+            />
           </div>
         </div>
         <div style={{ display: "flex", justifyContent: "flex-end", gap: _.s2, marginTop: _.s5 }}>

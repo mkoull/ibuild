@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext.jsx";
 import _ from "../../theme/tokens.js";
 import { fmt, pName, stCol, badge, ds } from "../../theme/styles.js";
@@ -20,6 +20,7 @@ import {
   ReceiptText,
   ShoppingCart,
 } from "lucide-react";
+import { isSubcontractor } from "../../lib/permissions.js";
 
 function toTimestamp(value, fallback = 0) {
   if (!value) return fallback;
@@ -102,8 +103,9 @@ function buildRecentActivity(projects, clients) {
 }
 
 export default function DashboardPage() {
-  const { projects, clients, create, update, notify } = useApp();
+  const { projects, clients, create, update, notify, currentUser } = useApp();
   const navigate = useNavigate();
+  if (isSubcontractor(currentUser)) return <Navigate to="/portal" replace />;
 
   const projectCalcs = useMemo(
     () => projects.map((pr) => ({ pr, t: calc(pr) })),

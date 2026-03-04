@@ -14,11 +14,12 @@ import Button from "../../components/ui/Button.jsx";
 import LoadingSpinner from "../../components/ui/LoadingSpinner.jsx";
 import { FolderOpen, Trash2, ArrowRight, Plus } from "lucide-react";
 import { getWorkspaceUrl } from "../../config/workspaceTabs.js";
+import { isSubcontractor } from "../../lib/permissions.js";
 
 const FILTERS = ["All", ...STAGES];
 
 export default function ProjectsListPage() {
-  const { projects, clients, create, remove, mobile, notify, api } = useApp();
+  const { projects, clients, create, remove, mobile, notify, api, currentUser } = useApp();
   const navigate = useNavigate();
   const [filter, setFilter] = useState("All");
   const [search, setSearch] = useState("");
@@ -48,7 +49,24 @@ export default function ProjectsListPage() {
     if (isRemote) loadRemoteProjects();
   }, [api, isRemote, loadRemoteProjects, mode]);
 
-  const sourceProjects = useMemo(() => (isRemote ? remoteProjects : projects), [isRemote, remoteProjects, projects]);
+  const sourceProjects = useMemo(() => {
+    const rows = isRemote ? remoteProjects : projects;
+    if (!isSubcontractor(currentUser)) return rows;
+    const assignedProjectIds = Array.isArray(currentUser?.assignedProjectIds) ? currentUser.assignedProjectIds : [];
+    const assignedTrades = Array.isArray(currentUser?.assignedTradeNames) ? currentUser.assignedTradeNames : [];
+    return rows.filter((pr) => {
+      if (assignedProjectIds.includes(pr.id)) return true;
+      const hasTaskTrade = (pr.schedule?.tasks || []).some((t) => {
+        const trade = String(t.trade || "").toLowerCase();
+        return assignedTrades.some((name) => trade.includes(String(name || "").toLowerCase()));
+      });
+      const hasDefectTrade = (pr.defects || []).some((d) => {
+        const trade = String(d.trade || "").toLowerCase();
+        return assignedTrades.some((name) => trade.includes(String(name || "").toLowerCase()));
+      });
+      return hasTaskTrade || hasDefectTrade;
+    });
+  }, [currentUser, isRemote, remoteProjects, projects]);
 
   const filtered = sourceProjects.filter(pr => {
     const stage = pr.stage || pr.status;
@@ -136,7 +154,7 @@ export default function ProjectsListPage() {
 
         <div style={{ flex: 1 }} />
 
-        <Button icon={Plus} onClick={handleNew} disabled={isRemote && remoteLoading}>
+        <Button icon={Plus} onClick={handleNew} disabled={(isRemote && remoteLoading) || isSubcontractor(currentUser)}>
           {isRemote && remoteLoading ? "Loading..." : "New Project"}
         </Button>
       </div>

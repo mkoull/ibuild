@@ -3,12 +3,14 @@ import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { useApp } from "../../context/AppContext.jsx";
 import _ from "../../theme/tokens.js";
 import { pName } from "../../theme/styles.js";
-import { Search, Plus, Bell, FileText, HardHat, ReceiptText, ShoppingCart, ClipboardList, NotebookText, Bug } from "lucide-react";
+import { Search, Plus, Bell, FileText, HardHat, ReceiptText, ShoppingCart, ClipboardList, NotebookText, Bug, LogOut } from "lucide-react";
 import { applyConvertToJobBaseline } from "../../lib/costEngine.js";
+import { isSubcontractor } from "../../lib/permissions.js";
 
 /* ─── Route → title mapping ─── */
 const ROUTE_TITLES = {
   "/dashboard":  "Dashboard",
+  "/portal":     "Subcontractor Portal",
   "/projects":   "All Projects",
   "/estimates":  "Estimates",
   "/quotes":     "Quotes",
@@ -39,6 +41,8 @@ export default function TopBar() {
     unreadNotifications,
     markNotificationRead,
     markAllNotificationsRead,
+    auth,
+    currentUser,
   } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
@@ -110,6 +114,7 @@ export default function TopBar() {
     return tb - ta;
   });
   const activeProjects = sortedProjects.filter((p) => String(p.stage || p.status || "").toLowerCase() === "active");
+  const subRole = isSubcontractor(currentUser);
 
   const resolveTargetProject = (requireActive = true) => {
     if (currentWorkspaceProject) {
@@ -301,55 +306,73 @@ export default function TopBar() {
         )}
       </div>
 
-      {/* Create dropdown */}
-      <div ref={createRef} style={{ position: "relative" }}>
-        <button onClick={() => setShowCreate(v => !v)} style={{
-          display: "flex", alignItems: "center", gap: 6,
-          padding: "7px 14px", borderRadius: 8,
-          background: _.ink, color: "#fff", border: "none",
-          fontSize: 13, fontWeight: 600, cursor: "pointer",
-          fontFamily: "inherit", transition: `background ${_.tr}`,
-        }}
-          onMouseEnter={e => e.currentTarget.style.background = "#1e293b"}
-          onMouseLeave={e => e.currentTarget.style.background = _.ink}
-        >
-          <Plus size={14} strokeWidth={2.5} /> Create
-        </button>
+      {!subRole && (
+        <div ref={createRef} style={{ position: "relative" }}>
+          <button onClick={() => setShowCreate(v => !v)} style={{
+            display: "flex", alignItems: "center", gap: 6,
+            padding: "7px 14px", borderRadius: 8,
+            background: _.ink, color: "#fff", border: "none",
+            fontSize: 13, fontWeight: 600, cursor: "pointer",
+            fontFamily: "inherit", transition: `background ${_.tr}`,
+          }}
+            onMouseEnter={e => e.currentTarget.style.background = "#1e293b"}
+            onMouseLeave={e => e.currentTarget.style.background = _.ink}
+          >
+            <Plus size={14} strokeWidth={2.5} /> Create
+          </button>
 
-        {showCreate && (
-          <div style={{
-            position: "absolute", top: "calc(100% + 6px)", right: 0,
-            minWidth: 200, background: _.surface,
-            border: "1px solid rgba(0,0,0,0.06)",
-            borderRadius: 10, boxShadow: _.sh3,
-            padding: "4px", animation: "fadeUp 0.12s ease",
-            zIndex: 200,
-          }}>
-            {[
-              { label: "New Estimate", Ic: FileText, action: handleNewEstimate },
-              { label: "New Job", Ic: HardHat, action: handleNewJob },
-              { label: "New Invoice", Ic: ReceiptText, action: () => openProjectCreateFlow("invoices", "Invoice") },
-              { label: "New Purchase Order", Ic: ShoppingCart, action: () => openProjectCreateFlow("procurement", "Purchase Order") },
-              { label: "New Variation", Ic: ClipboardList, action: () => openProjectCreateFlow("variations", "Variation") },
-              { label: "New Site Diary Entry", Ic: NotebookText, action: () => openProjectCreateFlow("site-diary", "Site diary entry") },
-              { label: "New Defect", Ic: Bug, action: () => openProjectCreateFlow("defects", "Defect") },
-            ].map(item => (
-              <div key={item.label} onClick={item.action} style={{
-                display: "flex", alignItems: "center", gap: 10,
-                padding: "8px 12px", borderRadius: 6,
-                cursor: "pointer", fontSize: 13, color: _.ink,
-                transition: `background ${_.tr}`,
-              }}
-                onMouseEnter={e => e.currentTarget.style.background = _.well}
-                onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-              >
-                <item.Ic size={15} color={_.body} strokeWidth={1.5} />
-                {item.label}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+          {showCreate && (
+            <div style={{
+              position: "absolute", top: "calc(100% + 6px)", right: 0,
+              minWidth: 200, background: _.surface,
+              border: "1px solid rgba(0,0,0,0.06)",
+              borderRadius: 10, boxShadow: _.sh3,
+              padding: "4px", animation: "fadeUp 0.12s ease",
+              zIndex: 200,
+            }}>
+              {[
+                { label: "New Estimate", Ic: FileText, action: handleNewEstimate },
+                { label: "New Job", Ic: HardHat, action: handleNewJob },
+                { label: "New Invoice", Ic: ReceiptText, action: () => openProjectCreateFlow("invoices", "Invoice") },
+                { label: "New Purchase Order", Ic: ShoppingCart, action: () => openProjectCreateFlow("procurement", "Purchase Order") },
+                { label: "New Variation", Ic: ClipboardList, action: () => openProjectCreateFlow("variations", "Variation") },
+                { label: "New Site Diary Entry", Ic: NotebookText, action: () => openProjectCreateFlow("site-diary", "Site diary entry") },
+                { label: "New Defect", Ic: Bug, action: () => openProjectCreateFlow("defects", "Defect") },
+              ].map(item => (
+                <div key={item.label} onClick={item.action} style={{
+                  display: "flex", alignItems: "center", gap: 10,
+                  padding: "8px 12px", borderRadius: 6,
+                  cursor: "pointer", fontSize: 13, color: _.ink,
+                  transition: `background ${_.tr}`,
+                }}
+                  onMouseEnter={e => e.currentTarget.style.background = _.well}
+                  onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                >
+                  <item.Ic size={15} color={_.body} strokeWidth={1.5} />
+                  {item.label}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+      <button
+        onClick={() => { auth.logout(); navigate("/login"); }}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+          padding: "6px 10px",
+          borderRadius: 8,
+          border: `1px solid ${_.line}`,
+          background: _.surface,
+          color: _.body,
+          cursor: "pointer",
+        }}
+      >
+        <LogOut size={14} />
+        {currentUser?.name || "Logout"}
+      </button>
     </div>
   );
 }

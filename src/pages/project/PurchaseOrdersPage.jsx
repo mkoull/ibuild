@@ -12,6 +12,7 @@ import _ from "../../theme/tokens.js";
 import { uid, ds, fmt, input, label, badge } from "../../theme/styles.js";
 import { exportPrintPdf } from "../../lib/pdfExport.js";
 import { ShoppingCart, Plus, Receipt, FilePlus2 } from "lucide-react";
+import { isSubcontractor } from "../../lib/permissions.js";
 
 const PO_STATUSES = ["Draft", "Issued", "Received", "Billed"];
 const STATUS_COLORS = {
@@ -42,7 +43,7 @@ function newBillForm() {
 
 export default function PurchaseOrdersPage() {
   const { project: p, update } = useProject();
-  const { mobile, notify, settings, addNotification } = useApp();
+  const { mobile, notify, settings, addNotification, currentUser } = useApp();
   const [showPoModal, setShowPoModal] = useState(false);
   const [searchParams] = useSearchParams();
   const [showBillModal, setShowBillModal] = useState(false);
@@ -57,8 +58,16 @@ export default function PurchaseOrdersPage() {
 
   const budgetLines = p.workingBudget || p.budget || [];
   const procurement = p.procurement || { purchaseOrders: [], bills: [] };
-  const purchaseOrders = procurement.purchaseOrders || [];
+  const allPurchaseOrders = procurement.purchaseOrders || [];
   const bills = procurement.bills || [];
+  const subcontractor = isSubcontractor(currentUser);
+  const allowedTrades = Array.isArray(currentUser?.assignedTradeNames) ? currentUser.assignedTradeNames : [];
+  const purchaseOrders = subcontractor
+    ? allPurchaseOrders.filter((po) => {
+      const supplier = String(po.supplier || "").toLowerCase();
+      return allowedTrades.some((t) => supplier.includes(String(t || "").toLowerCase()));
+    })
+    : allPurchaseOrders;
 
   const budgetLabelById = useMemo(() => {
     const out = {};
@@ -239,8 +248,8 @@ export default function PurchaseOrdersPage() {
           </div>
         </div>
         <div style={{ display: "flex", gap: _.s2, flexWrap: "wrap" }}>
-          <Button icon={Plus} onClick={() => setShowPoModal(true)}>Create Purchase Order</Button>
-          <Button variant="secondary" icon={Receipt} onClick={() => setShowBillModal(true)} disabled={purchaseOrders.length === 0}>Record Bill</Button>
+          {!subcontractor && <Button icon={Plus} onClick={() => setShowPoModal(true)}>Create Purchase Order</Button>}
+          {!subcontractor && <Button variant="secondary" icon={Receipt} onClick={() => setShowBillModal(true)} disabled={purchaseOrders.length === 0}>Record Bill</Button>}
           <Button variant="secondary" onClick={exportPurchaseOrdersPdf} disabled={purchaseOrders.length === 0}>Download Purchase Order PDF</Button>
         </div>
       </div>
@@ -292,7 +301,7 @@ export default function PurchaseOrdersPage() {
                   Expected delivery: {po.expectedDeliveryDate || "—"}
                 </div>
                 <div style={{ display: "flex", gap: _.s2, flexWrap: "wrap" }}>
-                  {PO_STATUSES.map((status) => (
+                  {!subcontractor && PO_STATUSES.map((status) => (
                     <Button
                       key={status}
                       size="sm"

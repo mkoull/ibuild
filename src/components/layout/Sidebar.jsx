@@ -1,8 +1,9 @@
 import { memo, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
-import { useProjectsCtx } from "../../context/AppContext.jsx";
+import { PanelLeftClose, PanelLeftOpen, ShieldCheck } from "lucide-react";
+import { useProjectsCtx, useApp } from "../../context/AppContext.jsx";
 import { NAV_STRUCTURE } from "../../config/navStructure.js";
+import { isSubcontractor } from "../../lib/permissions.js";
 
 /* ─── Sidebar palette (desaturated navy) ─── */
 const S = {
@@ -24,6 +25,7 @@ function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { saveStatus } = useProjectsCtx();
+  const { currentUser } = useApp();
   const [collapsed, setCollapsed] = useState(false);
   const w = collapsed ? W_COLLAPSED : W_EXPANDED;
 
@@ -32,7 +34,12 @@ function Sidebar() {
     return () => document.documentElement.style.setProperty("--sidebar-w", `${W_EXPANDED}px`);
   }, [w]);
 
-  const nav = NAV_STRUCTURE.global;
+  const nav = isSubcontractor(currentUser)
+    ? [
+      { id: "portal", label: "Portal", Ic: ShieldCheck, to: "/portal" },
+      ...NAV_STRUCTURE.global.filter((item) => ["projects", "site"].includes(item.id)),
+    ]
+    : NAV_STRUCTURE.global;
   const activeMap = NAV_STRUCTURE.activeMap;
 
   const isActive = (item) => {

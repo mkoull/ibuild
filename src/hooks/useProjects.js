@@ -6,7 +6,7 @@ import { shadowWriter } from "../lib/shadowWrite.js";
 import { getNextEstimateNumber } from "../config/workspaceTabs.js";
 
 const STORAGE_KEY = "ib_projects";
-const STORE_VERSION = 20;
+const STORE_VERSION = 21;
 const SAVE_DEBOUNCE_MS = 300;
 
 function hydrateProject(pr) {
@@ -405,6 +405,8 @@ function migrateProjects(data, fromVersion) {
           endDate: task.endDate || task.plannedFinish || "",
           dependencyTaskId: task.dependencyTaskId || (Array.isArray(task.dependsOn) ? task.dependsOn[0] || null : null),
           order: Number.isFinite(Number(task.order)) ? Number(task.order) : idx,
+            status: task.status || "Not started",
+            photos: Array.isArray(task.photos) ? task.photos : [],
         }));
       } else if (Array.isArray(p.schedule)) {
         p.schedule = {
@@ -417,6 +419,8 @@ function migrateProjects(data, fromVersion) {
             endDate: task.endDate || task.plannedFinish || "",
             dependencyTaskId: task.dependencyTaskId || (Array.isArray(task.dependsOn) ? task.dependsOn[0] || null : null),
             order: Number.isFinite(Number(task.order)) ? Number(task.order) : idx,
+            status: task.status || "Not started",
+            photos: Array.isArray(task.photos) ? task.photos : [],
           })),
         };
       } else {

@@ -11,6 +11,7 @@ import Button from "../../components/ui/Button.jsx";
 import Modal from "../../components/ui/Modal.jsx";
 import Card from "../../components/ui/Card.jsx";
 import { Search, CheckCircle2, Pencil, Plus, KanbanSquare, List } from "lucide-react";
+import { isSubcontractor } from "../../lib/permissions.js";
 
 const PRIORITIES = ["Low", "Medium", "High"];
 const STATUSES = ["Open", "In Progress", "Completed"];
@@ -76,7 +77,7 @@ async function filesToDataUrls(fileList) {
 
 export default function DefectsPage() {
   const { project: p, update: up, log } = useProject();
-  const { mobile, notify, trades, settings, addNotification } = useApp();
+  const { mobile, notify, trades, settings, addNotification, currentUser } = useApp();
   const [createOpen, setCreateOpen] = useState(false);
   const [searchParams] = useSearchParams();
   const [editOpen, setEditOpen] = useState(false);
@@ -84,15 +85,23 @@ export default function DefectsPage() {
   const [form, setForm] = useState(emptyForm);
   const [viewMode, setViewMode] = useState("table");
 
+  const subcontractor = isSubcontractor(currentUser);
+  const assignedTradeNames = Array.isArray(currentUser?.assignedTradeNames) ? currentUser.assignedTradeNames : [];
+
   useEffect(() => {
-    if (searchParams.get("create") === "1") {
+    if (!subcontractor && searchParams.get("create") === "1") {
       setCreateOpen(true);
     }
-  }, [searchParams]);
+  }, [searchParams, subcontractor]);
 
   const defects = useMemo(() => {
-    return (p.defects || []).map((d, idx) => normalizeDefect(d, idx));
-  }, [p.defects]);
+    const rows = (p.defects || []).map((d, idx) => normalizeDefect(d, idx));
+    if (!subcontractor) return rows;
+    return rows.filter((d) => {
+      const trade = String(d.trade || "").toLowerCase();
+      return assignedTradeNames.some((t) => trade.includes(String(t || "").toLowerCase()));
+    });
+  }, [assignedTradeNames, p.defects, subcontractor]);
 
   const summary = useMemo(() => {
     const open = defects.filter((d) => d.status === "Open").length;
@@ -152,6 +161,14 @@ export default function DefectsPage() {
   };
 
   const openEdit = (defect) => {
+    if (subcontractor) {
+      const trade = String(defect.trade || "").toLowerCase();
+      const allowed = assignedTradeNames.some((t) => trade.includes(String(t || "").toLowerCase()));
+      if (!allowed) {
+        notify("You can only edit assigned defects", "info");
+        return;
+      }
+    }
     setEditingId(defect.id);
     setForm({
       title: defect.title || "",
@@ -307,13 +324,19 @@ export default function DefectsPage() {
           </Button>
         </div>
         <div style={{ display: "flex", gap: _.s2, flexWrap: "wrap" }}>
-          <Button icon={Plus} onClick={() => setCreateOpen(true)}>Create Defect</Button>
+          {!subcontractor && <Button icon={Plus} onClick={() => setCreateOpen(true)}>Create Defect</Button>}
           <Button variant="secondary" onClick={exportDefectsPdf} disabled={defects.length === 0}>Export Defect List PDF</Button>
         </div>
       </div>
 
       {defects.length === 0 ? (
-        <Empty icon={Search} title="No defects yet" text="Create your first defect to start your punch list." action={() => setCreateOpen(true)} actionText="Create Defect" />
+        <Empty
+          icon={Search}
+          title="No defects yet"
+          text={subcontractor ? "Assigned defects will appear here." : "Create your first defect to start your punch list."}
+          action={subcontractor ? undefined : () => setCreateOpen(true)}
+          actionText={subcontractor ? undefined : "Create Defect"}
+        />
       ) : viewMode === "table" ? (
         <>
           <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr auto" : "90px 1.3fr 1fr 1fr 100px 120px 120px 260px", gap: _.s2, padding: `${_.s2}px 0`, borderBottom: `2px solid ${_.ink}`, fontSize: _.fontSize.xs, color: _.muted, fontWeight: _.fontWeight.semi, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase" }}>
@@ -507,9 +530,35 @@ export default function DefectsPage() {
             <Button size="sm" variant="ghost" onClick={() => setStatus(editingId, "Open")}>Set Open</Button>
             <Button size="sm" variant="ghost" onClick={() => setStatus(editingId, "In Progress")}>Set In Progress</Button>
             <Button size="sm" variant="secondary" onClick={() => setStatus(editingId, "Completed")}>Set Completed</Button>
-            <Button size="sm" variant="danger" onClick={() => { removeDefect(editingId); setEditOpen(false); setEditingId(""); resetForm(); }}>
-              Delete
-            </Button>
+            {!subcontractor && (
+              <Button size="sm" variant="danger" onClick={() => { removeDefect(editingId); setEditOpen(false); setEditingId(""); resetForm(); }}>
+                Delete
+              </Button>
+            )}
+          </div>
+          <div>
+            <label style={label}>Add Photos</label>
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={async (e) => {
+                try {
+                  const urls = await filesToDataUrls(e.target.files);
+                  if (!urls.length) return;
+                  setForm((v) => ({ ...v, photos: [...(v.photos || []), ...urls] }));
+                } catch {
+                  notify("Unable to read selected photo", "error");
+                }
+              }}
+            />
+            {(form.photos || []).length > 0 && (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(70px, 1fr))", gap: _.s2, marginTop: _.s2 }}>
+                {form.photos.map((img, idx) => (
+                  <img key={`${img.slice(0, 24)}-${idx}`} src={img} alt="" style={{ width: "100%", height: 60, objectFit: "cover", borderRadius: _.rSm, border: `1px solid ${_.line}` }} />
+                ))}
+              </div>
+            )}
           </div>
         </div>
         <div style={{ display: "flex", justifyContent: "flex-end", gap: _.s2, marginTop: _.s4 }}>
