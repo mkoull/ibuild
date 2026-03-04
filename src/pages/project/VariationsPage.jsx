@@ -34,7 +34,7 @@ function nextVariationNumber(variations) {
 
 export default function VariationsPage() {
   const { project: p, update: up, log } = useProject();
-  const { mobile, notify } = useApp();
+  const { mobile, notify, addNotification } = useApp();
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ title: "", description: "", costImpact: "", sellImpact: "", _err: false });
 
@@ -74,6 +74,11 @@ export default function VariationsPage() {
     });
     notify("Variation created");
     log(`Variation created: ${variation.number} ${variation.title}`);
+    addNotification({
+      message: `Variation created: ${variation.number}`,
+      type: "variation_created",
+      link: `/projects/${p.id}/variations`,
+    });
     setForm({ title: "", description: "", costImpact: "", sellImpact: "", _err: false });
     setShowCreate(false);
   };

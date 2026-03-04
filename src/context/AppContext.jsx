@@ -10,6 +10,7 @@ import { useSettings } from "../hooks/useSettings.js";
 import { useModules } from "../hooks/useModules.js";
 import { useFeatureFlags } from "../hooks/useFeatureFlags.js";
 import { useApi } from "../hooks/useApi.js";
+import { useNotifications } from "../hooks/useNotifications.js";
 
 const ProjectsCtx = createContext(null);
 const SettingsCtx = createContext(null);
@@ -26,6 +27,7 @@ export function AppProvider({ children }) {
   const settingsHook = useSettings();
   const featureFlagsHook = useFeatureFlags();
   const api = useApi();
+  const notificationsHook = useNotifications();
 
   const projectsValue = useMemo(() => ({
     ...projectsHook,
@@ -52,7 +54,12 @@ export function AppProvider({ children }) {
     mobile,
     featureFlags: featureFlagsHook,
     api,
-  }), [projectsValue, settingsValue, toast, notify, dismiss, mobile, featureFlagsHook, api]);
+    notifications: notificationsHook.notifications,
+    unreadNotifications: notificationsHook.unreadCount,
+    addNotification: notificationsHook.addNotification,
+    markNotificationRead: notificationsHook.markRead,
+    markAllNotificationsRead: notificationsHook.markAllRead,
+  }), [projectsValue, settingsValue, toast, notify, dismiss, mobile, featureFlagsHook, api, notificationsHook]);
 
   return (
     <ProjectsCtx.Provider value={projectsValue}>

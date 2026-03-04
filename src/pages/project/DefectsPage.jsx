@@ -75,7 +75,7 @@ async function filesToDataUrls(fileList) {
 
 export default function DefectsPage() {
   const { project: p, update: up, log } = useProject();
-  const { mobile, notify, trades, settings } = useApp();
+  const { mobile, notify, trades, settings, addNotification } = useApp();
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editingId, setEditingId] = useState("");
@@ -131,6 +131,13 @@ export default function DefectsPage() {
       return pr;
     });
     log(`Defect created: ${form.title.trim()}`);
+    if (form.trade.trim()) {
+      addNotification({
+        message: `Defect assigned: ${form.title.trim()} → ${form.trade.trim()}`,
+        type: "defect_assigned",
+        link: `/projects/${p.id}/defects`,
+      });
+    }
     notify("Defect created");
     resetForm();
     setCreateOpen(false);
@@ -174,6 +181,13 @@ export default function DefectsPage() {
       return pr;
     });
     notify("Defect updated");
+    if (form.trade.trim()) {
+      addNotification({
+        message: `Defect assigned: ${form.title.trim()} → ${form.trade.trim()}`,
+        type: "defect_assigned",
+        link: `/projects/${p.id}/defects`,
+      });
+    }
     setEditOpen(false);
     setEditingId("");
     resetForm();

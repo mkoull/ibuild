@@ -35,7 +35,7 @@ function isOverdue(inv) {
 
 export default function InvoicesPage() {
   const { project: p, update: up, T, log } = useProject();
-  const { mobile, notify, settings } = useApp();
+  const { mobile, notify, settings, addNotification } = useApp();
   const [createOpen, setCreateOpen] = useState(false);
   const [invoiceForm, setInvoiceForm] = useState({
     description: "",
@@ -118,9 +118,11 @@ export default function InvoicesPage() {
   };
 
   const updateInvoiceStatus = (invoiceId, status) => {
+    let paidInvoiceNumber = "";
     up((pr) => {
       const inv = (pr.invoices || []).find((x) => x.id === invoiceId);
       if (!inv) return;
+      const previousStatus = String(inv.status || "");
 
       if (status === "Overdue" && (String(inv.status).toLowerCase() === "paid" || String(inv.status).toLowerCase() === "draft")) {
         return;
@@ -129,6 +131,9 @@ export default function InvoicesPage() {
       inv.status = status;
       if (status === "Paid") {
         inv.paidDate = toIsoDate();
+        if (String(previousStatus).toLowerCase() !== "paid") {
+          paidInvoiceNumber = inv.number || inv.id || "";
+        }
       }
       if (status === "Sent" && !inv.invoiceDate) {
         inv.invoiceDate = toIsoDate();
@@ -141,6 +146,13 @@ export default function InvoicesPage() {
         else claim.status = "Draft";
       }
     });
+    if (status === "Paid" && paidInvoiceNumber) {
+      addNotification({
+        message: `Invoice marked paid: ${paidInvoiceNumber}`,
+        type: "invoice_paid",
+        link: `/projects/${p.id}/invoices`,
+      });
+    }
     notify(`Invoice marked ${status}`);
   };
 

@@ -41,7 +41,7 @@ function newBillForm() {
 
 export default function PurchaseOrdersPage() {
   const { project: p, update } = useProject();
-  const { mobile, notify, settings } = useApp();
+  const { mobile, notify, settings, addNotification } = useApp();
   const [showPoModal, setShowPoModal] = useState(false);
   const [showBillModal, setShowBillModal] = useState(false);
   const [poForm, setPoForm] = useState(newPoForm);
@@ -145,15 +145,27 @@ export default function PurchaseOrdersPage() {
   };
 
   const markStatus = (poId, status) => {
+    let changedPo = null;
     update((pr) => {
       if (!pr.procurement?.purchaseOrders) return;
       const po = pr.procurement.purchaseOrders.find((x) => x.id === poId);
       if (!po) return;
+      const previous = po.status;
       po.status = status;
+      if (status === "Issued" && previous !== "Issued") {
+        changedPo = { number: po.number, supplier: po.supplier };
+      }
       if (status === "Billed") {
         applyBilledToBudgetLine(pr, po);
       }
     });
+    if (changedPo) {
+      addNotification({
+        message: `Purchase order issued: ${changedPo.number || "PO"} ${changedPo.supplier ? `(${changedPo.supplier})` : ""}`.trim(),
+        type: "purchase_order_issued",
+        link: `/projects/${p.id}/procurement`,
+      });
+    }
   };
 
   const recordBill = () => {

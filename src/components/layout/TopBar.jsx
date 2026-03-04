@@ -3,7 +3,7 @@ import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { useApp } from "../../context/AppContext.jsx";
 import _ from "../../theme/tokens.js";
 import { pName } from "../../theme/styles.js";
-import { Search, Plus, FolderOpen, Users, Building2 } from "lucide-react";
+import { Search, Plus, FolderOpen, Users, Building2, Bell } from "lucide-react";
 
 /* ─── Route → title mapping ─── */
 const ROUTE_TITLES = {
@@ -26,16 +26,40 @@ const ROUTE_TITLES = {
 };
 
 export default function TopBar() {
-  const { projects, clients, create, clientsHook, tradesHook, notify, settings } = useApp();
+  const {
+    projects,
+    clients,
+    create,
+    clientsHook,
+    tradesHook,
+    notify,
+    settings,
+    notifications,
+    unreadNotifications,
+    markNotificationRead,
+    markAllNotificationsRead,
+  } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
   const params = useParams();
   const [showCreate, setShowCreate] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const createRef = useRef(null);
+  const notificationsRef = useRef(null);
 
   useEffect(() => {
     const handler = e => {
       if (createRef.current && !createRef.current.contains(e.target)) setShowCreate(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (notificationsRef.current && !notificationsRef.current.contains(e.target)) {
+        setShowNotifications(false);
+      }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -132,6 +156,114 @@ export default function TopBar() {
           background: _.surface, border: `1px solid ${_.line}`,
           borderRadius: 4, padding: "1px 5px",
         }}>{navigator.platform?.includes("Mac") ? "\u2318K" : "Ctrl+K"}</kbd>
+      </div>
+
+      {/* Notifications */}
+      <div ref={notificationsRef} style={{ position: "relative" }}>
+        <button
+          onClick={() => setShowNotifications((v) => !v)}
+          style={{
+            position: "relative",
+            width: 34,
+            height: 34,
+            borderRadius: 8,
+            border: `1px solid ${_.line}`,
+            background: _.surface,
+            color: _.body,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+          }}
+          title="Notifications"
+        >
+          <Bell size={16} />
+          {unreadNotifications > 0 && (
+            <span style={{
+              position: "absolute",
+              top: -5,
+              right: -5,
+              minWidth: 16,
+              height: 16,
+              padding: "0 4px",
+              borderRadius: 99,
+              background: _.red,
+              color: "#fff",
+              fontSize: 10,
+              fontWeight: 700,
+              lineHeight: "16px",
+            }}>
+              {unreadNotifications > 99 ? "99+" : unreadNotifications}
+            </span>
+          )}
+        </button>
+
+        {showNotifications && (
+          <div style={{
+            position: "absolute",
+            top: "calc(100% + 8px)",
+            right: 0,
+            width: 360,
+            maxHeight: 420,
+            overflowY: "auto",
+            background: _.surface,
+            border: `1px solid ${_.line}`,
+            borderRadius: 10,
+            boxShadow: _.sh3,
+            zIndex: 210,
+          }}>
+            <div style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              padding: "10px 12px",
+              borderBottom: `1px solid ${_.line}`,
+            }}>
+              <strong style={{ fontSize: 13, color: _.ink }}>Notifications</strong>
+              <button
+                onClick={markAllNotificationsRead}
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  color: _.ac,
+                  cursor: "pointer",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  fontFamily: "inherit",
+                }}
+              >
+                Mark all read
+              </button>
+            </div>
+
+            {(notifications || []).length === 0 ? (
+              <div style={{ padding: "16px 12px", fontSize: 13, color: _.muted }}>No notifications yet.</div>
+            ) : (
+              notifications.slice(0, 40).map((n) => (
+                <div
+                  key={n.id}
+                  onClick={() => {
+                    markNotificationRead(n.id);
+                    setShowNotifications(false);
+                    navigate(n.link || "/dashboard");
+                  }}
+                  style={{
+                    padding: "10px 12px",
+                    borderBottom: `1px solid ${_.line}`,
+                    cursor: "pointer",
+                    background: n.read ? "transparent" : `${_.ac}0d`,
+                  }}
+                >
+                  <div style={{ fontSize: 13, color: _.ink, fontWeight: n.read ? 500 : 600 }}>{n.message}</div>
+                  <div style={{ marginTop: 3, display: "flex", justifyContent: "space-between", gap: 8 }}>
+                    <span style={{ fontSize: 11, color: _.muted }}>{new Date(n.createdAt).toLocaleString("en-AU")}</span>
+                    <span style={{ fontSize: 11, color: _.ac }}>Open</span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
       </div>
 
       {/* Create dropdown */}

@@ -74,7 +74,7 @@ function normaliseEntry(entry, index, trades) {
 
 export default function SiteDiaryPage() {
   const { project: p, update: up, log } = useProject();
-  const { mobile, notify, trades } = useApp();
+  const { mobile, notify, trades, addNotification } = useApp();
   const [showCreate, setShowCreate] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [createForm, setCreateForm] = useState(makeEmptyForm);
@@ -143,6 +143,11 @@ export default function SiteDiaryPage() {
       return pr;
     });
     log(`Diary entry added (${createForm.weather})`);
+    addNotification({
+      message: `Site diary entry added: ${entryDate}`,
+      type: "site_diary_added",
+      link: `/projects/${p.id}/site-diary`,
+    });
     notify("Diary entry saved");
     setCreateForm(makeEmptyForm());
     setShowCreate(false);

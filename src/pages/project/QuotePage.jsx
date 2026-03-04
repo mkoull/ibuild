@@ -21,7 +21,7 @@ const QUOTE_STATUSES = ["Draft", "Sent", "Accepted", "Rejected"];
 
 export default function QuotePage() {
   const { project: p, update: up, T, client, log, transitionStage } = useProject();
-  const { clients, clientsHook, rateLibrary, mobile, notify, settings } = useApp();
+  const { clients, clientsHook, rateLibrary, mobile, notify, settings, addNotification } = useApp();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -414,6 +414,11 @@ export default function QuotePage() {
       return pr;
     });
     log("Quote marked accepted");
+    addNotification({
+      message: `Quote accepted: ${p.name || "Project"}`,
+      type: "quote_accepted",
+      link: `/projects/${p.id}/overview`,
+    });
     if (converted) {
       notify("Quote accepted and converted to active job");
       navigate("../overview");
