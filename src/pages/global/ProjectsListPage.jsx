@@ -19,7 +19,7 @@ import { isSubcontractor } from "../../lib/permissions.js";
 const FILTERS = ["All", ...STAGES];
 
 export default function ProjectsListPage() {
-  const { projects, clients, create, remove, mobile, notify, api, currentUser } = useApp();
+  const { projects, clients, remove, mobile, notify, api, currentUser } = useApp();
   const navigate = useNavigate();
   const [filter, setFilter] = useState("All");
   const [search, setSearch] = useState("");
@@ -92,9 +92,7 @@ export default function ProjectsListPage() {
         .catch((e) => notify(e.message || "Failed creating remote project", "error"));
       return;
     }
-    const p = create();
-    navigate(`/estimates/${p.id}/overview?step=estimate`);
-    notify("New estimate created");
+    navigate("/estimates/new");
   };
 
   const handleDelete = (id) => {

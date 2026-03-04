@@ -16,7 +16,7 @@ import { Plus, FileText, Trash2 } from "lucide-react";
 const QUOTE_TABS = ["All", "Lead", "Quoted"];
 
 export default function QuotesListPage() {
-  const { projects, clients, create, remove, mobile, notify } = useApp();
+  const { projects, clients, remove, mobile, notify } = useApp();
   const navigate = useNavigate();
   const [filter, setFilter] = useState("All");
   const [search, setSearch] = useState("");
@@ -37,9 +37,7 @@ export default function QuotesListPage() {
   });
 
   const handleNew = () => {
-    const p = create();
-    navigate(`/estimates/${p.id}/overview?step=estimate`);
-    notify("New estimate created");
+    navigate("/estimates/new");
   };
 
   return (

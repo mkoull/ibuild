@@ -20,6 +20,7 @@ const RateLibraryPage = lazy(() => import("./pages/global/RateLibraryPage.jsx"))
 const SettingsPage = lazy(() => import("./pages/global/SettingsPage.jsx"));
 const DataPage = lazy(() => import("./pages/global/DataPage.jsx"));
 const QuotesListPage = lazy(() => import("./pages/global/QuotesListPage.jsx"));
+const CreateEstimateWizardPage = lazy(() => import("./pages/global/CreateEstimateWizardPage.jsx"));
 const JobsListPage = lazy(() => import("./pages/global/JobsListPage.jsx"));
 const InvoicesListPage = lazy(() => import("./pages/global/InvoicesListPage.jsx"));
 const BillsListPage = lazy(() => import("./pages/global/BillsListPage.jsx"));
@@ -76,6 +77,7 @@ export default function App() {
                 <Route path="portal" element={<SubcontractorPortalPage />} />
                 <Route path="projects" element={<ProjectsListPage />} />
                 <Route path="estimates" element={<QuotesListPage />} />
+                <Route path="estimates/new" element={<CreateEstimateWizardPage />} />
                 <Route path="jobs" element={<JobsListPage />} />
                 <Route path="pipeline" element={<PipelineShell />}>
                   <Route index element={<Navigate to="clients" replace />} />

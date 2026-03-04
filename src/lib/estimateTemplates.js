@@ -22,6 +22,7 @@ function makeCategory(name, items = []) {
 }
 
 export const ESTIMATE_TEMPLATE_OPTIONS = [
+  { id: "basic_residential", label: "Basic Residential" },
   { id: "residential", label: "Residential Build" },
   { id: "extension", label: "Extension" },
   { id: "renovation", label: "Renovation" },
@@ -30,6 +31,24 @@ export const ESTIMATE_TEMPLATE_OPTIONS = [
 ];
 
 const TEMPLATE_DEFINITIONS = {
+  basic_residential: [
+    makeCategory("Preliminaries"),
+    makeCategory("Demo / Site Prep"),
+    makeCategory("Concrete"),
+    makeCategory("Framing"),
+    makeCategory("Roofing"),
+    makeCategory("Electrical"),
+    makeCategory("Plumbing"),
+    makeCategory("HVAC"),
+    makeCategory("Insulation"),
+    makeCategory("Plaster"),
+    makeCategory("Flooring"),
+    makeCategory("Cabinets"),
+    makeCategory("Painting"),
+    makeCategory("External Works"),
+    makeCategory("PC/Provisional Sums"),
+    makeCategory("Margin / Adjustments"),
+  ],
   residential: [
     makeCategory("Preliminaries"),
     makeCategory("Site Works"),

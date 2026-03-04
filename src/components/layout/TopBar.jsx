@@ -139,13 +139,7 @@ export default function TopBar() {
   };
 
   const handleNewEstimate = () => {
-    const p = create({
-      marginPct: settings.defaultMargin ?? 18,
-      contingencyPct: settings.defaultContingency ?? 5,
-      validDays: settings.defaultValidDays ?? 30,
-    });
-    navigate(`/estimates/${p.id}/overview?step=estimate`);
-    notify("New estimate created");
+    navigate("/estimates/new");
     setShowCreate(false);
   };
 

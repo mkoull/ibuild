@@ -40,12 +40,21 @@ export default function OverviewPage() {
 
   // Convert modal state
   const [showConvertModal, setShowConvertModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [importMode, setImportMode] = useState("section");
   const [mergeMode, setMergeMode] = useState("replace");
   const [importSchedule, setImportSchedule] = useState(true);
   const [lockQuoteOnConvert, setLockQuoteOnConvert] = useState(true);
   const [allowQuoteEditsAfterConvert, setAllowQuoteEditsAfterConvert] = useState(false);
   const [pendingReturnPath, setPendingReturnPath] = useState("");
+  const [editForm, setEditForm] = useState({
+    name: p.name || "",
+    client: p.client || "",
+    phone: p.phone || "",
+    email: p.email || "",
+    buildType: p.buildType || p.type || "",
+    address: p.address || "",
+  });
 
   // Open modal from URL param (e.g. from JobModuleGate redirect)
   useEffect(() => {
@@ -261,6 +270,33 @@ export default function OverviewPage() {
     { label: "Create Invoice", to: "../invoices" },
   ];
 
+  const openEditDetails = () => {
+    setEditForm({
+      name: p.name || "",
+      client: p.client || "",
+      phone: p.phone || "",
+      email: p.email || "",
+      buildType: p.buildType || p.type || "",
+      address: p.address || "",
+    });
+    setShowEditModal(true);
+  };
+
+  const saveInlineDetails = () => {
+    up((pr) => {
+      pr.name = editForm.name;
+      pr.client = editForm.client;
+      pr.phone = editForm.phone;
+      pr.email = editForm.email;
+      pr.buildType = editForm.buildType;
+      pr.type = editForm.buildType;
+      pr.address = editForm.address;
+      return pr;
+    });
+    setShowEditModal(false);
+    notify("Details updated");
+  };
+
   return (
     <div style={{ animation: "fadeUp 0.2s ease", maxWidth: 1200 }}>
       {/* HERO */}
@@ -270,7 +306,7 @@ export default function OverviewPage() {
           title={pName(p, clients) === "New Project" ? "Overview" : pName(p, clients)}
           subtitle={`${stage} · ${p.buildType || p.type}${p.floorArea || p.area ? ` · ${p.floorArea || p.area}m²` : ""} · ${ds()}`}
           actions={(
-            <Button variant="ghost" size="sm" onClick={() => navigate("../quote?step=details")} icon={Pencil}>
+            <Button variant="ghost" size="sm" onClick={openEditDetails} icon={Pencil}>
               Edit details
             </Button>
           )}
@@ -623,6 +659,38 @@ export default function OverviewPage() {
           <Button onClick={handleConvertConfirm}>{importMode === "skip" ? "Convert" : "Convert & Import"}</Button>
         </div>
       </Modal>
+
+      <Modal open={showEditModal} onClose={() => setShowEditModal(false)} title="Edit Estimate & Customer Details" width={560}>
+        <div style={{ display: "grid", gap: _.s3 }}>
+          <div style={{ fontSize: _.fontSize.caption, color: _.muted, textTransform: "uppercase", letterSpacing: _.letterSpacing.wide }}>
+            Estimate Details
+          </div>
+          <input style={{ width: "100%", ...inputField }} value={editForm.name} onChange={(e) => setEditForm((v) => ({ ...v, name: e.target.value }))} placeholder="Project name" />
+          <input style={{ width: "100%", ...inputField }} value={editForm.buildType} onChange={(e) => setEditForm((v) => ({ ...v, buildType: e.target.value }))} placeholder="Build type" />
+          <div style={{ fontSize: _.fontSize.caption, color: _.muted, textTransform: "uppercase", letterSpacing: _.letterSpacing.wide, marginTop: _.s2 }}>
+            Customer Details
+          </div>
+          <input style={{ width: "100%", ...inputField }} value={editForm.client} onChange={(e) => setEditForm((v) => ({ ...v, client: e.target.value }))} placeholder="Client name" />
+          <input style={{ width: "100%", ...inputField }} value={editForm.phone} onChange={(e) => setEditForm((v) => ({ ...v, phone: e.target.value }))} placeholder="Phone" />
+          <input style={{ width: "100%", ...inputField }} value={editForm.email} onChange={(e) => setEditForm((v) => ({ ...v, email: e.target.value }))} placeholder="Email" />
+          <input style={{ width: "100%", ...inputField }} value={editForm.address} onChange={(e) => setEditForm((v) => ({ ...v, address: e.target.value }))} placeholder="Address" />
+        </div>
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: _.s2, marginTop: _.s4 }}>
+          <Button variant="ghost" onClick={() => setShowEditModal(false)}>Cancel</Button>
+          <Button onClick={saveInlineDetails}>Save</Button>
+        </div>
+      </Modal>
     </div>
   );
 }
+
+const inputField = {
+  height: 38,
+  border: `1px solid ${_.line}`,
+  borderRadius: _.rSm,
+  background: _.well,
+  padding: "0 10px",
+  fontFamily: "inherit",
+  fontSize: _.fontSize.base,
+  color: _.ink,
+};

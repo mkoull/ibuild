@@ -139,9 +139,7 @@ export default function DashboardPage() {
   const primaryActiveProject = activeProjects[0]?.pr || null;
 
   const quickCreateEstimate = () => {
-    const p = create();
-    navigate(`/estimates/${p.id}/overview?step=estimate`);
-    notify("New estimate created");
+    navigate("/estimates/new");
   };
 
   const quickCreateJob = () => {

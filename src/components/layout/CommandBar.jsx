@@ -34,7 +34,7 @@ export default function CommandBar() {
   const [selectedIdx, setSelectedIdx] = useState(0);
   const inputRef = useRef(null);
   const navigate = useNavigate();
-  const { projects, clients, trades, create, clientsHook, tradesHook, notify, settings } = useApp();
+  const { projects, clients, trades, clientsHook, tradesHook, notify } = useApp();
 
   // Open helper that also resets state
   const openBar = useCallback(() => {
@@ -163,8 +163,7 @@ export default function CommandBar() {
 
   const createResults = !q || "create new project client trade".includes(q) ? [
     { label: "New Estimate", sub: "Create", Ic: Plus, group: "Create", action: () => {
-      const p = create({ marginPct: settings.defaultMargin ?? 18, contingencyPct: settings.defaultContingency ?? 5, validDays: settings.defaultValidDays ?? 30 });
-      navigate(`/estimates/${p.id}/overview?step=estimate`); notify("New estimate created"); close();
+      navigate("/estimates/new"); close();
     }},
     { label: "New Client", sub: "Create", Ic: Plus, group: "Create", action: () => {
       const c = clientsHook.create(); navigate(`/clients/${c.id}`); notify("New client created"); close();
