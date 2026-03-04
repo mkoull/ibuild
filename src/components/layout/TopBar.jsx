@@ -138,7 +138,7 @@ export default function TopBar() {
       contingencyPct: settings.defaultContingency ?? 5,
       validDays: settings.defaultValidDays ?? 30,
     });
-    navigate(`/estimates/${p.id}/overview`);
+    navigate(`/estimates/${p.id}/overview?step=estimate`);
     notify("New estimate created");
     setShowCreate(false);
   };

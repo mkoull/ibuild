@@ -138,7 +138,7 @@ export default function DashboardPage() {
 
   const quickCreateEstimate = () => {
     const p = create();
-    navigate(`/estimates/${p.id}/overview`);
+    navigate(`/estimates/${p.id}/overview?step=estimate`);
     notify("New estimate created");
   };
 

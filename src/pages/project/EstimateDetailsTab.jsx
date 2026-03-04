@@ -1,13 +1,14 @@
-import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useProject } from "../../context/ProjectContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
 import _ from "../../theme/tokens.js";
-import { ds, fmt, uid } from "../../theme/styles.js";
+import { ds, fmt } from "../../theme/styles.js";
 import { displayStage } from "../../config/workspaceTabs.js";
 import { ArrowRight, CheckCircle2, MapPin } from "lucide-react";
 import Button from "../../components/ui/Button.jsx";
 import { calculateTotals, normalizeCategories } from "../../lib/costEngine.js";
+import { ESTIMATE_TEMPLATE_OPTIONS, buildEstimateTemplate } from "../../lib/estimateTemplates.js";
 
 const CARD = { background: "#fff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 10, padding: 20 };
 const CARD_HEADER = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 };
@@ -21,13 +22,6 @@ const STEPS = [
   { id: "pricing", label: "Step 4: Pricing Review" },
   { id: "quote", label: "Step 5: Generate Quote" },
 ];
-
-const TEMPLATE_CATEGORIES = {
-  residential: ["Site Works", "Concrete", "Framing", "Roofing", "Electrical", "Plumbing", "Finishes", "Joinery", "Painting", "Landscaping"],
-  renovation: ["Demolition", "Structural", "Services", "Joinery", "Finishes", "Painting", "External Works"],
-  extension: ["Site Works", "Foundations", "Framing", "Roofing", "Cladding", "Electrical", "Plumbing", "Finishes"],
-  custom: [],
-};
 
 function safeText(value) {
   if (value === null || value === undefined) return "—";
@@ -51,9 +45,10 @@ export default function EstimateDetailsTab() {
   const { project: p, update: up, client } = useProject();
   const { mobile, notify } = useApp();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [notes, setNotes] = useState(p.notes || "");
   const [activeStep, setActiveStep] = useState("project");
-  const [selectedTemplate, setSelectedTemplate] = useState("residential");
+  const [selectedTemplate, setSelectedTemplate] = useState(p.estimateTemplate || "custom");
 
   const stage = p.stage || p.status || "Lead";
   const contact = client?.contacts?.[0];
@@ -70,6 +65,13 @@ export default function EstimateDetailsTab() {
   const stepIndex = STEPS.findIndex((s) => s.id === activeStep);
   const nextStep = STEPS[stepIndex + 1];
 
+  useEffect(() => {
+    const step = searchParams.get("step");
+    if (step && STEPS.some((s) => s.id === step)) {
+      setActiveStep(step);
+    }
+  }, [searchParams]);
+
   const handleSaveNotes = () => {
     up((pr) => { pr.notes = notes; return pr; });
     notify("Notes saved");
@@ -82,17 +84,26 @@ export default function EstimateDetailsTab() {
 
   const applyTemplate = (templateKey) => {
     setSelectedTemplate(templateKey);
-    const names = TEMPLATE_CATEGORIES[templateKey] || [];
+    const categoriesFromTemplate = buildEstimateTemplate(templateKey);
     if (templateKey === "custom") {
+      up((pr) => {
+        pr.costCategories = [];
+        pr.estimateTemplate = "custom";
+        pr.estimate = {
+          categories: [],
+          totals: calculateTotals([]),
+        };
+        return pr;
+      });
       notify("Custom template selected");
       return;
     }
     up((pr) => {
-      const nextCategories = names.map((name) => ({ id: uid(), name, items: [] }));
-      pr.costCategories = nextCategories;
+      pr.costCategories = categoriesFromTemplate;
+      pr.estimateTemplate = templateKey;
       pr.estimate = {
-        categories: normalizeCategories(nextCategories),
-        totals: calculateTotals(nextCategories),
+        categories: normalizeCategories(categoriesFromTemplate),
+        totals: calculateTotals(categoriesFromTemplate),
       };
       return pr;
     });
@@ -220,12 +231,7 @@ export default function EstimateDetailsTab() {
             Start fast with a template or build custom categories.
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
-            {[
-              ["residential", "Residential Build"],
-              ["renovation", "Renovation"],
-              ["extension", "Extension"],
-              ["custom", "Custom"],
-            ].map(([id, label]) => (
+            {ESTIMATE_TEMPLATE_OPTIONS.map(({ id, label }) => (
               <Button key={id} variant={selectedTemplate === id ? "primary" : "secondary"} size="sm" onClick={() => applyTemplate(id)}>
                 {label}
               </Button>

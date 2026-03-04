@@ -164,7 +164,7 @@ export default function CommandBar() {
   const createResults = !q || "create new project client trade".includes(q) ? [
     { label: "New Estimate", sub: "Create", Ic: Plus, group: "Create", action: () => {
       const p = create({ marginPct: settings.defaultMargin ?? 18, contingencyPct: settings.defaultContingency ?? 5, validDays: settings.defaultValidDays ?? 30 });
-      navigate(`/estimates/${p.id}/overview`); notify("New estimate created"); close();
+      navigate(`/estimates/${p.id}/overview?step=estimate`); notify("New estimate created"); close();
     }},
     { label: "New Client", sub: "Create", Ic: Plus, group: "Create", action: () => {
       const c = clientsHook.create(); navigate(`/clients/${c.id}`); notify("New client created"); close();
