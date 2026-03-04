@@ -9,6 +9,7 @@ import Button from "../../components/ui/Button.jsx";
 import Modal from "../../components/ui/Modal.jsx";
 import SearchInput from "../../components/ui/SearchInput.jsx";
 import { calculateTotals, normalizeCategories } from "../../lib/costEngine.js";
+import { evaluateBenchmark, findTradeBenchmark } from "../../lib/tradeBenchmarks.js";
 
 const BOX = {
   background: _.surface,
@@ -502,12 +503,23 @@ export default function ScopePage() {
                     <th style={{ padding: "10px 12px", borderBottom: `1px solid ${_.line}` }}>Cost</th>
                     <th style={{ padding: "10px 12px", borderBottom: `1px solid ${_.line}` }}>Margin %</th>
                     <th style={{ padding: "10px 12px", borderBottom: `1px solid ${_.line}` }}>Sell</th>
+                    <th style={{ padding: "10px 12px", borderBottom: `1px solid ${_.line}` }}>Typical Range</th>
+                    <th style={{ padding: "10px 12px", borderBottom: `1px solid ${_.line}` }}>Benchmark</th>
                     <th style={{ padding: "10px 12px", borderBottom: `1px solid ${_.line}` }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {(cat.items || []).map((item) => (
                     <tr key={item.id}>
+                      {(() => {
+                        const benchmark = findTradeBenchmark({
+                          categoryName: cat.name,
+                          description: item.description,
+                          unit: item.unit,
+                        });
+                        const indicator = evaluateBenchmark(item.unitRate, benchmark);
+                        return (
+                          <>
                       <td style={{ padding: "8px 12px", borderBottom: `1px solid ${_.line}` }}>
                         <input
                           value={item.description || ""}
@@ -557,6 +569,27 @@ export default function ScopePage() {
                       <td style={{ padding: "8px 12px", borderBottom: `1px solid ${_.line}`, fontVariantNumeric: "tabular-nums", fontWeight: 600 }}>
                         {money(item.sellTotal)}
                       </td>
+                      <td style={{ padding: "8px 12px", borderBottom: `1px solid ${_.line}`, fontSize: 12, color: _.muted, whiteSpace: "nowrap" }}>
+                        {benchmark ? `${money(benchmark.low)} - ${money(benchmark.high)} / ${benchmark.unit}` : "—"}
+                      </td>
+                      <td style={{ padding: "8px 12px", borderBottom: `1px solid ${_.line}` }}>
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            padding: "3px 8px",
+                            borderRadius: 999,
+                            fontSize: 11,
+                            fontWeight: 700,
+                            color: indicator.color,
+                            background: `${indicator.color}18`,
+                            border: `1px solid ${indicator.color}44`,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {indicator.label}
+                        </span>
+                      </td>
                       <td style={{ padding: "8px 12px", borderBottom: `1px solid ${_.line}` }}>
                         {!isActive && (
                           <button
@@ -569,6 +602,9 @@ export default function ScopePage() {
                           </button>
                         )}
                       </td>
+                          </>
+                        );
+                      })()}
                     </tr>
                   ))}
                 </tbody>
