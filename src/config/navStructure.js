@@ -24,6 +24,6 @@ export const NAV_STRUCTURE = {
     projects:   ["/projects", "/estimates", "/jobs"],
     finance:    ["/finance", "/invoices", "/bills", "/payments"],
     site:       ["/site", "/documents", "/site-diary", "/defects"],
-    settings:   ["/settings", "/rate-library", "/trades"],
+    settings:   ["/settings", "/rate-library", "/cost-library", "/trades"],
   },
 };

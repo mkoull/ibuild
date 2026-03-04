@@ -102,6 +102,7 @@ export default function App() {
                 <Route path="trades" element={<TradesListPage />} />
                 <Route path="trades/:tradeId" element={<TradeDetailPage />} />
                 <Route path="rate-library" element={<RateLibraryPage />} />
+                <Route path="cost-library" element={<RateLibraryPage />} />
                 <Route path="settings" element={<SettingsPage />} />
                 <Route path="settings/data" element={<DataPage />} />
 

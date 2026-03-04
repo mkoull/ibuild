@@ -1,10 +1,13 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useProject } from "../../context/ProjectContext.jsx";
+import { useApp } from "../../context/AppContext.jsx";
 import { uid } from "../../theme/styles.js";
 import _ from "../../theme/tokens.js";
 import Button from "../../components/ui/Button.jsx";
+import Modal from "../../components/ui/Modal.jsx";
+import SearchInput from "../../components/ui/SearchInput.jsx";
 import { calculateTotals, normalizeCategories } from "../../lib/costEngine.js";
 
 const BOX = {
@@ -34,7 +37,10 @@ function money(n) {
 
 export default function ScopePage() {
   const { project, update } = useProject();
+  const { rateLibrary } = useApp();
   const navigate = useNavigate();
+  const [libraryModalCategoryId, setLibraryModalCategoryId] = useState("");
+  const [libraryQuery, setLibraryQuery] = useState("");
   const isActive = String(project.stage || project.status || "").toLowerCase() === "active";
   const estimateCategories = normalizeCategories(project?.estimate?.categories || project.costCategories || []);
   const budgetCategories = normalizeCategories(project?.job?.budget?.categories || []);
@@ -53,6 +59,35 @@ export default function ScopePage() {
     { key: "margin", label: "Step 3 — Review Margin", complete: hasItems && totals.totalSell > 0 },
     { key: "quote", label: "Step 4 — Generate Quote", complete: false },
   ];
+  const libraryCategoryById = useMemo(() => {
+    const m = {};
+    (rateLibrary.categories || []).forEach((c) => { m[c.id] = c.name; });
+    return m;
+  }, [rateLibrary.categories]);
+  const filteredLibraryItems = useMemo(() => {
+    const q = libraryQuery.trim().toLowerCase();
+    return (rateLibrary.items || [])
+      .map((item) => {
+        const labour = Number(item.labourCost) || 0;
+        const material = Number(item.materialCost) || 0;
+        const unitCost = Number(item.unitRate ?? (labour + material)) || 0;
+        return {
+          ...item,
+          categoryName: libraryCategoryById[item.categoryId] || item.category || "Uncategorised",
+          unitCost,
+          markupPct: Number(item.markupPct ?? item.margin ?? 20) || 20,
+        };
+      })
+      .filter((item) => {
+        if (!q) return true;
+        return (
+          String(item.name || "").toLowerCase().includes(q)
+          || String(item.description || "").toLowerCase().includes(q)
+          || String(item.categoryName || "").toLowerCase().includes(q)
+        );
+      })
+      .slice(0, 60);
+  }, [rateLibrary.items, libraryQuery, libraryCategoryById]);
 
   const addCategory = () => {
     if (isActive) return;
@@ -120,6 +155,33 @@ export default function ScopePage() {
       };
       return pr;
     });
+  };
+
+  const addFromLibrary = (categoryId, libraryItem) => {
+    if (isActive) return;
+    update((pr) => {
+      const cat = (pr.costCategories || []).find((c) => c.id === categoryId);
+      if (!cat) return pr;
+      if (!Array.isArray(cat.items)) cat.items = [];
+      cat.items.push({
+        id: uid(),
+        description: libraryItem.name || libraryItem.description || "",
+        quantity: 1,
+        unit: libraryItem.unit || "unit",
+        unitRate: Number(libraryItem.unitCost) || 0,
+        costTotal: 0,
+        marginPercent: Number(libraryItem.markupPct) || 20,
+        sellTotal: 0,
+      });
+      cat.items = normalizeCategories([{ id: cat.id, name: cat.name, items: cat.items }])[0].items;
+      pr.estimate = {
+        categories: normalizeCategories(pr.costCategories),
+        totals: calculateTotals(pr.costCategories),
+      };
+      return pr;
+    });
+    setLibraryModalCategoryId("");
+    setLibraryQuery("");
   };
 
   const updateLineItem = (categoryId, itemId, field, value) => {
@@ -247,7 +309,16 @@ export default function ScopePage() {
                   color: _.ink,
                 }}
               />
-              {!isActive && <Button size="sm" variant="secondary" icon={Plus} onClick={() => addLineItem(cat.id)}>Add Line Item</Button>}
+              {!isActive && (
+                <>
+                  <Button size="sm" variant="secondary" icon={Plus} onClick={() => setLibraryModalCategoryId(cat.id)}>
+                    Add from Library
+                  </Button>
+                  <Button size="sm" variant="secondary" icon={Plus} onClick={() => addLineItem(cat.id)}>
+                    Add Line Item
+                  </Button>
+                </>
+              )}
             </div>
 
             <div style={{ overflowX: "auto" }}>
@@ -352,6 +423,48 @@ export default function ScopePage() {
           </>
         )}
       </aside>
+
+      <Modal
+        open={!!libraryModalCategoryId}
+        onClose={() => { setLibraryModalCategoryId(""); setLibraryQuery(""); }}
+        title="Add Cost Item From Library"
+        width={760}
+      >
+        <SearchInput value={libraryQuery} onChange={setLibraryQuery} placeholder="Search cost library items..." style={{ marginBottom: 10 }} />
+        <div style={{ maxHeight: 420, overflowY: "auto", border: `1px solid ${_.line}`, borderRadius: 8 }}>
+          {filteredLibraryItems.length === 0 && (
+            <div style={{ padding: 12, fontSize: 13, color: _.muted }}>No library items found.</div>
+          )}
+          {filteredLibraryItems.map((item) => (
+            <button
+              type="button"
+              key={item.id}
+              onClick={() => addFromLibrary(libraryModalCategoryId, item)}
+              style={{
+                width: "100%",
+                textAlign: "left",
+                border: "none",
+                background: _.surface,
+                borderBottom: `1px solid ${_.line}`,
+                padding: "10px 12px",
+                cursor: "pointer",
+                display: "grid",
+                gridTemplateColumns: "1.4fr 1fr 0.7fr 0.7fr",
+                gap: 10,
+                alignItems: "center",
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: _.ink }}>{item.name || "Cost Item"}</div>
+                <div style={{ fontSize: 12, color: _.muted }}>{item.description || "No description"}</div>
+              </div>
+              <span style={{ fontSize: 12, color: _.muted }}>{item.categoryName}</span>
+              <span style={{ fontSize: 13, color: _.ink }}>{item.unit}</span>
+              <span style={{ textAlign: "right", fontSize: 13, color: _.ink, fontWeight: 600 }}>{money(item.unitCost)}</span>
+            </button>
+          ))}
+        </div>
+      </Modal>
     </div>
   );
 }

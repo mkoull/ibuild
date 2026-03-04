@@ -22,7 +22,8 @@ const ROUTE_TITLES = {
   "/site-diary": "Site Diary",
   "/defects":    "Defects",
   "/trades":     "Trades",
-  "/rate-library": "Rate Library",
+  "/rate-library": "Cost Library",
+  "/cost-library": "Cost Library",
   "/settings":   "Settings",
 };
 

@@ -23,7 +23,7 @@ const NAV_ITEMS = [
   { label: "Site Diary",   to: "/site-diary",     Ic: NotebookText,    group: "Navigate" },
   { label: "Defects",      to: "/defects",        Ic: Bug,             group: "Navigate" },
   { label: "Trades",       to: "/trades",         Ic: Building2,       group: "Navigate" },
-  { label: "Rate Library", to: "/rate-library",   Ic: Landmark,        group: "Navigate" },
+  { label: "Cost Library", to: "/rate-library",   Ic: Landmark,        group: "Navigate" },
   { label: "Settings",     to: "/settings",       Ic: Settings,        group: "Navigate" },
   { label: "Projects",     to: "/projects",       Ic: FolderOpen,      group: "Navigate" },
 ];
