@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useCallback, useEffect } from "react";
+import { useState, useRef, useMemo, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useProject } from "../../context/ProjectContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
@@ -10,11 +10,12 @@ import { canTransition, isQuote, isJob, needsQuoteToJobConversion } from "../../
 import { usePageBottomBar } from "../../hooks/usePageBottomBar.js";
 import { applyConvertToJobBaseline, calculateTotals, normalizeCategories } from "../../lib/costEngine.js";
 import { exportPrintPdf } from "../../lib/pdfExport.js";
-import { isRequiredText, toPositiveNumber } from "../../lib/validation.js";
+import { isRequiredText } from "../../lib/validation.js";
 import Card from "../../components/ui/Card.jsx";
 import Modal from "../../components/ui/Modal.jsx";
 import Button from "../../components/ui/Button.jsx";
 import { Check, ChevronRight, ChevronDown, Plus, ArrowRight, ArrowLeft, X, Send, Search, UserPlus, FileCheck } from "lucide-react";
+import QuoteEditor from "./quote/QuoteEditor.jsx";
 
 const STEPS = ["details", "scope", "extras", "review"];
 const STEP_LABELS = { details: "Details", scope: "Scope", extras: "Extras", review: "Review" };
@@ -29,13 +30,6 @@ export default function QuotePage() {
   const currentStep = STEPS.includes(searchParams.get("step")) ? searchParams.get("step") : "details";
   const setStep = useCallback((s) => setSearchParams({ step: s }, { replace: true }), [setSearchParams]);
 
-  const [newCat, setNewCat] = useState("");
-  const [selectedCat, setSelectedCat] = useState("");
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [editRow, setEditRow] = useState(null);
-  const [librarySearch, setLibrarySearch] = useState("");
-  const [pendingFocusKey, setPendingFocusKey] = useState("");
-  const [delCat, setDelCat] = useState(null);
   const [clientOpen, setClientOpen] = useState(false);
   const [clientSearch, setClientSearch] = useState("");
   const [newClientModal, setNewClientModal] = useState(false);
@@ -49,7 +43,6 @@ export default function QuotePage() {
   const [pcInput, setPcInput] = useState({ description: "", amount: "" });
   const [qualInput, setQualInput] = useState("");
   const [termInput, setTermInput] = useState("");
-  const descInputRefs = useRef({});
 
   const stage = p.stage || p.status;
   const margin = p.marginPct ?? p.margin ?? 0;
@@ -72,91 +65,6 @@ export default function QuotePage() {
     extras: true,
     review: proposalGenerated,
   };
-  const scopeCategories = Object.keys(p.scope || {});
-
-  useEffect(() => {
-    if (!scopeCategories.length) {
-      if (selectedCat) setSelectedCat("");
-      return;
-    }
-    if (!selectedCat || !p.scope[selectedCat]) {
-      setSelectedCat(scopeCategories[0]);
-    }
-  }, [scopeCategories, selectedCat, p.scope]);
-
-  // ─── Scope mutation helpers ───
-  const uI = (cat, idx, k, v) => up(pr => {
-    if (k === "qty" || k === "rate") {
-      pr.scope[cat][idx][k] = toPositiveNumber(v, 0);
-    } else {
-      pr.scope[cat][idx][k] = v;
-    }
-    if (k === "on" && v && !pr.scope[cat][idx].qty) pr.scope[cat][idx].qty = 1;
-    return pr;
-  });
-
-  const addLineItem = (cat, seed = {}) => {
-    let insertedIdx = -1;
-    up((pr) => {
-      if (!pr.scope[cat]) pr.scope[cat] = [];
-      const row = {
-        item: seed.item || "",
-        type: seed.type || "Labour",
-        unit: seed.unit || "ea",
-        rate: toPositiveNumber(seed.rate, 0),
-        qty: toPositiveNumber(seed.qty, 1),
-        on: true,
-        actual: 0,
-        custom: true,
-        _id: uid(),
-        notes: seed.notes || "",
-        supplier: seed.supplier || "",
-        labourCost: toPositiveNumber(seed.labourCost, 0),
-        materialCost: toPositiveNumber(seed.materialCost, 0),
-        attachments: Array.isArray(seed.attachments) ? seed.attachments : [],
-      };
-      pr.scope[cat].push(row);
-      insertedIdx = pr.scope[cat].length - 1;
-      return pr;
-    });
-    if (insertedIdx >= 0) {
-      setPendingFocusKey(`${cat}:${insertedIdx}`);
-    }
-    return insertedIdx;
-  };
-
-  const delI = (cat, idx) => up(pr => {
-    pr.scope[cat].splice(idx, 1);
-    return pr;
-  });
-
-  const getRowMargin = (item) => Number(item.marginPct ?? margin) || 0;
-  const getRowSell = (item) => {
-    const qty = Number(item.qty) || 0;
-    const rate = Number(item.rate) || 0;
-    return qty * rate * (1 + (getRowMargin(item) / 100));
-  };
-
-  useEffect(() => {
-    if (!pendingFocusKey) return;
-    const el = descInputRefs.current[pendingFocusKey];
-    if (el && typeof el.focus === "function") {
-      el.focus();
-      el.select?.();
-      setPendingFocusKey("");
-      return;
-    }
-    const t = setTimeout(() => {
-      const next = descInputRefs.current[pendingFocusKey];
-      if (next && typeof next.focus === "function") {
-        next.focus();
-        next.select?.();
-      }
-      setPendingFocusKey("");
-    }, 0);
-    return () => clearTimeout(t);
-  }, [pendingFocusKey, p.scope]);
-
   // ─── Client picker ───
   const filteredClients = useMemo(() => {
     const q = clientSearch.toLowerCase().trim();
@@ -496,45 +404,6 @@ export default function QuotePage() {
     notify("Quote marked Accepted");
   };
 
-  const libraryMatches = useMemo(() => {
-    if (!selectedCat || !librarySearch.trim()) return [];
-    const q = librarySearch.toLowerCase().trim();
-    return (rateLibrary.items || [])
-      .filter((item) => {
-        const name = String(item.name || "").toLowerCase();
-        const categoryName = String(rateLibrary.categories.find((c) => c.id === item.categoryId)?.name || "").toLowerCase();
-        return name.includes(q) || categoryName.includes(q);
-      })
-      .slice(0, 8);
-  }, [librarySearch, rateLibrary.items, rateLibrary.categories, selectedCat]);
-
-  const addFromLibrary = (item) => {
-    if (!selectedCat) return;
-    const insertedIdx = addLineItem(selectedCat, {
-      item: item.name,
-      unit: item.unit || "ea",
-      rate: Number(item.unitRate) || 0,
-      qty: Number(item.defaultQty) || 1,
-      labourCost: Number(item.labourCost) || 0,
-      materialCost: Number(item.materialCost) || 0,
-    });
-    if (insertedIdx >= 0) {
-      notify(`Added: ${item.name}`);
-      setLibrarySearch("");
-    }
-  };
-
-  const filesToDataUrls = async (fileList) => {
-    const files = Array.from(fileList || []);
-    const mapped = files.map((file) => new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve({ name: file.name, type: file.type, dataUrl: String(reader.result || "") });
-      reader.onerror = () => reject(new Error("Failed to read file"));
-      reader.readAsDataURL(file);
-    }));
-    return Promise.all(mapped);
-  };
-
   return (
     <div style={{ animation: "fadeUp 0.2s ease", width: "100%", maxWidth: "none" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: _.s2 }}>
@@ -722,297 +591,12 @@ export default function QuotePage() {
 
           {/* ═══════════════ SCOPE STEP ═══════════════ */}
           {currentStep === "scope" && (
-            <div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: _.s4 }}>
-                <div style={{ fontSize: _.fontSize.unit, fontWeight: _.fontWeight.semi, color: _.ink }}>Quote Editor</div>
-                {T.items > 0 && <span style={{ fontSize: _.fontSize.md, color: _.body }}>{T.items} items · {fmt(T.sub)}</span>}
-              </div>
-              <div style={{
-                display: "grid",
-                gridTemplateColumns: mobile ? "1fr" : `${sidebarCollapsed ? "84px" : "220px"} minmax(0,1fr)`,
-                gap: _.s3,
-                alignItems: "start",
-              }}>
-                <Card style={{ padding: 12, maxHeight: mobile ? "none" : "70vh", overflowY: "auto" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: _.s2 }}>
-                    {!sidebarCollapsed && (
-                      <div style={{ fontSize: _.fontSize.caption, color: _.muted, textTransform: "uppercase", letterSpacing: _.letterSpacing.wide }}>
-                        Categories
-                      </div>
-                    )}
-                    {!mobile && (
-                      <button type="button" onClick={() => setSidebarCollapsed((v) => !v)} style={{ ...btnGhost, padding: "4px 8px", marginLeft: "auto" }}>
-                        {sidebarCollapsed ? "Expand" : "Collapse"}
-                      </button>
-                    )}
-                  </div>
-                  {scopeCategories.length === 0 && (
-                    <div style={{ fontSize: _.fontSize.sm, color: _.muted, padding: "10px 0" }}>
-                      Add a category to start your quote.
-                    </div>
-                  )}
-                  <div style={{ display: "grid", gap: 6 }}>
-                    {scopeCategories.map((cat) => {
-                      const items = p.scope[cat] || [];
-                      const active = selectedCat === cat;
-                      const catCount = items.filter((i) => i.on).length;
-                      const catTotal = items.filter((i) => i.on).reduce((t, i) => t + (Number(i.rate) || 0) * (Number(i.qty) || 0), 0);
-                      return (
-                        <button
-                          key={cat}
-                          type="button"
-                          onClick={() => setSelectedCat(cat)}
-                          style={{
-                            border: `1px solid ${active ? _.ac : _.line}`,
-                            borderRadius: _.rSm,
-                            background: active ? `${_.ac}10` : _.surface,
-                            textAlign: "left",
-                            padding: "8px 10px",
-                            cursor: "pointer",
-                          }}
-                        >
-                          <div style={{ fontSize: _.fontSize.base, fontWeight: _.fontWeight.semi, color: _.ink }}>
-                            {sidebarCollapsed ? (cat.slice(0, 2).toUpperCase() || "C") : cat}
-                          </div>
-                          {!sidebarCollapsed && (
-                            <div style={{ fontSize: _.fontSize.caption, color: _.muted }}>{catCount} items · {fmt(catTotal)}</div>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <div style={{ display: "grid", gap: 8, marginTop: _.s3 }}>
-                    {!sidebarCollapsed && (
-                      <input
-                        style={{ ...input, width: "100%" }}
-                        value={newCat}
-                        onChange={(e) => setNewCat(e.target.value)}
-                        placeholder="Add category"
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && newCat.trim()) {
-                            const name = newCat.trim();
-                            up((pr) => {
-                              if (!pr.scope[name]) pr.scope[name] = [];
-                              return pr;
-                            });
-                            setSelectedCat(name);
-                            setNewCat("");
-                          }
-                        }}
-                      />
-                    )}
-                    {!sidebarCollapsed && (
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => {
-                          const name = newCat.trim();
-                          if (!name) {
-                            notify("Enter a category name", "error");
-                            return;
-                          }
-                          if (p.scope[name]) {
-                            notify("Category already exists", "error");
-                            return;
-                          }
-                          up((pr) => {
-                            pr.scope[name] = [];
-                            return pr;
-                          });
-                          setSelectedCat(name);
-                          setNewCat("");
-                        }}
-                      >
-                        Add Category
-                      </Button>
-                    )}
-                  </div>
-                </Card>
-
-                <Card style={{ padding: 12 }}>
-                  {!selectedCat ? (
-                    <div style={{ padding: "28px 12px", textAlign: "center", color: _.muted }}>
-                      Select a category to start adding line items.
-                    </div>
-                  ) : (
-                    <>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: _.s3, flexWrap: "wrap", gap: _.s2 }}>
-                        <div style={{ fontSize: _.fontSize.lg, fontWeight: _.fontWeight.semi, color: _.ink }}>{selectedCat}</div>
-                        <div style={{ display: "flex", gap: _.s2 }}>
-                          <Button size="sm" onClick={() => {
-                            addLineItem(selectedCat);
-                          }} icon={Plus}>Add Line Item</Button>
-                        </div>
-                      </div>
-                      <div style={{ position: "relative", marginBottom: _.s2 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, border: `1px solid ${_.line}`, borderRadius: _.rSm, padding: "6px 10px", background: _.well }}>
-                          <Search size={13} color={_.muted} />
-                          <input
-                            style={{ border: "none", outline: "none", background: "transparent", width: "100%", fontSize: _.fontSize.base, color: _.ink, fontFamily: "inherit" }}
-                            value={librarySearch}
-                            onChange={(e) => setLibrarySearch(e.target.value)}
-                            placeholder="Search rate library..."
-                          />
-                        </div>
-                        {librarySearch.trim() && (
-                          <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 20, background: _.surface, border: `1px solid ${_.line}`, borderRadius: _.rSm, boxShadow: _.sh2, maxHeight: 220, overflowY: "auto" }}>
-                            {libraryMatches.length === 0 ? (
-                              <div style={{ padding: "10px 12px", fontSize: _.fontSize.sm, color: _.muted }}>No matching library items</div>
-                            ) : libraryMatches.map((item) => (
-                              <button
-                                key={item.id}
-                                type="button"
-                                onClick={() => addFromLibrary(item)}
-                                style={{ width: "100%", textAlign: "left", border: "none", background: "transparent", cursor: "pointer", padding: "9px 12px", borderBottom: `1px solid ${_.line}` }}
-                              >
-                                <div style={{ fontSize: _.fontSize.base, color: _.ink, fontWeight: _.fontWeight.medium }}>{item.name}</div>
-                                <div style={{ fontSize: _.fontSize.caption, color: _.muted }}>{item.unit || "ea"} · {fmt(Number(item.unitRate) || 0)}</div>
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      <div style={{ overflowX: "auto" }}>
-                        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 760 }}>
-                          <thead>
-                            <tr style={{ textAlign: "left", borderBottom: `1px solid ${_.line}` }}>
-                              {["Description", "Type", "Qty", "Unit Cost", "Sell Price", "Margin %", ""].map((h) => (
-                                <th key={h} style={{ fontSize: _.fontSize.xs, color: _.muted, fontWeight: _.fontWeight.semi, padding: "8px 6px", whiteSpace: "nowrap" }}>{h}</th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {(p.scope[selectedCat] || []).map((item, idx) => {
-                              const qty = Number(item.qty) || 0;
-                              const rate = Number(item.rate) || 0;
-                              const lineMargin = getRowMargin(item);
-                              const sell = getRowSell(item);
-                              return (
-                                <tr key={item._id} style={{ borderBottom: `1px solid ${_.line}`, cursor: "pointer" }} onClick={() => setEditRow({ cat: selectedCat, idx })}>
-                                  <td style={{ padding: "8px 6px" }}>
-                                    <input
-                                      ref={(el) => { descInputRefs.current[`${selectedCat}:${idx}`] = el; }}
-                                      style={{ ...input, width: "100%" }}
-                                      value={item.item || ""}
-                                      onClick={(e) => e.stopPropagation()}
-                                      onChange={(e) => uI(selectedCat, idx, "item", e.target.value)}
-                                      onKeyDown={(e) => {
-                                        if (e.key === "Enter") {
-                                          e.preventDefault();
-                                          addLineItem(selectedCat);
-                                        }
-                                      }}
-                                    />
-                                  </td>
-                                  <td style={{ padding: "8px 6px" }}>
-                                    <input
-                                      style={{ ...input, width: 110 }}
-                                      value={item.type || "Labour"}
-                                      onClick={(e) => e.stopPropagation()}
-                                      onChange={(e) => uI(selectedCat, idx, "type", e.target.value)}
-                                      onKeyDown={(e) => {
-                                        if (e.key === "Enter") {
-                                          e.preventDefault();
-                                          addLineItem(selectedCat);
-                                        }
-                                      }}
-                                    />
-                                  </td>
-                                  <td style={{ padding: "8px 6px" }}>
-                                    <input
-                                      type="number"
-                                      style={{ ...input, width: 72 }}
-                                      value={item.qty}
-                                      onClick={(e) => e.stopPropagation()}
-                                      onChange={(e) => uI(selectedCat, idx, "qty", parseFloat(e.target.value) || 0)}
-                                      onKeyDown={(e) => {
-                                        if (e.key === "Enter") {
-                                          e.preventDefault();
-                                          addLineItem(selectedCat);
-                                        }
-                                      }}
-                                    />
-                                  </td>
-                                  <td style={{ padding: "8px 6px" }}>
-                                    <input
-                                      type="number"
-                                      style={{ ...input, width: 110 }}
-                                      value={item.rate}
-                                      onClick={(e) => e.stopPropagation()}
-                                      onChange={(e) => uI(selectedCat, idx, "rate", parseFloat(e.target.value) || 0)}
-                                      onKeyDown={(e) => {
-                                        if (e.key === "Enter") {
-                                          e.preventDefault();
-                                          addLineItem(selectedCat);
-                                        }
-                                      }}
-                                    />
-                                  </td>
-                                  <td style={{ padding: "8px 6px" }}>
-                                    <input
-                                      type="number"
-                                      style={{ ...input, width: 120 }}
-                                      value={sell.toFixed(2)}
-                                      onClick={(e) => e.stopPropagation()}
-                                      onChange={(e) => {
-                                        const sellVal = toPositiveNumber(e.target.value, 0);
-                                        const denom = 1 + (lineMargin / 100);
-                                        const nextRate = qty > 0 ? (sellVal / denom) / qty : 0;
-                                        uI(selectedCat, idx, "rate", nextRate);
-                                      }}
-                                      onKeyDown={(e) => {
-                                        if (e.key === "Enter") {
-                                          e.preventDefault();
-                                          addLineItem(selectedCat);
-                                        }
-                                      }}
-                                    />
-                                  </td>
-                                  <td style={{ padding: "8px 6px", fontWeight: _.fontWeight.semi, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
-                                    <input
-                                      type="number"
-                                      style={{ ...input, width: 90 }}
-                                      value={lineMargin}
-                                      onClick={(e) => e.stopPropagation()}
-                                      onChange={(e) => uI(selectedCat, idx, "marginPct", toPositiveNumber(e.target.value, 0))}
-                                      onKeyDown={(e) => {
-                                        if (e.key === "Enter") {
-                                          e.preventDefault();
-                                          addLineItem(selectedCat);
-                                        }
-                                      }}
-                                    />
-                                  </td>
-                                  <td style={{ padding: "8px 6px" }}>
-                                    <button type="button" onClick={(e) => { e.stopPropagation(); delI(selectedCat, idx); }} style={{ ...btnGhost, padding: "4px 8px" }}>
-                                      <X size={12} />
-                                    </button>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                      {(p.scope[selectedCat] || []).length === 0 && (
-                        <div style={{ marginTop: _.s3, padding: "18px 12px", textAlign: "center", fontSize: _.fontSize.sm, color: _.muted, border: `1px dashed ${_.line2}`, borderRadius: _.rSm }}>
-                          No line items yet. Click <strong>Add Line Item</strong> to start pricing this category.
-                        </div>
-                      )}
-                      <div style={{ marginTop: _.s2 }}>
-                        <button onClick={() => setDelCat(selectedCat)} style={{ ...btnGhost, color: _.red }}>Delete Category</button>
-                      </div>
-                    </>
-                  )}
-                </Card>
-              </div>
-
-              {/* Nav */}
-              <div style={{ marginTop: _.s7, display: "flex", gap: _.s3 }}>
-                <Button variant="ghost" onClick={() => setStep("details")} icon={ArrowLeft}>Details</Button>
-                <Button onClick={() => setStep("extras")} icon={ArrowRight}>Continue to Extras</Button>
-              </div>
-            </div>
+            <QuoteEditor
+              project={p} up={up} T={T}
+              margin={margin} contingency={contingency}
+              mobile={mobile} rateLibrary={rateLibrary}
+              notify={notify} onNavigate={setStep}
+            />
           )}
 
           {/* ═══════════════ EXTRAS STEP ═══════════════ */}
@@ -1380,199 +964,6 @@ export default function QuotePage() {
         )}
       </div>
 
-      {/* Scope totals bar */}
-      {currentStep === "scope" && (
-        <div style={{
-          position: "fixed",
-          bottom: mobile ? "var(--mobile-bottom-total)" : 0,
-          left: 0,
-          right: 0,
-          background: _.surface, borderTop: `1px solid ${_.line}`,
-          padding: mobile ? "10px 16px" : "10px 24px",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          boxShadow: "0 -2px 8px rgba(0,0,0,0.06)", zIndex: 45,
-        }}>
-          <div style={{ display: "flex", gap: mobile ? _.s3 : _.s6, alignItems: "center", flexWrap: "wrap" }}>
-            <div>
-              <div style={{ fontSize: _.fontSize.caption, color: _.muted, fontWeight: _.fontWeight.semi }}>Total Sell</div>
-              <div style={{ fontSize: _.fontSize.lg, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums" }}>{fmt(T.curr)}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: _.fontSize.caption, color: _.muted, fontWeight: _.fontWeight.semi }}>Margin %</div>
-              <div style={{ fontSize: _.fontSize.base, fontWeight: _.fontWeight.semi }}>{Number(margin || 0).toFixed(2)}%</div>
-            </div>
-            <div>
-              <div style={{ fontSize: _.fontSize.caption, color: _.muted, fontWeight: _.fontWeight.semi }}>GST</div>
-              <div style={{ fontSize: _.fontSize.base, fontWeight: _.fontWeight.semi, fontVariantNumeric: "tabular-nums" }}>{fmt(T.gst)}</div>
-            </div>
-          </div>
-          <Button size="sm" onClick={() => setStep("review")} icon={ArrowRight}>Review Quote</Button>
-        </div>
-      )}
-
-      {/* Line item side drawer */}
-      {currentStep === "scope" && !!editRow && (
-        <>
-          <div
-            onClick={() => setEditRow(null)}
-            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.2)", zIndex: 70 }}
-          />
-          <div style={{
-            position: "fixed",
-            top: 0,
-            right: 0,
-            bottom: mobile ? "var(--mobile-bottom-total)" : 0,
-            width: mobile ? "100%" : 420,
-            background: _.surface,
-            borderLeft: `1px solid ${_.line}`,
-            boxShadow: "-6px 0 20px rgba(0,0,0,0.08)",
-            zIndex: 71,
-            display: "grid",
-            gridTemplateRows: "auto 1fr auto",
-          }}>
-            <div style={{ padding: "12px 14px", borderBottom: `1px solid ${_.line}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.semi, color: _.ink }}>Line Item</div>
-              <button type="button" onClick={() => setEditRow(null)} style={{ ...btnGhost, padding: "4px 8px" }}><X size={14} /></button>
-            </div>
-            <div style={{ padding: 14, overflowY: "auto" }}>
-              {(() => {
-                const cat = editRow.cat;
-                const idx = editRow.idx;
-                const item = p.scope?.[cat]?.[idx];
-                if (!item) return <div style={{ fontSize: _.fontSize.sm, color: _.muted }}>Line item not found.</div>;
-                const rowMargin = getRowMargin(item);
-                const rowSell = getRowSell(item);
-                return (
-                  <div style={{ display: "grid", gap: _.s3 }}>
-                    <div>
-                      <label style={label}>Description</label>
-                      <input style={input} value={item.item || ""} onChange={(e) => uI(cat, idx, "item", e.target.value)} />
-                    </div>
-                    <div>
-                      <label style={label}>Type</label>
-                      <input style={input} value={item.type || ""} onChange={(e) => uI(cat, idx, "type", e.target.value)} />
-                    </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: _.s2 }}>
-                      <div>
-                        <label style={label}>Qty</label>
-                        <input type="number" style={input} value={item.qty} onChange={(e) => uI(cat, idx, "qty", toPositiveNumber(e.target.value, 0))} />
-                      </div>
-                      <div>
-                        <label style={label}>Unit Cost</label>
-                        <input type="number" style={input} value={item.rate} onChange={(e) => uI(cat, idx, "rate", toPositiveNumber(e.target.value, 0))} />
-                      </div>
-                    </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: _.s2 }}>
-                      <div>
-                        <label style={label}>Sell Price</label>
-                        <input
-                          type="number"
-                          style={input}
-                          value={rowSell.toFixed(2)}
-                          onChange={(e) => {
-                            const sellVal = toPositiveNumber(e.target.value, 0);
-                            const qty = Number(item.qty) || 0;
-                            const denom = 1 + (rowMargin / 100);
-                            const nextRate = qty > 0 ? (sellVal / denom) / qty : 0;
-                            uI(cat, idx, "rate", nextRate);
-                          }}
-                        />
-                      </div>
-                      <div>
-                        <label style={label}>Margin %</label>
-                        <input type="number" style={input} value={rowMargin} onChange={(e) => uI(cat, idx, "marginPct", toPositiveNumber(e.target.value, 0))} />
-                      </div>
-                    </div>
-                    <div style={{ marginTop: _.s2, borderTop: `1px solid ${_.line}`, paddingTop: _.s3 }}>
-                      <div style={{ fontSize: _.fontSize.caption, color: _.muted, textTransform: "uppercase", letterSpacing: _.letterSpacing.wide, marginBottom: _.s2 }}>
-                        Advanced
-                      </div>
-                      <div style={{ display: "grid", gap: _.s2 }}>
-                        <div>
-                          <label style={label}>Notes</label>
-                          <textarea
-                            style={{ ...input, minHeight: 70, resize: "vertical" }}
-                            value={item.notes || ""}
-                            onChange={(e) => uI(cat, idx, "notes", e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <label style={label}>Supplier</label>
-                          <input style={input} value={item.supplier || ""} onChange={(e) => uI(cat, idx, "supplier", e.target.value)} />
-                        </div>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: _.s2 }}>
-                          <div>
-                            <label style={label}>Labour Cost</label>
-                            <input type="number" style={input} value={item.labourCost || 0} onChange={(e) => uI(cat, idx, "labourCost", toPositiveNumber(e.target.value, 0))} />
-                          </div>
-                          <div>
-                            <label style={label}>Material Cost</label>
-                            <input type="number" style={input} value={item.materialCost || 0} onChange={(e) => uI(cat, idx, "materialCost", toPositiveNumber(e.target.value, 0))} />
-                          </div>
-                        </div>
-                        <div>
-                          <label style={label}>Attachments</label>
-                          <input
-                            type="file"
-                            multiple
-                            onChange={async (e) => {
-                              const files = await filesToDataUrls(e.target.files);
-                              up((pr) => {
-                                const row = pr.scope?.[cat]?.[idx];
-                                if (!row) return pr;
-                                if (!Array.isArray(row.attachments)) row.attachments = [];
-                                row.attachments.push(...files);
-                                return pr;
-                              });
-                            }}
-                          />
-                          {Array.isArray(item.attachments) && item.attachments.length > 0 && (
-                            <div style={{ marginTop: _.s2, display: "grid", gap: 4 }}>
-                              {item.attachments.map((f, attachmentIdx) => (
-                                <div key={`${f.name}-${attachmentIdx}`} style={{ fontSize: _.fontSize.sm, color: _.muted, display: "flex", justifyContent: "space-between", gap: _.s2 }}>
-                                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name || `Attachment ${attachmentIdx + 1}`}</span>
-                                  <button
-                                    type="button"
-                                    style={{ ...btnGhost, padding: "0 6px" }}
-                                    onClick={() => {
-                                      up((pr) => {
-                                        const row = pr.scope?.[cat]?.[idx];
-                                        if (!row || !Array.isArray(row.attachments)) return pr;
-                                        row.attachments.splice(attachmentIdx, 1);
-                                        return pr;
-                                      });
-                                    }}
-                                  >
-                                    Remove
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-            <div style={{ padding: "10px 14px", borderTop: `1px solid ${_.line}`, display: "flex", justifyContent: "space-between" }}>
-              <Button variant="danger" onClick={() => {
-                const cat = editRow.cat;
-                const idx = editRow.idx;
-                delI(cat, idx);
-                setEditRow(null);
-              }}>
-                Delete
-              </Button>
-              <Button variant="secondary" onClick={() => setEditRow(null)}>Done</Button>
-            </div>
-          </div>
-        </>
-      )}
-
       {/* ─── New Client Modal ─── */}
       <Modal open={newClientModal} onClose={() => setNewClientModal(false)} title="Create New Client" width={420}>
         <div style={{ marginBottom: _.s3 }}>
@@ -1589,14 +980,6 @@ export default function QuotePage() {
         </div>
       </Modal>
 
-      {/* Delete category modal */}
-      <Modal open={!!delCat} onClose={() => setDelCat(null)} title="Delete Category" width={400}>
-        <div style={{ fontSize: _.fontSize.md, color: _.body, marginBottom: 24 }}>Delete <strong>{delCat}</strong> and all its items?</div>
-        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          <Button variant="ghost" onClick={() => setDelCat(null)}>Cancel</Button>
-          <Button variant="danger" onClick={() => { up(pr => { delete pr.scope[delCat]; return pr; }); setDelCat(null); }}>Delete</Button>
-        </div>
-      </Modal>
     </div>
   );
 }
