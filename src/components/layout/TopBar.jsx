@@ -126,7 +126,7 @@ export default function TopBar() {
         onMouseLeave={e => e.currentTarget.style.background = _.well}
       >
         <Search size={14} color={_.muted} />
-        <span style={{ fontSize: 13, color: _.muted, flex: 1 }}>Search...</span>
+        <span style={{ fontSize: 13, color: _.muted, flex: 1 }}>Search projects, quotes, invoices...</span>
         <kbd style={{
           fontSize: 10, color: _.faint, fontFamily: "inherit", fontWeight: 600,
           background: _.surface, border: `1px solid ${_.line}`,

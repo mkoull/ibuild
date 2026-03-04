@@ -34,7 +34,7 @@ export default function CommandBar() {
   const [selectedIdx, setSelectedIdx] = useState(0);
   const inputRef = useRef(null);
   const navigate = useNavigate();
-  const { projects, clients, create, clientsHook, tradesHook, notify, settings } = useApp();
+  const { projects, clients, trades, create, clientsHook, tradesHook, notify, settings } = useApp();
 
   // Open helper that also resets state
   const openBar = useCallback(() => {
@@ -67,18 +67,95 @@ export default function CommandBar() {
   const q = query.toLowerCase().trim();
 
   const projectResults = q
-    ? projects.filter(p => pName(p, clients).toLowerCase().includes(q)).slice(0, 5).map(p => ({
-        label: pName(p, clients), sub: p.stage || "Project", Ic: FolderOpen,
-        group: "Projects", action: () => { navigate(`${getWorkspaceUrl(p)}/overview`); close(); },
+    ? projects
+      .filter((p) => {
+        const projectName = pName(p, clients).toLowerCase();
+        const clientName = String(p.client || "").toLowerCase();
+        return projectName.includes(q) || clientName.includes(q);
+      })
+      .slice(0, 8)
+      .map((p) => ({
+        label: pName(p, clients),
+        sub: p.stage || "Project",
+        Ic: FolderOpen,
+        group: "Projects",
+        action: () => { navigate(`${getWorkspaceUrl(p)}/overview`); close(); },
       }))
     : [];
 
-  const clientResults = q
-    ? clients.filter(c => `${c.displayName} ${c.companyName}`.toLowerCase().includes(q)).slice(0, 3).map(c => ({
-        label: c.displayName || c.companyName, sub: "Client", Ic: Users,
-        group: "Clients", action: () => { navigate(`/clients/${c.id}`); close(); },
+  const quoteResults = q
+    ? projects
+      .filter((p) => {
+        const quoteNum = String(p.estimateNumber || "").toLowerCase();
+        const quoteDocNum = String(p?.quoteDocument?.id || "").toLowerCase();
+        return quoteNum.includes(q) || quoteDocNum.includes(q);
+      })
+      .slice(0, 8)
+      .map((p) => ({
+        label: p.estimateNumber || p?.quoteDocument?.id || "Quote",
+        sub: pName(p, clients),
+        Ic: FileText,
+        group: "Quotes",
+        action: () => { navigate(`${getWorkspaceUrl(p)}/quote`); close(); },
       }))
     : [];
+
+  const invoiceResults = q
+    ? projects.flatMap((p) =>
+      (p.invoices || [])
+        .filter((inv) => {
+          const number = String(inv.number || "").toLowerCase();
+          return number.includes(q);
+        })
+        .slice(0, 4)
+        .map((inv) => ({
+          label: inv.number || "Invoice",
+          sub: `${pName(p, clients)} · ${inv.status || "Draft"}`,
+          Ic: ReceiptText,
+          group: "Invoices",
+          action: () => { navigate(`/projects/${p.id}/invoices`); close(); },
+        })))
+      .slice(0, 8)
+    : [];
+
+  const supplierFromTrades = q
+    ? (trades || [])
+      .filter((t) => {
+        const n = String(t.businessName || t.name || "").toLowerCase();
+        return n.includes(q);
+      })
+      .slice(0, 6)
+      .map((t) => ({
+        label: t.businessName || t.name || "Supplier",
+        sub: "Trade",
+        Ic: Building2,
+        group: "Suppliers",
+        action: () => { navigate(`/trades/${t.id}`); close(); },
+      }))
+    : [];
+
+  const supplierFromProcurement = q
+    ? projects.flatMap((p) =>
+      (p?.procurement?.purchaseOrders || [])
+        .filter((po) => String(po.supplier || "").toLowerCase().includes(q))
+        .slice(0, 4)
+        .map((po) => ({
+          label: po.supplier || "Supplier",
+          sub: `${pName(p, clients)} · ${po.number || "PO"}`,
+          Ic: Building2,
+          group: "Suppliers",
+          action: () => { navigate(`/projects/${p.id}/procurement`); close(); },
+        })))
+      .slice(0, 8)
+    : [];
+
+  const supplierResults = [
+    ...supplierFromTrades,
+    ...supplierFromProcurement,
+  ].filter((item, index, arr) => {
+    const k = `${item.label.toLowerCase()}|${item.sub.toLowerCase()}`;
+    return arr.findIndex((x) => `${x.label.toLowerCase()}|${x.sub.toLowerCase()}` === k) === index;
+  }).slice(0, 8);
 
   const navResults = NAV_ITEMS.filter(n => !q || n.label.toLowerCase().includes(q)).slice(0, q ? 6 : 8).map(n => ({
     ...n, action: () => { navigate(n.to); close(); },
@@ -97,7 +174,14 @@ export default function CommandBar() {
     }},
   ] : [];
 
-  const allResults = [...projectResults, ...clientResults, ...navResults, ...createResults];
+  const allResults = [
+    ...projectResults,
+    ...quoteResults,
+    ...invoiceResults,
+    ...supplierResults,
+    ...navResults,
+    ...createResults,
+  ];
 
   // Keyboard navigation
   const handleKeyDown = (e) => {
@@ -151,7 +235,7 @@ export default function CommandBar() {
             value={query}
             onChange={handleQueryChange}
             onKeyDown={handleKeyDown}
-            placeholder="Search projects, navigate, or create..."
+            placeholder="Search projects, quotes, invoices..."
             style={{
               flex: 1, border: "none", outline: "none", background: "transparent",
               fontSize: 15, color: _.ink, fontFamily: "inherit",
