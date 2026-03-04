@@ -5,7 +5,7 @@ import Card from "../../../components/ui/Card.jsx";
 import Button from "../../../components/ui/Button.jsx";
 import { ArrowRight, ChevronDown } from "lucide-react";
 
-export default function QuoteSummaryCard({ T, margin, contingency, mobile, onReview }) {
+export default function QuoteSummaryCard({ T, margin, contingency, mobile, onReview, sticky = true }) {
   const [expanded, setExpanded] = useState(false);
 
   if (mobile) {
@@ -45,7 +45,7 @@ export default function QuoteSummaryCard({ T, margin, contingency, mobile, onRev
   }
 
   return (
-    <div style={{ position: "sticky", top: 0 }}>
+    <div style={sticky ? { position: "sticky", top: 0 } : undefined}>
       <Card style={{ padding: 16 }}>
         <div style={{ marginBottom: 12 }}>
           <div style={{ fontSize: _.fontSize.caption, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: 6 }}>Quote Summary</div>

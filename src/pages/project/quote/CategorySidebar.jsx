@@ -8,6 +8,7 @@ export default function CategorySidebar({
   scopeCategories, scope, selectedCat, setSelectedCat,
   newCat, setNewCat, addCategory, setDelCat,
   asSlideover, onClose,
+  compact = false,
 }) {
   const content = (
     <>
@@ -40,12 +41,14 @@ export default function CategorySidebar({
                 style={{
                   flex: 1, border: `1px solid ${active ? _.ac : _.line}`,
                   borderRadius: _.rSm, background: active ? `${_.ac}10` : _.surface,
-                  textAlign: "left", padding: "8px 10px", cursor: "pointer",
+                  textAlign: "left", padding: compact ? "8px 6px" : "8px 10px", cursor: "pointer",
                   fontFamily: "inherit", minHeight: 44,
                 }}
               >
-                <div style={{ fontSize: _.fontSize.base, fontWeight: _.fontWeight.semi, color: _.ink }}>{cat}</div>
-                <div style={{ fontSize: _.fontSize.caption, color: _.muted }}>{catCount} items · {fmt(catTotal)}</div>
+                <div style={{ fontSize: _.fontSize.base, fontWeight: _.fontWeight.semi, color: _.ink, textAlign: compact ? "center" : "left" }}>
+                  {compact ? (cat.slice(0, 2).toUpperCase() || "C") : cat}
+                </div>
+                {!compact && <div style={{ fontSize: _.fontSize.caption, color: _.muted }}>{catCount} items · {fmt(catTotal)}</div>}
               </button>
               <button
                 type="button"
@@ -64,20 +67,22 @@ export default function CategorySidebar({
           );
         })}
       </div>
-      <div style={{ display: "grid", gap: 8, marginTop: _.s3 }}>
-        <input
-          style={{ ...input, width: "100%" }}
-          value={newCat}
-          onChange={(e) => setNewCat(e.target.value)}
-          placeholder="Add category"
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && newCat.trim()) {
-              addCategory(newCat);
-            }
-          }}
-        />
-        <Button size="sm" variant="secondary" onClick={() => addCategory(newCat)}>Add Category</Button>
-      </div>
+      {!compact && (
+        <div style={{ display: "grid", gap: 8, marginTop: _.s3 }}>
+          <input
+            style={{ ...input, width: "100%" }}
+            value={newCat}
+            onChange={(e) => setNewCat(e.target.value)}
+            placeholder="Add category"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && newCat.trim()) {
+                addCategory(newCat);
+              }
+            }}
+          />
+          <Button size="sm" variant="secondary" onClick={() => addCategory(newCat)}>Add Category</Button>
+        </div>
+      )}
     </>
   );
 
@@ -98,7 +103,7 @@ export default function CategorySidebar({
   }
 
   return (
-    <Card style={{ padding: 12, maxHeight: "70vh", overflowY: "auto", position: "sticky", top: 0 }}>
+    <Card style={{ padding: compact ? 8 : 12, maxHeight: "70vh", overflowY: "auto", position: "sticky", top: 0 }}>
       {content}
     </Card>
   );

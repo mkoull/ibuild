@@ -1,8 +1,9 @@
+import { useEffect, useState } from "react";
 import _ from "../../../theme/tokens.js";
 import { fmt } from "../../../theme/styles.js";
 import Button from "../../../components/ui/Button.jsx";
 import Modal from "../../../components/ui/Modal.jsx";
-import { ArrowLeft, ArrowRight, Menu } from "lucide-react";
+import { ArrowLeft, ArrowRight, X } from "lucide-react";
 import useQuoteEditor from "./useQuoteEditor.js";
 import CategorySidebar from "./CategorySidebar.jsx";
 import RateLibrarySearch from "./RateLibrarySearch.jsx";
@@ -12,6 +13,9 @@ import QuoteSummaryCard from "./QuoteSummaryCard.jsx";
 
 export default function QuoteEditor({ project, up, T, margin, contingency, mobile, rateLibrary, notify, onNavigate }) {
   const editor = useQuoteEditor({ project, up, margin, rateLibrary, notify });
+  const [viewportW, setViewportW] = useState(() => (typeof window !== "undefined" ? window.innerWidth : 1280));
+  const [showSummarySheet, setShowSummarySheet] = useState(false);
+  const [mobileCategoriesOpen, setMobileCategoriesOpen] = useState(true);
   const {
     selectedCat, setSelectedCat,
     newCat, setNewCat,
@@ -19,7 +23,6 @@ export default function QuoteEditor({ project, up, T, margin, contingency, mobil
     drawerItem, setDrawerItem,
     deletedItem, undoDelete,
     delCat, setDelCat,
-    mobileSidebar, setMobileSidebar,
     rowMenu, setRowMenu,
     descInputRefs, scopeCategories,
     uI, addLineItem, delI,
@@ -31,44 +34,70 @@ export default function QuoteEditor({ project, up, T, margin, contingency, mobil
   } = editor;
 
   const items = selectedCat ? (project.scope[selectedCat] || []) : [];
+  const isDesktop = viewportW >= 1024;
+  const isMobileBp = viewportW < 768;
+  const compactCategories = !isDesktop;
+
+  useEffect(() => {
+    const onResize = () => setViewportW(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  useEffect(() => {
+    if (isDesktop) setShowSummarySheet(false);
+  }, [isDesktop]);
 
   return (
-    <div>
+    <div style={{ overflowX: "hidden", maxWidth: "100%" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: _.s4 }}>
         <div style={{ display: "flex", alignItems: "center", gap: _.s3 }}>
-          {mobile && (
-            <button type="button" onClick={() => setMobileSidebar(true)}
-              style={{ background: "none", border: "none", cursor: "pointer", padding: 6, color: _.body, display: "flex", minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" }}>
-              <Menu size={18} />
-            </button>
-          )}
           <div style={{ fontSize: _.fontSize.unit, fontWeight: _.fontWeight.semi, color: _.ink }}>Quote Editor</div>
         </div>
-        {T.items > 0 && <span style={{ fontSize: _.fontSize.md, color: _.body }}>{T.items} items · {fmt(T.sub)}</span>}
+        <div style={{ display: "flex", alignItems: "center", gap: _.s2 }}>
+          {T.items > 0 && <span style={{ fontSize: _.fontSize.md, color: _.body }}>{T.items} items · {fmt(T.sub)}</span>}
+          {!isDesktop && (
+            <Button size="sm" variant="secondary" onClick={() => setShowSummarySheet(true)} aria-label="Open quote summary">
+              Summary
+            </Button>
+          )}
+        </div>
       </div>
 
-      {/* Mobile summary card */}
-      {mobile && <QuoteSummaryCard T={T} margin={margin} contingency={contingency} mobile={mobile} />}
+      {isMobileBp && (
+        <div style={{ marginBottom: _.s3 }}>
+          <Button size="sm" variant="secondary" onClick={() => setMobileCategoriesOpen((v) => !v)}>
+            {mobileCategoriesOpen ? "Hide Categories" : "Show Categories"}
+          </Button>
+        </div>
+      )}
 
-      {/* 3-column desktop / single column mobile */}
+      {/* 3-column desktop / responsive tablet-mobile */}
       <div style={{
         display: "grid",
-        gridTemplateColumns: mobile ? "1fr" : "220px minmax(0,1fr) 260px",
+        gridTemplateColumns: isDesktop
+          ? "260px minmax(0,1fr) 340px"
+          : isMobileBp
+            ? "1fr"
+            : "84px minmax(0,1fr)",
         gap: _.s3,
         alignItems: "start",
+        maxWidth: "100%",
+        overflowX: "hidden",
       }}>
-        {/* Left: Category sidebar (desktop only; mobile uses slideover) */}
-        {!mobile && (
+        {/* Left: Category sidebar */}
+        {(isDesktop || !isMobileBp || mobileCategoriesOpen) && (
           <CategorySidebar
             scopeCategories={scopeCategories} scope={project.scope}
             selectedCat={selectedCat} setSelectedCat={setSelectedCat}
             newCat={newCat} setNewCat={setNewCat}
             addCategory={addCategory} setDelCat={setDelCat}
+            compact={compactCategories}
           />
         )}
 
         {/* Center: search + table */}
-        <div>
+        <div style={{ minWidth: 0, maxWidth: "100%" }}>
           {selectedCat ? (
             <>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: _.s2 }}>
@@ -100,8 +129,10 @@ export default function QuoteEditor({ project, up, T, margin, contingency, mobil
         </div>
 
         {/* Right: Quote summary (desktop) */}
-        {!mobile && (
-          <QuoteSummaryCard T={T} margin={margin} contingency={contingency} mobile={false} onReview={() => onNavigate("review")} />
+        {isDesktop && (
+          <div style={{ width: 340, minWidth: 340 }}>
+            <QuoteSummaryCard T={T} margin={margin} contingency={contingency} mobile={false} sticky onReview={() => onNavigate("review")} />
+          </div>
         )}
       </div>
 
@@ -109,33 +140,6 @@ export default function QuoteEditor({ project, up, T, margin, contingency, mobil
       <div style={{ marginTop: _.s7, display: "flex", gap: _.s3 }}>
         <Button variant="ghost" onClick={() => onNavigate("details")} icon={ArrowLeft}>Details</Button>
         <Button onClick={() => onNavigate("extras")} icon={ArrowRight}>Continue to Extras</Button>
-      </div>
-
-      {/* Fixed bottom totals bar */}
-      <div style={{
-        position: "fixed",
-        bottom: mobile ? "var(--mobile-bottom-total)" : 0,
-        left: 0, right: 0,
-        background: _.surface, borderTop: `1px solid ${_.line}`,
-        padding: mobile ? "10px 16px" : "10px 24px",
-        display: "flex", justifyContent: "space-between", alignItems: "center",
-        boxShadow: "0 -2px 8px rgba(0,0,0,0.06)", zIndex: 45,
-      }}>
-        <div style={{ display: "flex", gap: mobile ? _.s3 : _.s6, alignItems: "center", flexWrap: "wrap" }}>
-          <div>
-            <div style={{ fontSize: _.fontSize.caption, color: _.muted, fontWeight: _.fontWeight.semi }}>Total Sell</div>
-            <div style={{ fontSize: _.fontSize.lg, fontWeight: _.fontWeight.bold, fontVariantNumeric: "tabular-nums" }}>{fmt(T.curr)}</div>
-          </div>
-          <div>
-            <div style={{ fontSize: _.fontSize.caption, color: _.muted, fontWeight: _.fontWeight.semi }}>Margin %</div>
-            <div style={{ fontSize: _.fontSize.base, fontWeight: _.fontWeight.semi }}>{Number(margin || 0).toFixed(2)}%</div>
-          </div>
-          <div>
-            <div style={{ fontSize: _.fontSize.caption, color: _.muted, fontWeight: _.fontWeight.semi }}>GST</div>
-            <div style={{ fontSize: _.fontSize.base, fontWeight: _.fontWeight.semi, fontVariantNumeric: "tabular-nums" }}>{fmt(T.gst)}</div>
-          </div>
-        </div>
-        <Button size="sm" onClick={() => onNavigate("review")} icon={ArrowRight}>Review Quote</Button>
       </div>
 
       {/* Undo toast */}
@@ -154,15 +158,28 @@ export default function QuoteEditor({ project, up, T, margin, contingency, mobil
         </div>
       )}
 
-      {/* Mobile category sidebar (slideover) */}
-      {mobile && mobileSidebar && (
-        <CategorySidebar
-          asSlideover onClose={() => setMobileSidebar(false)}
-          scopeCategories={scopeCategories} scope={project.scope}
-          selectedCat={selectedCat} setSelectedCat={setSelectedCat}
-          newCat={newCat} setNewCat={setNewCat}
-          addCategory={addCategory} setDelCat={setDelCat}
-        />
+      {/* Responsive summary drawer/sheet */}
+      {!isDesktop && showSummarySheet && (
+        <>
+          <div onClick={() => setShowSummarySheet(false)} style={{ position: "fixed", inset: 0, background: _.overlay, zIndex: 70 }} />
+          <div style={{
+            position: "fixed",
+            zIndex: 71,
+            background: _.surface,
+            boxShadow: _.sh3,
+            ...(isMobileBp
+              ? { left: 0, right: 0, bottom: "var(--mobile-bottom-total)", borderTopLeftRadius: _.r, borderTopRightRadius: _.r, maxHeight: "72vh", overflowY: "auto", padding: 12 }
+              : { top: 0, right: 0, bottom: 0, width: 360, borderLeft: `1px solid ${_.line}`, padding: 12, overflowY: "auto" }),
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: _.s2 }}>
+              <div style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.semi, color: _.ink }}>Quote Summary</div>
+              <button type="button" onClick={() => setShowSummarySheet(false)} style={{ background: "none", border: "none", cursor: "pointer", padding: 6, color: _.muted }}>
+                <X size={16} />
+              </button>
+            </div>
+            <QuoteSummaryCard T={T} margin={margin} contingency={contingency} mobile={false} sticky={false} onReview={() => { setShowSummarySheet(false); onNavigate("review"); }} />
+          </div>
+        </>
       )}
 
       {/* Line item drawer */}

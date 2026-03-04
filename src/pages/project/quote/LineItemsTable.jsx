@@ -17,37 +17,42 @@ export default function LineItemsTable({
   setDrawerItem, scopeCategories, rowMenu, setRowMenu, mobile,
 }) {
   return (
-    <Card style={{ padding: mobile ? 10 : 12 }}>
-      {!mobile && (
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "minmax(140px,1fr) 120px 70px 70px 90px 80px 80px 40px",
-          gap: 4, borderBottom: `1px solid ${_.line}`, marginBottom: 4,
-        }}>
-          <div style={headerStyle}>Description</div>
-          <div style={headerStyle}>Type</div>
-          <div style={{ ...headerStyle, textAlign: "right" }}>Qty</div>
-          <div style={headerStyle}>Unit</div>
-          <div style={{ ...headerStyle, textAlign: "right" }}>Cost</div>
-          <div style={{ ...headerStyle, textAlign: "right" }}>Margin %</div>
-          <div style={{ ...headerStyle, textAlign: "right" }}>Total</div>
-          <div style={headerStyle}></div>
-        </div>
-      )}
+    <Card style={{ padding: mobile ? 10 : 12, minWidth: 0, maxWidth: "100%" }}>
+      <div style={{ position: "relative", overflowX: "auto", maxWidth: "100%", minWidth: 0 }}>
+        <div style={{ minWidth: mobile ? 620 : 760 }}>
+          {!mobile && (
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "minmax(140px,1fr) 120px 70px 70px 90px 80px 80px 40px",
+              gap: 4, borderBottom: `1px solid ${_.line}`, marginBottom: 4,
+            }}>
+              <div style={headerStyle}>Description</div>
+              <div style={headerStyle}>Type</div>
+              <div style={{ ...headerStyle, textAlign: "right" }}>Qty</div>
+              <div style={headerStyle}>Unit</div>
+              <div style={{ ...headerStyle, textAlign: "right" }}>Cost</div>
+              <div style={{ ...headerStyle, textAlign: "right" }}>Margin %</div>
+              <div style={{ ...headerStyle, textAlign: "right" }}>Total</div>
+              <div style={headerStyle}></div>
+            </div>
+          )}
 
-      {items.map((item, idx) => (
-        <LineItemRow
-          key={item._id}
-          item={item} cat={cat} idx={idx}
-          descRef={(el) => { descInputRefs.current[`${cat}:${idx}`] = el; }}
-          uI={uI} getRowMargin={getRowMargin} getRowSell={getRowSell}
-          addLineItem={addLineItem} delI={delI}
-          duplicateItem={duplicateItem} moveItemUp={moveItemUp} moveItemDown={moveItemDown}
-          moveItemToCategory={moveItemToCategory}
-          setDrawerItem={setDrawerItem} scopeCategories={scopeCategories}
-          rowMenu={rowMenu} setRowMenu={setRowMenu} mobile={mobile}
-        />
-      ))}
+          {items.map((item, idx) => (
+            <LineItemRow
+              key={item._id}
+              item={item} cat={cat} idx={idx}
+              descRef={(el) => { descInputRefs.current[`${cat}:${idx}`] = el; }}
+              uI={uI} getRowMargin={getRowMargin} getRowSell={getRowSell}
+              addLineItem={addLineItem} delI={delI}
+              duplicateItem={duplicateItem} moveItemUp={moveItemUp} moveItemDown={moveItemDown}
+              moveItemToCategory={moveItemToCategory}
+              setDrawerItem={setDrawerItem} scopeCategories={scopeCategories}
+              rowMenu={rowMenu} setRowMenu={setRowMenu} mobile={mobile}
+            />
+          ))}
+        </div>
+        <div style={{ position: "absolute", top: 0, right: 0, bottom: 0, width: 24, pointerEvents: "none", background: "linear-gradient(to right, rgba(255,255,255,0), rgba(255,255,255,0.94))" }} />
+      </div>
 
       {items.length === 0 && (
         <div style={{
