@@ -8,6 +8,7 @@ import { STAGES, DEFAULT_EXCLUSIONS, DEFAULT_ALLOWANCES, DEFAULT_PC_ITEMS, DEFAU
 import { calc } from "../../lib/calc.js";
 import { canTransition, isQuote, isJob, needsQuoteToJobConversion } from "../../lib/lifecycle.js";
 import { usePageBottomBar } from "../../hooks/usePageBottomBar.js";
+import { calculateTotals, normalizeCategories } from "../../lib/costEngine.js";
 import Card from "../../components/ui/Card.jsx";
 import Modal from "../../components/ui/Modal.jsx";
 import Button from "../../components/ui/Button.jsx";
@@ -15,6 +16,7 @@ import { Check, ChevronRight, ChevronDown, Plus, ArrowRight, ArrowLeft, X, Libra
 
 const STEPS = ["details", "scope", "extras", "review"];
 const STEP_LABELS = { details: "Details", scope: "Scope", extras: "Extras", review: "Review" };
+const QUOTE_STATUSES = ["Draft", "Sent", "Accepted", "Rejected"];
 
 export default function QuotePage() {
   const { project: p, update: up, T, client, log, transitionStage } = useProject();
@@ -55,6 +57,9 @@ export default function QuotePage() {
   const hasScope = T.items > 0;
   const quoteReady = clientName && hasScope;
   const proposalGenerated = p.proposal && p.proposal.status === "Generated";
+  const quoteDoc = p.quoteDocument || null;
+  const estimateCategories = normalizeCategories((p?.estimate && p.estimate.categories) || p.costCategories || []);
+  const estimateTotals = calculateTotals(estimateCategories);
   usePageBottomBar(mobile && T.curr > 0 ? 64 : 0);
 
   // Step completeness
@@ -215,6 +220,90 @@ export default function QuotePage() {
       return pr;
     });
     notify("Proposal generated");
+  };
+
+  const generateQuoteDocument = () => {
+    if (!quoteReady) {
+      notify("Complete client details and scope first", "error");
+      return;
+    }
+    up((pr) => {
+      const cats = normalizeCategories((pr?.estimate && pr.estimate.categories) || pr.costCategories || []);
+      const totals = calculateTotals(cats);
+      pr.quoteDocument = {
+        id: pr.quoteDocument?.id || `QDOC-${uid()}`,
+        status: pr.quoteDocument?.status || "Draft",
+        generatedAt: new Date().toISOString(),
+        quoteDate: ds(),
+        clientName: pr.client || clientName || "",
+        projectName: pr.name || "Project",
+        categories: cats.map((cat) => ({
+          id: cat.id,
+          name: cat.name,
+          itemCount: (cat.items || []).length,
+        })),
+        pricing: {
+          totalCost: totals.totalCost,
+          marginPercent: Number(pr.marginPct ?? pr.margin ?? 0),
+          totalQuotePrice: totals.totalSell > 0 ? totals.totalSell : T.curr,
+        },
+        terms: "This quote is valid for 30 days. Work proceeds after written acceptance and scheduling confirmation.",
+      };
+      return pr;
+    });
+    notify("Quote generated");
+  };
+
+  const updateQuoteStatus = (status) => {
+    up((pr) => {
+      if (!pr.quoteDocument) return pr;
+      pr.quoteDocument.status = status;
+      return pr;
+    });
+    notify(`Quote marked ${status}`);
+  };
+
+  const exportQuotePdf = () => {
+    if (!quoteDoc) return;
+    const quoteLines = (quoteDoc.categories || [])
+      .map((cat) => `<tr><td>${cat.name}</td><td style="text-align:right;">${cat.itemCount}</td></tr>`)
+      .join("");
+    const w = window.open("", "_blank");
+    if (!w) {
+      notify("Pop-up blocked — please allow pop-ups for this site", "error");
+      return;
+    }
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${quoteDoc.projectName} Quote</title><style>
+      @page { size: A4; margin: 14mm; }
+      body { font-family: Inter, Arial, sans-serif; color:#0f172a; font-size:12px; }
+      h1 { font-size:20px; margin:0 0 8px; }
+      .section { margin: 16px 0; }
+      .label { font-size:11px; color:#64748b; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:6px; }
+      table { width:100%; border-collapse:collapse; }
+      th,td { border-bottom:1px solid #e2e8f0; padding:8px 4px; }
+      th { text-align:left; color:#64748b; font-size:11px; text-transform:uppercase; }
+      .totals { border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px; }
+      .row { display:flex; justify-content:space-between; margin:4px 0; font-variant-numeric:tabular-nums; }
+      .grand { font-weight:700; font-size:16px; border-top:2px solid #0f172a; padding-top:8px; margin-top:8px; }
+    </style></head><body>
+      <h1>Quote</h1>
+      <div><strong>Client:</strong> ${quoteDoc.clientName || "—"}</div>
+      <div><strong>Project:</strong> ${quoteDoc.projectName || "—"}</div>
+      <div><strong>Date:</strong> ${quoteDoc.quoteDate || ds()}</div>
+      <div class="section">
+        <div class="label">Scope Summary</div>
+        <table><thead><tr><th>Category</th><th style="text-align:right;">Items</th></tr></thead><tbody>${quoteLines}</tbody></table>
+      </div>
+      <div class="section totals">
+        <div class="label">Pricing Summary</div>
+        <div class="row"><span>Total Cost</span><strong>${fmt(quoteDoc.pricing?.totalCost || 0)}</strong></div>
+        <div class="row"><span>Margin %</span><strong>${Number(quoteDoc.pricing?.marginPercent || 0).toFixed(2)}%</strong></div>
+        <div class="row grand"><span>Total Quote Price</span><span>${fmt(quoteDoc.pricing?.totalQuotePrice || 0)}</span></div>
+      </div>
+      <div class="section"><div class="label">Terms</div><div>${quoteDoc.terms || "Terms to be agreed."}</div></div>
+    </body></html>`);
+    w.document.close();
+    setTimeout(() => w.print(), 500);
   };
 
   // ─── Send Quote (Lead → Quoted) ───
@@ -741,6 +830,58 @@ export default function QuotePage() {
           {currentStep === "review" && (
             <div>
               <div style={{ fontSize: _.fontSize.unit, fontWeight: _.fontWeight.semi, color: _.ink, marginBottom: _.s5 }}>Review & Generate</div>
+              <Card title="Quote Generator" subtitle="Generate, preview and export your quote document" style={{ marginBottom: _.s5 }}>
+                <div style={{ display: "grid", gap: _.s4 }}>
+                  <div>
+                    <div style={{ fontSize: _.fontSize.xs, color: _.muted, fontWeight: _.fontWeight.semi, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Quote Header</div>
+                    <div style={{ fontSize: _.fontSize.base, color: _.body }}>Client: <strong>{quoteDoc?.clientName || clientName || "—"}</strong></div>
+                    <div style={{ fontSize: _.fontSize.base, color: _.body }}>Project: <strong>{quoteDoc?.projectName || p.name || "—"}</strong></div>
+                    <div style={{ fontSize: _.fontSize.base, color: _.body }}>Quote date: <strong>{quoteDoc?.quoteDate || ds()}</strong></div>
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: _.fontSize.xs, color: _.muted, fontWeight: _.fontWeight.semi, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Scope Summary</div>
+                    {(quoteDoc?.categories || estimateCategories.map((cat) => ({ id: cat.id, name: cat.name, itemCount: (cat.items || []).length }))).length === 0 ? (
+                      <div style={{ fontSize: _.fontSize.sm, color: _.muted }}>No estimate categories yet.</div>
+                    ) : (
+                      <div style={{ display: "grid", gap: 4 }}>
+                        {(quoteDoc?.categories || estimateCategories.map((cat) => ({ id: cat.id, name: cat.name, itemCount: (cat.items || []).length }))).map((cat) => (
+                          <div key={cat.id} style={{ display: "flex", justifyContent: "space-between", fontSize: _.fontSize.base, color: _.body }}>
+                            <span>{cat.name}</span>
+                            <span style={{ color: _.muted }}>{cat.itemCount} items</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: _.fontSize.xs, color: _.muted, fontWeight: _.fontWeight.semi, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Pricing Summary</div>
+                    <div style={{ display: "grid", gap: 4, fontVariantNumeric: "tabular-nums" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between" }}><span>Total Cost</span><strong>{fmt(quoteDoc?.pricing?.totalCost ?? estimateTotals.totalCost)}</strong></div>
+                      <div style={{ display: "flex", justifyContent: "space-between" }}><span>Margin %</span><strong>{Number(quoteDoc?.pricing?.marginPercent ?? margin).toFixed(2)}%</strong></div>
+                      <div style={{ display: "flex", justifyContent: "space-between", borderTop: `1px solid ${_.line}`, paddingTop: 6, fontSize: _.fontSize.md }}><span>Total Quote Price</span><strong>{fmt(quoteDoc?.pricing?.totalQuotePrice ?? (estimateTotals.totalSell || T.curr))}</strong></div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: _.fontSize.xs, color: _.muted, fontWeight: _.fontWeight.semi, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Terms</div>
+                    <div style={{ fontSize: _.fontSize.sm, color: _.body }}>{quoteDoc?.terms || "This quote is valid for 30 days. Work proceeds after written acceptance and scheduling confirmation."}</div>
+                  </div>
+
+                  <div style={{ display: "flex", gap: _.s2, flexWrap: "wrap" }}>
+                    <Button onClick={generateQuoteDocument} icon={FileCheck}>{quoteDoc ? "Regenerate Quote" : "Generate Quote"}</Button>
+                    <Button variant="secondary" onClick={exportQuotePdf} disabled={!quoteDoc}>Export PDF</Button>
+                    <select
+                      value={quoteDoc?.status || "Draft"}
+                      onChange={(e) => updateQuoteStatus(e.target.value)}
+                      style={{ ...input, minWidth: 140, maxWidth: 180, cursor: "pointer" }}
+                    >
+                      {QUOTE_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                </div>
+              </Card>
 
               {/* Client & address summary */}
               {(clientName || p.address) && (
