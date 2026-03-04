@@ -23,11 +23,11 @@ export default function QuoteEditor({ project, up, T, margin, contingency, mobil
     drawerItem, setDrawerItem,
     deletedItem, undoDelete,
     delCat, setDelCat,
-    rowMenu, setRowMenu,
+    tableScrollMemoryRef,
     descInputRefs, scopeCategories,
     uI, addLineItem, delI,
     getRowMargin, getRowSell,
-    duplicateItem, moveItemUp, moveItemDown, moveItemToCategory,
+    duplicateItem,
     addCategory, deleteCategory,
     libraryMatches, addFromLibrary,
     filesToDataUrls,
@@ -112,10 +112,10 @@ export default function QuoteEditor({ project, up, T, margin, contingency, mobil
                 items={items} cat={selectedCat} descInputRefs={descInputRefs}
                 uI={uI} getRowMargin={getRowMargin} getRowSell={getRowSell}
                 addLineItem={addLineItem} delI={delI}
-                duplicateItem={duplicateItem} moveItemUp={moveItemUp} moveItemDown={moveItemDown}
-                moveItemToCategory={moveItemToCategory}
-                setDrawerItem={setDrawerItem} scopeCategories={scopeCategories}
-                rowMenu={rowMenu} setRowMenu={setRowMenu} mobile={mobile}
+                duplicateItem={duplicateItem}
+                setDrawerItem={setDrawerItem}
+                tableScrollMemoryRef={tableScrollMemoryRef}
+                mobile={mobile}
               />
             </>
           ) : (

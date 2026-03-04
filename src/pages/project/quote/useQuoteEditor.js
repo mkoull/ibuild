@@ -12,8 +12,8 @@ export default function useQuoteEditor({ project, up, margin, rateLibrary, notif
   const [pendingFocusKey, setPendingFocusKey] = useState("");
   const [delCat, setDelCat] = useState(null);
   const [mobileSidebar, setMobileSidebar] = useState(false);
-  const [rowMenu, setRowMenu] = useState(null); // { cat, idx }
   const descInputRefs = useRef({});
+  const tableScrollMemoryRef = useRef({});
 
   const scopeCategories = Object.keys(project.scope || {});
 
@@ -144,36 +144,6 @@ export default function useQuoteEditor({ project, up, margin, rateLibrary, notif
     notify("Item duplicated");
   }, [up, notify]);
 
-  const moveItemUp = useCallback((cat, idx) => {
-    if (idx <= 0) return;
-    up(pr => {
-      const arr = pr.scope[cat];
-      [arr[idx - 1], arr[idx]] = [arr[idx], arr[idx - 1]];
-      return pr;
-    });
-  }, [up]);
-
-  const moveItemDown = useCallback((cat, idx) => {
-    up(pr => {
-      const arr = pr.scope[cat];
-      if (idx >= arr.length - 1) return pr;
-      [arr[idx], arr[idx + 1]] = [arr[idx + 1], arr[idx]];
-      return pr;
-    });
-  }, [up]);
-
-  const moveItemToCategory = useCallback((fromCat, idx, toCat) => {
-    up(pr => {
-      const item = pr.scope[fromCat]?.[idx];
-      if (!item) return pr;
-      pr.scope[fromCat].splice(idx, 1);
-      if (!pr.scope[toCat]) pr.scope[toCat] = [];
-      pr.scope[toCat].push(item);
-      return pr;
-    });
-    notify(`Moved to ${toCat}`);
-  }, [up, notify]);
-
   const addCategory = useCallback((name) => {
     const trimmed = name.trim();
     if (!trimmed) { notify("Enter a category name", "error"); return; }
@@ -238,13 +208,13 @@ export default function useQuoteEditor({ project, up, margin, rateLibrary, notif
     deletedItem,
     delCat, setDelCat,
     mobileSidebar, setMobileSidebar,
-    rowMenu, setRowMenu,
     descInputRefs,
+    tableScrollMemoryRef,
     scopeCategories,
     // Mutations
     uI, addLineItem, delI, undoDelete,
     getRowMargin, getRowSell,
-    duplicateItem, moveItemUp, moveItemDown, moveItemToCategory,
+    duplicateItem,
     addCategory, deleteCategory,
     // Library
     libraryMatches, addFromLibrary,

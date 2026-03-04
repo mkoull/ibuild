@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import _ from "../../../theme/tokens.js";
 import Card from "../../../components/ui/Card.jsx";
 import Button from "../../../components/ui/Button.jsx";
@@ -13,17 +14,39 @@ const headerStyle = {
 export default function LineItemsTable({
   items, cat, descInputRefs,
   uI, getRowMargin, getRowSell, addLineItem, delI,
-  duplicateItem, moveItemUp, moveItemDown, moveItemToCategory,
-  setDrawerItem, scopeCategories, rowMenu, setRowMenu, mobile,
+  duplicateItem,
+  setDrawerItem, tableScrollMemoryRef, mobile,
 }) {
+  const scrollerRef = useRef(null);
+
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el || !cat) return;
+    const saved = tableScrollMemoryRef?.current?.[cat];
+    if (!saved) return;
+    el.scrollTop = Number(saved.top) || 0;
+    el.scrollLeft = Number(saved.left) || 0;
+  }, [cat, tableScrollMemoryRef]);
+
   return (
     <Card style={{ padding: mobile ? 10 : 12, minWidth: 0, maxWidth: "100%" }}>
-      <div style={{ position: "relative", overflowX: "auto", maxWidth: "100%", minWidth: 0 }}>
-        <div style={{ minWidth: mobile ? 620 : 760 }}>
+      <div
+        data-line-items-grid
+        ref={scrollerRef}
+        onScroll={(e) => {
+          if (!tableScrollMemoryRef?.current || !cat) return;
+          tableScrollMemoryRef.current[cat] = {
+            top: e.currentTarget.scrollTop,
+            left: e.currentTarget.scrollLeft,
+          };
+        }}
+        style={{ position: "relative", overflowX: "auto", overflowY: "auto", maxWidth: "100%", minWidth: 0, maxHeight: "62vh" }}
+      >
+        <div style={{ minWidth: mobile ? 700 : 980 }}>
           {!mobile && (
             <div style={{
               display: "grid",
-              gridTemplateColumns: "minmax(140px,1fr) 120px 70px 70px 90px 80px 80px 40px",
+              gridTemplateColumns: "minmax(220px,1fr) 130px 80px 90px 110px 120px 100px 96px",
               gap: 4, borderBottom: `1px solid ${_.line}`, marginBottom: 4,
             }}>
               <div style={headerStyle}>Description</div>
@@ -31,9 +54,9 @@ export default function LineItemsTable({
               <div style={{ ...headerStyle, textAlign: "right" }}>Qty</div>
               <div style={headerStyle}>Unit</div>
               <div style={{ ...headerStyle, textAlign: "right" }}>Cost</div>
+              <div style={{ ...headerStyle, textAlign: "right" }}>Sell Price</div>
               <div style={{ ...headerStyle, textAlign: "right" }}>Margin %</div>
-              <div style={{ ...headerStyle, textAlign: "right" }}>Total</div>
-              <div style={headerStyle}></div>
+              <div style={headerStyle}>Actions</div>
             </div>
           )}
 
@@ -44,10 +67,9 @@ export default function LineItemsTable({
               descRef={(el) => { descInputRefs.current[`${cat}:${idx}`] = el; }}
               uI={uI} getRowMargin={getRowMargin} getRowSell={getRowSell}
               addLineItem={addLineItem} delI={delI}
-              duplicateItem={duplicateItem} moveItemUp={moveItemUp} moveItemDown={moveItemDown}
-              moveItemToCategory={moveItemToCategory}
-              setDrawerItem={setDrawerItem} scopeCategories={scopeCategories}
-              rowMenu={rowMenu} setRowMenu={setRowMenu} mobile={mobile}
+              duplicateItem={duplicateItem}
+              setDrawerItem={setDrawerItem}
+              mobile={mobile}
             />
           ))}
         </div>
