@@ -11,6 +11,7 @@ import Button from "../../components/ui/Button.jsx";
 import Modal from "../../components/ui/Modal.jsx";
 import Card from "../../components/ui/Card.jsx";
 import { Receipt, Plus, Send, DollarSign, AlertCircle } from "lucide-react";
+import { isValidIsoDate } from "../../lib/validation.js";
 
 const INVOICE_STATUS_COLORS = {
   Draft: _.muted,
@@ -39,6 +40,7 @@ export default function InvoicesPage() {
   const { mobile, notify, settings, addNotification } = useApp();
   const [createOpen, setCreateOpen] = useState(false);
   const [searchParams] = useSearchParams();
+  const [creating, setCreating] = useState(false);
   const [invoiceForm, setInvoiceForm] = useState({
     description: "",
     amount: "",
@@ -75,15 +77,29 @@ export default function InvoicesPage() {
   const invoicedPct = contractValue > 0 ? Math.min(100, Math.max(0, (totalInvoiced / contractValue) * 100)) : 0;
 
   const createInvoice = () => {
+    if (creating) return;
     const amount = num(invoiceForm.amount);
     if (!invoiceForm.description.trim() || amount <= 0 || !invoiceForm.invoiceDate) {
       notify("Description, amount and invoice date are required", "error");
+      return;
+    }
+    if (!isValidIsoDate(invoiceForm.invoiceDate)) {
+      notify("Invoice date must be valid", "error");
+      return;
+    }
+    if (invoiceForm.dueDate && !isValidIsoDate(invoiceForm.dueDate)) {
+      notify("Due date must be valid", "error");
+      return;
+    }
+    if (invoiceForm.dueDate && invoiceForm.dueDate < invoiceForm.invoiceDate) {
+      notify("Due date cannot be before invoice date", "error");
       return;
     }
     if (amount > remainingToInvoice) {
       notify("Amount exceeds remaining to invoice", "error");
       return;
     }
+    setCreating(true);
     up((pr) => {
       if (!Array.isArray(pr.invoices)) pr.invoices = [];
       if (!Array.isArray(pr.claims)) pr.claims = [];
@@ -123,6 +139,7 @@ export default function InvoicesPage() {
       dueDate: "",
     });
     setCreateOpen(false);
+    setCreating(false);
   };
 
   const updateInvoiceStatus = (invoiceId, status) => {
@@ -320,7 +337,7 @@ export default function InvoicesPage() {
         </div>
         <div style={{ display: "flex", justifyContent: "flex-end", gap: _.s2, marginTop: _.s5 }}>
           <Button variant="ghost" onClick={() => setCreateOpen(false)}>Cancel</Button>
-          <Button onClick={createInvoice}>Create</Button>
+          <Button onClick={createInvoice} disabled={creating}>{creating ? "Creating..." : "Create"}</Button>
         </div>
       </Modal>
     </Section>

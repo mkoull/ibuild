@@ -23,6 +23,7 @@ export function ProjectProvider({ project, children }) {
   const up = (fn) => update(project.id, fn);
 
   const log = (action) => up(pr => {
+    if (!Array.isArray(pr.activity)) pr.activity = [];
     pr.activity.unshift({ action, time: ts(), date: ds() });
     if (pr.activity.length > 30) pr.activity = pr.activity.slice(0, 30);
     return pr;

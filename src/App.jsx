@@ -182,6 +182,7 @@ export default function App() {
                 <Route path="jobs/:id/*" element={<LegacyJobRedirect />} />
 
                 <Route path="modules/:moduleId" element={<Navigate to="/projects" replace />} />
+                <Route path="*" element={<Navigate to="/dashboard" replace />} />
               </Route>
             </Routes>
           </Suspense>

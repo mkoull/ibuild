@@ -10,6 +10,7 @@ import Modal from "../../components/ui/Modal.jsx";
 import SearchInput from "../../components/ui/SearchInput.jsx";
 import { calculateTotals, normalizeCategories } from "../../lib/costEngine.js";
 import { evaluateBenchmark, findTradeBenchmark } from "../../lib/tradeBenchmarks.js";
+import { toPositiveNumber } from "../../lib/validation.js";
 
 const BOX = {
   background: _.surface,
@@ -94,9 +95,9 @@ function normalizeAiCategories(payload, prompt = "") {
           description: String(item?.description || item?.item || "").trim(),
           quantity: Number(item?.qty ?? item?.quantity ?? 1) || 1,
           unit: String(item?.unit || "unit"),
-          unitRate: Number(item?.rate ?? item?.unitRate ?? 0) || 0,
+          unitRate: toPositiveNumber(item?.rate ?? item?.unitRate ?? 0, 0),
           costTotal: 0,
-          marginPercent: Number(item?.marginPercent ?? 20) || 20,
+          marginPercent: toPositiveNumber(item?.marginPercent ?? 20, 20),
           sellTotal: 0,
         }))
         : [],
@@ -242,9 +243,9 @@ export default function ScopePage() {
         description: libraryItem.name || libraryItem.description || "",
         quantity: 1,
         unit: libraryItem.unit || "unit",
-        unitRate: Number(libraryItem.unitCost) || 0,
+        unitRate: toPositiveNumber(libraryItem.unitCost, 0),
         costTotal: 0,
-        marginPercent: Number(libraryItem.markupPct) || 20,
+        marginPercent: toPositiveNumber(libraryItem.markupPct, 20),
         sellTotal: 0,
       });
       cat.items = normalizeCategories([{ id: cat.id, name: cat.name, items: cat.items }])[0].items;
@@ -329,9 +330,9 @@ export default function ScopePage() {
           description: item.description || "",
           quantity: Number(item.quantity) || 1,
           unit: item.unit || "unit",
-          unitRate: Number(item.unitRate) || 0,
+          unitRate: toPositiveNumber(item.unitRate, 0),
           costTotal: 0,
-          marginPercent: Number(item.marginPercent) || 20,
+          marginPercent: toPositiveNumber(item.marginPercent, 20),
           sellTotal: 0,
         }));
         pr.costCategories.push({
@@ -360,7 +361,7 @@ export default function ScopePage() {
       const base = cat.items[idx];
       const next = field === "description" || field === "unit"
         ? { ...base, [field]: value }
-        : { ...base, [field]: Number(value) };
+        : { ...base, [field]: toPositiveNumber(value, 0) };
       const normalized = normalizeCategories([{ id: cat.id, name: cat.name, items: [next] }])[0].items[0];
       cat.items[idx] = normalized;
       pr.estimate = {

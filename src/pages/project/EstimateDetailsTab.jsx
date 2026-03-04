@@ -9,6 +9,7 @@ import { ArrowRight, CheckCircle2, MapPin } from "lucide-react";
 import Button from "../../components/ui/Button.jsx";
 import { calculateTotals, normalizeCategories } from "../../lib/costEngine.js";
 import { ESTIMATE_TEMPLATE_OPTIONS, buildEstimateTemplate } from "../../lib/estimateTemplates.js";
+import { isRequiredText } from "../../lib/validation.js";
 
 const CARD = { background: "#fff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 10, padding: 20 };
 const CARD_HEADER = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 };
@@ -78,6 +79,10 @@ export default function EstimateDetailsTab() {
   };
 
   const goNext = () => {
+    if (activeStep === "project" && !isRequiredText(p.name)) {
+      notify("Project name is required", "error");
+      return;
+    }
     if (!nextStep) return;
     setActiveStep(nextStep.id);
   };

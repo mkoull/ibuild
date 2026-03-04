@@ -16,6 +16,7 @@ import {
   recalcScheduleFromDependencies,
   writeScheduleTasks,
 } from "../../lib/scheduleStore.js";
+import { isValidIsoDate } from "../../lib/validation.js";
 
 const EMPTY_FORM = {
   id: null,
@@ -76,6 +77,7 @@ export default function SchedulePage() {
     const nextErrors = {};
     if (!form.name.trim()) nextErrors.name = "Task name is required";
     if (!form.startDate) nextErrors.startDate = "Start date is required";
+    else if (!isValidIsoDate(form.startDate)) nextErrors.startDate = "Enter a valid date";
     if (!Number.isFinite(Number(form.durationDays)) || Number(form.durationDays) < 1) {
       nextErrors.durationDays = "Duration must be at least 1 day";
     }

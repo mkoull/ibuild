@@ -10,6 +10,7 @@ import { canTransition, isQuote, isJob, needsQuoteToJobConversion } from "../../
 import { usePageBottomBar } from "../../hooks/usePageBottomBar.js";
 import { applyConvertToJobBaseline, calculateTotals, normalizeCategories } from "../../lib/costEngine.js";
 import { exportPrintPdf } from "../../lib/pdfExport.js";
+import { isRequiredText, toPositiveNumber } from "../../lib/validation.js";
 import Card from "../../components/ui/Card.jsx";
 import Modal from "../../components/ui/Modal.jsx";
 import Button from "../../components/ui/Button.jsx";
@@ -73,7 +74,11 @@ export default function QuotePage() {
 
   // ─── Scope mutation helpers ───
   const uI = (cat, idx, k, v) => up(pr => {
-    pr.scope[cat][idx][k] = v;
+    if (k === "qty" || k === "rate") {
+      pr.scope[cat][idx][k] = toPositiveNumber(v, 0);
+    } else {
+      pr.scope[cat][idx][k] = v;
+    }
     if (k === "on" && v && !pr.scope[cat][idx].qty) pr.scope[cat][idx].qty = 1;
     return pr;
   });
@@ -621,7 +626,13 @@ export default function QuotePage() {
 
               {/* Continue to Scope */}
               <div style={{ marginTop: _.s7, display: "flex", gap: _.s3 }}>
-                <Button onClick={() => setStep("scope")} icon={ArrowRight}>Continue to Scope</Button>
+                <Button onClick={() => {
+                  if (!isRequiredText(p.name)) {
+                    notify("Project name is required", "error");
+                    return;
+                  }
+                  setStep("scope");
+                }} icon={ArrowRight}>Continue to Scope</Button>
               </div>
             </div>
           )}
