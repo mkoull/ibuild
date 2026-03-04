@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext.jsx";
 import _ from "../../theme/tokens.js";
@@ -21,9 +21,12 @@ function toScopeFromCategories(categories) {
 export default function CreateEstimateWizardPage() {
   const { clients, clientsHook, create, update, notify, settings } = useApp();
   const navigate = useNavigate();
+  const [loadError, setLoadError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [retryTick, setRetryTick] = useState(0);
   const [step, setStep] = useState("client");
   const [clientMode, setClientMode] = useState("existing");
-  const [selectedClientId, setSelectedClientId] = useState(clients[0]?.id || "");
+  const [selectedClientId, setSelectedClientId] = useState("");
   const [newClient, setNewClient] = useState({ name: "", phone: "", email: "" });
   const [projectBasics, setProjectBasics] = useState({
     name: "",
@@ -31,16 +34,57 @@ export default function CreateEstimateWizardPage() {
     address: "",
   });
   const [templateId, setTemplateId] = useState("basic_residential");
+  const safeClients = useMemo(() => (Array.isArray(clients) ? clients : []), [clients]);
+  const safeSettings = useMemo(() => ((settings && typeof settings === "object") ? settings : {}), [settings]);
+  const safeTemplateOptions = useMemo(
+    () => (Array.isArray(ESTIMATE_TEMPLATE_OPTIONS) ? ESTIMATE_TEMPLATE_OPTIONS : []),
+    [],
+  );
+
+  useEffect(() => {
+    let alive = true;
+    const loadWizardData = async () => {
+      setLoading(true);
+      setLoadError("");
+      try {
+        // Keep async wrapper so data loading can evolve safely (API/local fallback).
+        await Promise.resolve();
+        if (!Array.isArray(clients)) {
+          console.error("CreateEstimate failed:", new Error("clients is not an array"));
+        }
+        if (!safeTemplateOptions.length) {
+          throw new Error("No estimate templates are available");
+        }
+        if (alive) {
+          setSelectedClientId((prev) => (prev ? prev : safeClients[0]?.id || ""));
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error("CreateEstimate failed:", err);
+        if (alive) {
+          setLoadError("Unable to load estimate setup. Please try again.");
+          setLoading(false);
+        }
+      }
+    };
+    loadWizardData();
+    return () => { alive = false; };
+  }, [retryTick, clients, safeClients, safeTemplateOptions]);
 
   const clientOptions = useMemo(
-    () => clients.map((c) => ({ id: c.id, label: c.displayName || c.companyName || "Unnamed client", client: c })),
-    [clients],
+    () => safeClients.map((c) => ({ id: c.id, label: c.displayName || c.companyName || "Unnamed client", client: c })),
+    [safeClients],
   );
   const selectedClient = useMemo(
-    () => clients.find((c) => c.id === selectedClientId) || null,
-    [clients, selectedClientId],
+    () => safeClients.find((c) => c.id === selectedClientId) || null,
+    [safeClients, selectedClientId],
   );
-  const templateLabel = ESTIMATE_TEMPLATE_OPTIONS.find((t) => t.id === templateId)?.label || "Custom (blank)";
+  const templateLabel = safeTemplateOptions.find((t) => t.id === templateId)?.label || "Custom (blank)";
+
+  const estimateEditorRoute = (projectId) => {
+    if (!projectId) return "/estimates";
+    return `/estimates/${projectId}/quote?step=scope`;
+  };
 
   const goNext = () => {
     if (step === "client") {
@@ -67,67 +111,98 @@ export default function CreateEstimateWizardPage() {
   };
 
   const createFromWizard = () => {
-    const p = create({
-      name: projectBasics.name.trim(),
-      buildType: projectBasics.buildType,
-      type: projectBasics.buildType,
-      address: projectBasics.address.trim(),
-      marginPct: settings.defaultMargin ?? 18,
-      contingencyPct: settings.defaultContingency ?? 5,
-      validDays: settings.defaultValidDays ?? 30,
-    });
+    try {
+      const p = create({
+        name: projectBasics.name.trim(),
+        buildType: projectBasics.buildType,
+        type: projectBasics.buildType,
+        address: projectBasics.address.trim(),
+        marginPct: safeSettings.defaultMargin ?? 18,
+        contingencyPct: safeSettings.defaultContingency ?? 5,
+        validDays: safeSettings.defaultValidDays ?? 30,
+      });
 
-    update(p.id, (pr) => {
-      let clientRef = selectedClient;
-      if (clientMode === "new") {
-        const created = clientsHook.create({
-          displayName: newClient.name.trim(),
-          contacts: [{
-            id: uid(),
-            name: newClient.name.trim(),
-            phone: newClient.phone.trim(),
-            email: newClient.email.trim(),
-            role: "",
-            address: "",
-            suburb: "",
-            state: "",
-            postcode: "",
-          }],
-        });
-        clientRef = created;
-      }
-      if (clientRef) {
-        const contact = clientRef.contacts?.[0];
-        pr.clientId = clientRef.id;
-        pr.client = clientRef.displayName || clientRef.companyName || "";
-        pr.phone = (clientMode === "new" ? newClient.phone : (contact?.phone || "")).trim();
-        pr.email = (clientMode === "new" ? newClient.email : (contact?.email || "")).trim();
-      }
-      const categories = templateId === "custom" ? [] : buildEstimateTemplate(templateId);
-      pr.costCategories = categories;
-      pr.estimateTemplate = templateId;
-      pr.estimate = {
-        categories: normalizeCategories(categories),
-        totals: calculateTotals(categories),
-      };
-      pr.scope = {
-        ...toScopeFromCategories(categories),
-      };
-      return pr;
-    });
+      update(p.id, (pr) => {
+        let clientRef = selectedClient;
+        if (clientMode === "new" && clientsHook?.create) {
+          const created = clientsHook.create({
+            displayName: newClient.name.trim(),
+            contacts: [{
+              id: uid(),
+              name: newClient.name.trim(),
+              phone: newClient.phone.trim(),
+              email: newClient.email.trim(),
+              role: "",
+              address: "",
+              suburb: "",
+              state: "",
+              postcode: "",
+            }],
+          });
+          clientRef = created;
+        }
+        if (clientRef) {
+          const contact = clientRef.contacts?.[0];
+          pr.clientId = clientRef.id;
+          pr.client = clientRef.displayName || clientRef.companyName || "";
+          pr.phone = (clientMode === "new" ? newClient.phone : (contact?.phone || "")).trim();
+          pr.email = (clientMode === "new" ? newClient.email : (contact?.email || "")).trim();
+        }
+        const categories = templateId === "custom" ? [] : buildEstimateTemplate(templateId);
+        pr.costCategories = Array.isArray(categories) ? categories : [];
+        pr.estimateTemplate = templateId;
+        pr.estimate = {
+          categories: normalizeCategories(pr.costCategories),
+          totals: calculateTotals(pr.costCategories),
+        };
+        pr.scope = {
+          ...toScopeFromCategories(pr.costCategories),
+        };
+        return pr;
+      });
 
-    notify("Estimate created");
-    navigate(`/estimates/${p.id}/quote?step=scope`);
+      notify("Estimate created");
+      navigate(estimateEditorRoute(p?.id));
+    } catch (err) {
+      console.error("CreateEstimate failed:", err);
+      notify("Could not create estimate. Please retry.", "error");
+    }
   };
 
   const skipWizard = () => {
-    const p = create({
-      marginPct: settings.defaultMargin ?? 18,
-      contingencyPct: settings.defaultContingency ?? 5,
-      validDays: settings.defaultValidDays ?? 30,
-    });
-    navigate(`/estimates/${p.id}/quote?step=scope`);
+    try {
+      const p = create({
+        marginPct: safeSettings.defaultMargin ?? 18,
+        contingencyPct: safeSettings.defaultContingency ?? 5,
+        validDays: safeSettings.defaultValidDays ?? 30,
+      });
+      navigate(estimateEditorRoute(p?.id));
+    } catch (err) {
+      console.error("CreateEstimate failed:", err);
+      notify("Could not create estimate. Please retry.", "error");
+    }
   };
+
+  if (loading) {
+    return (
+      <Card title="Create Estimate Wizard" subtitle="Loading setup...">
+        <div style={{ fontSize: 14, color: _.muted }}>Preparing estimate setup.</div>
+      </Card>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <Card title="Create Estimate Wizard" subtitle="Something went wrong while loading setup.">
+        <div style={{ display: "grid", gap: 12 }}>
+          <div style={{ fontSize: 14, color: _.red }}>{loadError}</div>
+          <div>
+            <Button onClick={() => setRetryTick((v) => v + 1)}>Retry</Button>
+          </div>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <div style={{ maxWidth: 980, margin: "0 auto", display: "grid", gap: 16 }}>
