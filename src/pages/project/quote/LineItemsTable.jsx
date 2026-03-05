@@ -40,9 +40,9 @@ export default function LineItemsTable({
             left: e.currentTarget.scrollLeft,
           };
         }}
-        style={{ position: "relative", overflowX: mobile ? "hidden" : "auto", overflowY: "auto", maxWidth: "100%", minWidth: 0, maxHeight: "62vh" }}
+        style={{ position: "relative", overflowX: "auto", overflowY: "auto", maxWidth: "100%", minWidth: 0, maxHeight: "62vh" }}
       >
-        <div style={{ minWidth: mobile ? 0 : 980 }}>
+        <div style={{ minWidth: mobile ? 760 : 980 }}>
           {!mobile && (
             <div style={{
               display: "grid",

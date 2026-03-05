@@ -80,71 +80,76 @@ export default function QuoteEditor({ project, up, T, margin, contingency, mobil
         </div>
       )}
 
-      {/* Desktop 3-col / tablet 2-col / mobile stacked */}
+      {/* Desktop 2-col / tablet/mobile with summary sheet */}
       <div style={{
         display: "grid",
         gridTemplateColumns: isDesktop
-          ? "280px minmax(0,1fr) 360px"
-          : isTablet
-            ? "260px minmax(0,1fr)"
-            : "1fr",
+          ? "minmax(0,1fr) 360px"
+          : "1fr",
         gap: _.s3,
         alignItems: "start",
         maxWidth: "100%",
         overflowX: "hidden",
       }}>
-        {/* Left: categories (desktop/tablet) */}
-        {!isMobileBp && (
-          <CategorySidebar
-            scopeCategories={scopeCategories}
-            scope={safeScope}
-            selectedCat={selectedCat}
-            setSelectedCat={setSelectedCat}
-            newCat={newCat}
-            setNewCat={setNewCat}
-            addCategory={addCategory}
-            setDelCat={setDelCat}
-            compact={compactCategories}
-          />
-        )}
-
-        {/* Middle: editor */}
         <div style={{ minWidth: 0, maxWidth: "100%" }}>
-          {selectedCat ? (
-            <>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: _.s2 }}>
-                <div style={{ fontSize: _.fontSize.lg, fontWeight: _.fontWeight.semi, color: _.ink }}>{selectedCat}</div>
-              </div>
-              <RateLibrarySearch
-                librarySearch={librarySearch}
-                setLibrarySearch={setLibrarySearch}
-                libraryMatches={libraryMatches}
-                addFromLibrary={addFromLibrary}
-                disabled={!selectedCat}
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: isMobileBp ? "1fr" : "260px minmax(0,1fr)",
+            gap: _.s3,
+            alignItems: "start",
+            minWidth: 0,
+          }}>
+            {!isMobileBp && (
+              <CategorySidebar
+                scopeCategories={scopeCategories}
+                scope={safeScope}
+                selectedCat={selectedCat}
+                setSelectedCat={setSelectedCat}
+                newCat={newCat}
+                setNewCat={setNewCat}
+                addCategory={addCategory}
+                setDelCat={setDelCat}
+                compact={compactCategories}
               />
-              <LineItemsTable
-                items={items}
-                cat={selectedCat}
-                descInputRefs={descInputRefs}
-                uI={uI}
-                getRowMargin={getRowMargin}
-                getRowSell={getRowSell}
-                addLineItem={addLineItem}
-                delI={delI}
-                duplicateItem={duplicateItem}
-                setDrawerItem={setEditModalItem}
-                tableScrollMemoryRef={tableScrollMemoryRef}
-                mobile={isMobileBp}
-              />
-            </>
-          ) : (
-            <div style={{ padding: "28px 12px", textAlign: "center", color: _.muted }}>
-              {scopeCategories.length === 0
-                ? "No scope items yet. Add a category to start pricing."
-                : "Select a category to start adding line items."
-              }
+            )}
+            <div style={{ minWidth: 0, maxWidth: "100%" }}>
+              {selectedCat ? (
+                <>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: _.s2 }}>
+                    <div style={{ fontSize: _.fontSize.lg, fontWeight: _.fontWeight.semi, color: _.ink }}>{selectedCat}</div>
+                  </div>
+                  <RateLibrarySearch
+                    librarySearch={librarySearch}
+                    setLibrarySearch={setLibrarySearch}
+                    libraryMatches={libraryMatches}
+                    addFromLibrary={addFromLibrary}
+                    disabled={!selectedCat}
+                  />
+                  <LineItemsTable
+                    items={items}
+                    cat={selectedCat}
+                    descInputRefs={descInputRefs}
+                    uI={uI}
+                    getRowMargin={getRowMargin}
+                    getRowSell={getRowSell}
+                    addLineItem={addLineItem}
+                    delI={delI}
+                    duplicateItem={duplicateItem}
+                    setDrawerItem={setEditModalItem}
+                    tableScrollMemoryRef={tableScrollMemoryRef}
+                    mobile={isMobileBp}
+                  />
+                </>
+              ) : (
+                <div style={{ padding: "28px 12px", textAlign: "center", color: _.muted }}>
+                  {scopeCategories.length === 0
+                    ? "No scope items yet. Add a category to start pricing."
+                    : "Select a category to start adding line items."
+                  }
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
 
         {/* Right: summary (desktop only) */}

@@ -83,7 +83,7 @@ export default function CreateEstimateWizardPage() {
 
   const estimateEditorRoute = (projectId) => {
     if (!projectId) return "/estimates";
-    return `/estimates/${projectId}/quote?step=scope`;
+    return `/estimates/${projectId}/overview?step=project`;
   };
 
   const goNext = () => {

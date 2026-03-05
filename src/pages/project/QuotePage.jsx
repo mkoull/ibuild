@@ -48,14 +48,12 @@ export default function QuotePage() {
       return;
     }
     setSearchParams((prev) => {
-      prev.set("step", step);
-      return prev;
+      const params = new URLSearchParams(prev);
+      params.set("step", step);
+      return params;
     }, { replace: true });
-    if (import.meta.env.DEV) {
-      console.log(`[QuotePage] step change: ${currentStep} -> ${step}`);
-    }
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [currentStep, setSearchParams]);
+  }, [setSearchParams]);
 
   const [clientOpen, setClientOpen] = useState(false);
   const [clientSearch, setClientSearch] = useState("");

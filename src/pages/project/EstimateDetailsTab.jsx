@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useProject } from "../../context/ProjectContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
@@ -10,6 +10,7 @@ import Button from "../../components/ui/Button.jsx";
 import { calculateTotals, normalizeCategories } from "../../lib/costEngine.js";
 import { ESTIMATE_TEMPLATE_OPTIONS, buildEstimateTemplate } from "../../lib/estimateTemplates.js";
 import { isRequiredText } from "../../lib/validation.js";
+import ScopePage from "./ScopePage.jsx";
 
 const CARD = { background: "#fff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 10, padding: 20 };
 const CARD_HEADER = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 };
@@ -46,10 +47,10 @@ export default function EstimateDetailsTab() {
   const { project: p, update: up, client } = useProject();
   const { mobile, notify } = useApp();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [notes, setNotes] = useState(p.notes || "");
-  const [activeStep, setActiveStep] = useState("project");
   const [selectedTemplate, setSelectedTemplate] = useState(p.estimateTemplate || "custom");
+  const builderRef = useRef(null);
 
   const stage = p.stage || p.status || "Lead";
   const contact = client?.contacts?.[0];
@@ -63,15 +64,16 @@ export default function EstimateDetailsTab() {
   const mapsHref = address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}` : "";
   const categories = normalizeCategories(p?.estimate?.categories || p.costCategories || []);
   const totals = useMemo(() => calculateTotals(categories), [categories]);
+  const activeStep = STEPS.some((s) => s.id === searchParams.get("step")) ? searchParams.get("step") : "project";
   const stepIndex = STEPS.findIndex((s) => s.id === activeStep);
   const nextStep = STEPS[stepIndex + 1];
 
-  useEffect(() => {
-    const step = searchParams.get("step");
-    if (step && STEPS.some((s) => s.id === step)) {
-      setActiveStep(step);
-    }
-  }, [searchParams]);
+  const gotoWorkflowStep = (step) => {
+    if (!STEPS.some((s) => s.id === step)) return;
+    const params = new URLSearchParams(searchParams);
+    params.set("step", step);
+    setSearchParams(params, { replace: true });
+  };
 
   const handleSaveNotes = () => {
     up((pr) => { pr.notes = notes; return pr; });
@@ -84,7 +86,7 @@ export default function EstimateDetailsTab() {
       return;
     }
     if (!nextStep) return;
-    setActiveStep(nextStep.id);
+    gotoWorkflowStep(nextStep.id);
   };
 
   const applyTemplate = (templateKey) => {
@@ -129,7 +131,7 @@ export default function EstimateDetailsTab() {
               <button
                 type="button"
                 key={step.id}
-                onClick={() => setActiveStep(step.id)}
+                onClick={() => gotoWorkflowStep(step.id)}
                 style={{
                   border: `1px solid ${active ? `${_.ac}55` : _.line}`,
                   borderRadius: 6,
@@ -233,7 +235,7 @@ export default function EstimateDetailsTab() {
         <div style={CARD}>
           <h3 style={{ ...CARD_TITLE, marginBottom: 10 }}>Build Estimate</h3>
           <div style={{ fontSize: 13, color: _.muted, marginBottom: 8 }}>
-            Start fast with a template or build custom categories.
+            Build estimate categories and line items directly here.
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
             {ESTIMATE_TEMPLATE_OPTIONS.map(({ id, label }) => (
@@ -257,8 +259,16 @@ export default function EstimateDetailsTab() {
             )}
           </div>
           <div style={{ marginTop: 12, display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap" }}>
-            <Button variant="secondary" onClick={() => navigate("../scope")}>Open Cost Builder</Button>
+            <Button
+              variant="secondary"
+              onClick={() => builderRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+            >
+              Open Cost Builder
+            </Button>
             <Button onClick={goNext} icon={ArrowRight}>Next Step</Button>
+          </div>
+          <div ref={builderRef} style={{ marginTop: 16 }}>
+            <ScopePage />
           </div>
         </div>
       )}
@@ -285,8 +295,8 @@ export default function EstimateDetailsTab() {
             You are ready to generate and manage your quote document.
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-            <Button onClick={() => navigate("../quote")} icon={CheckCircle2}>Go to Quote Generator</Button>
-            <Button variant="secondary" onClick={() => setActiveStep("pricing")}>Back to Pricing Review</Button>
+            <Button onClick={() => navigate("../quote?step=details")} icon={CheckCircle2}>Go to Quote Generator</Button>
+            <Button variant="secondary" onClick={() => gotoWorkflowStep("pricing")}>Back to Pricing Review</Button>
           </div>
         </div>
       )}
