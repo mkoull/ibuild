@@ -129,8 +129,8 @@ export default function App() {
                 }>
                   <Route index element={<Navigate to="overview" replace />} />
                   <Route path="overview" element={<SubcontractorRestricted message="Estimate details are restricted for subcontractor users."><EstimateDetailsTab /></SubcontractorRestricted>} />
-                  <Route path="estimate" element={<SubcontractorRestricted message="Estimate data is restricted for subcontractor users."><Navigate to="../scope" replace /></SubcontractorRestricted>} />
-                  <Route path="scope" element={<SubcontractorRestricted message="Costing data is restricted for subcontractor users."><ScopePage /></SubcontractorRestricted>} />
+                  <Route path="estimate" element={<SubcontractorRestricted message="Estimate data is restricted for subcontractor users."><Navigate to="../quote" replace /></SubcontractorRestricted>} />
+                  <Route path="scope" element={<SubcontractorRestricted message="Costing data is restricted for subcontractor users."><Navigate to="../quote" replace /></SubcontractorRestricted>} />
                   <Route path="quote" element={<SubcontractorRestricted message="Quote and pricing data is restricted for subcontractor users."><QuotePage /></SubcontractorRestricted>} />
                   <Route path="build" element={<BuildSectionPage />} />
                   <Route path="financial" element={<SubcontractorRestricted message="Financial data is restricted for subcontractor users."><FinancialSectionPage /></SubcontractorRestricted>} />
@@ -144,7 +144,7 @@ export default function App() {
                   <Route path="site-diary" element={<LockedTabGate><SiteDiaryPage /></LockedTabGate>} />
                   <Route path="defects" element={<LockedTabGate><DefectsPage /></LockedTabGate>} />
                   {/* Shortcut routes */}
-                  <Route path="pricing" element={<Navigate to="../quote?step=scope" replace />} />
+                  <Route path="pricing" element={<Navigate to="../quote?step=pricing" replace />} />
                   {/* Legacy estimate routes kept for compatibility */}
                   <Route path="plans" element={<PlansAIPage />} />
                   <Route path="quote-review" element={<QuotePage />} />

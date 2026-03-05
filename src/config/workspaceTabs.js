@@ -157,7 +157,7 @@ export const PROJECT_TAB_ROUTES = [
 
 export const PROJECT_WORKFLOW_SECTIONS = [
   { key: "overview", label: "Overview", tabs: ["overview"] },
-  { key: "preconstruction", label: "Pre-Construction", tabs: ["scope", "quote"] },
+  { key: "preconstruction", label: "Pre-Construction", tabs: ["quote"] },
   { key: "jobsetup", label: "Job Setup", tabs: ["schedule", "costs"] },
   { key: "construction", label: "Construction", tabs: ["procurement", "variations", "diary"] },
   { key: "financial", label: "Financial", tabs: ["invoices"] },

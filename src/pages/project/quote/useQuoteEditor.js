@@ -1,6 +1,7 @@
 import { useState, useRef, useMemo, useEffect, useCallback } from "react";
 import { uid } from "../../../theme/styles.js";
 import { toPositiveNumber } from "../../../lib/validation.js";
+import { syncScopeToEstimate } from "../../../lib/scopeSync.js";
 import { UNDO_TIMEOUT_MS } from "./constants.js";
 
 export default function useQuoteEditor({ project, up, margin, rateLibrary, notify }) {
@@ -65,6 +66,7 @@ export default function useQuoteEditor({ project, up, margin, rateLibrary, notif
       pr.scope[cat][idx][k] = v;
     }
     if (k === "on" && v && !pr.scope[cat][idx].qty) pr.scope[cat][idx].qty = 1;
+    syncScopeToEstimate(pr);
     return pr;
   }), [up]);
 
@@ -90,6 +92,7 @@ export default function useQuoteEditor({ project, up, margin, rateLibrary, notif
       };
       pr.scope[cat].push(row);
       insertedIdx = pr.scope[cat].length - 1;
+      syncScopeToEstimate(pr);
       return pr;
     });
     if (insertedIdx >= 0) {
@@ -106,6 +109,7 @@ export default function useQuoteEditor({ project, up, margin, rateLibrary, notif
     }
     up(pr => {
       pr.scope[cat].splice(idx, 1);
+      syncScopeToEstimate(pr);
       return pr;
     });
     notify("Item deleted — tap Undo to restore");
@@ -117,6 +121,7 @@ export default function useQuoteEditor({ project, up, margin, rateLibrary, notif
     up(pr => {
       if (!pr.scope[cat]) pr.scope[cat] = [];
       pr.scope[cat].splice(idx, 0, item);
+      syncScopeToEstimate(pr);
       return pr;
     });
     setDeletedItem(null);
@@ -139,6 +144,7 @@ export default function useQuoteEditor({ project, up, margin, rateLibrary, notif
       if (!src) return pr;
       const copy = { ...JSON.parse(JSON.stringify(src)), _id: uid() };
       pr.scope[cat].splice(idx + 1, 0, copy);
+      syncScopeToEstimate(pr);
       return pr;
     });
     notify("Item duplicated");
@@ -148,13 +154,13 @@ export default function useQuoteEditor({ project, up, margin, rateLibrary, notif
     const trimmed = name.trim();
     if (!trimmed) { notify("Enter a category name", "error"); return; }
     if (project.scope[trimmed]) { notify("Category already exists", "error"); return; }
-    up(pr => { pr.scope[trimmed] = []; return pr; });
+    up(pr => { pr.scope[trimmed] = []; syncScopeToEstimate(pr); return pr; });
     setSelectedCat(trimmed);
     setNewCat("");
   }, [up, project.scope, notify]);
 
   const deleteCategory = useCallback((cat) => {
-    up(pr => { delete pr.scope[cat]; return pr; });
+    up(pr => { delete pr.scope[cat]; syncScopeToEstimate(pr); return pr; });
     setDelCat(null);
   }, [up]);
 

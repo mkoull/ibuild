@@ -2,14 +2,13 @@ import { memo } from "react";
 import _ from "../../../theme/tokens.js";
 import { input } from "../../../theme/styles.js";
 import { toPositiveNumber } from "../../../lib/validation.js";
-import { LINE_ITEM_TYPES, UNIT_OPTIONS } from "./constants.js";
 import { Copy, Trash2, SlidersHorizontal } from "lucide-react";
 
 const cellInput = {
   ...input,
   padding: "6px 8px",
   fontSize: _.fontSize.sm,
-  minHeight: 32,
+  minHeight: 40,
 };
 
 function LineItemRow({
@@ -55,7 +54,7 @@ function LineItemRow({
             placeholder="Description"
           />
           <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <button type="button" onClick={() => setDrawerItem({ cat, idx })} style={actionBtn} title="Advanced details">
+            <button type="button" onClick={() => setDrawerItem({ cat, idx })} style={actionBtn} title="More details">
               <SlidersHorizontal size={14} />
             </button>
             <button type="button" onClick={() => duplicateItem(cat, idx)} style={actionBtn} title="Duplicate row">
@@ -68,89 +67,45 @@ function LineItemRow({
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
           <div>
-            <div style={{ fontSize: _.fontSize.xs, color: _.muted, marginBottom: 2 }}>Type</div>
-            <select style={{ ...cellInput, width: "100%", cursor: "pointer" }} value={item.type || "Labour"} data-row={idx} data-col={1} onChange={(e) => uI(cat, idx, "type", e.target.value)} onKeyDown={(e) => handleKeyDown(e, 1)}>
-              {LINE_ITEM_TYPES.map((t) => <option key={t}>{t}</option>)}
-            </select>
-          </div>
-          <div>
             <div style={{ fontSize: _.fontSize.xs, color: _.muted, marginBottom: 2 }}>Qty</div>
-            <input type="number" style={{ ...cellInput, width: "100%" }} value={item.qty} data-row={idx} data-col={2} onChange={(e) => uI(cat, idx, "qty", parseFloat(e.target.value) || 0)} onKeyDown={(e) => handleKeyDown(e, 2)} />
+            <input type="number" style={{ ...cellInput, width: "100%" }} value={item.qty} data-row={idx} data-col={1} onChange={(e) => uI(cat, idx, "qty", parseFloat(e.target.value) || 0)} onKeyDown={(e) => handleKeyDown(e, 1)} />
           </div>
           <div>
-            <div style={{ fontSize: _.fontSize.xs, color: _.muted, marginBottom: 2 }}>Unit</div>
-            <select style={{ ...cellInput, width: "100%", cursor: "pointer" }} value={item.unit || "ea"} data-row={idx} data-col={3} onChange={(e) => uI(cat, idx, "unit", e.target.value)} onKeyDown={(e) => handleKeyDown(e, 3)}>
-              {UNIT_OPTIONS.map((u) => <option key={u}>{u}</option>)}
-            </select>
-          </div>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginTop: 6 }}>
-          <div>
-            <div style={{ fontSize: _.fontSize.xs, color: _.muted, marginBottom: 2 }}>Cost</div>
-            <input type="number" style={{ ...cellInput, width: "100%" }} value={item.rate} data-row={idx} data-col={4} onChange={(e) => uI(cat, idx, "rate", parseFloat(e.target.value) || 0)} onKeyDown={(e) => handleKeyDown(e, 4)} />
-          </div>
-          <div>
-            <div style={{ fontSize: _.fontSize.xs, color: _.muted, marginBottom: 2 }}>Sell</div>
-            <input
-              type="number"
-              style={{ ...cellInput, width: "100%" }}
-              value={sell.toFixed(2)}
-              data-row={idx}
-              data-col={5}
-              onChange={(e) => {
-                const sellVal = toPositiveNumber(e.target.value, 0);
-                const qty = Number(item.qty) || 0;
-                const denom = 1 + (lineMargin / 100);
-                const nextRate = qty > 0 ? (sellVal / denom) / qty : 0;
-                uI(cat, idx, "rate", nextRate);
-              }}
-              onKeyDown={(e) => handleKeyDown(e, 5)}
-            />
+            <div style={{ fontSize: _.fontSize.xs, color: _.muted, marginBottom: 2 }}>Rate</div>
+            <input type="number" style={{ ...cellInput, width: "100%" }} value={item.rate} data-row={idx} data-col={2} onChange={(e) => uI(cat, idx, "rate", parseFloat(e.target.value) || 0)} onKeyDown={(e) => handleKeyDown(e, 2)} />
           </div>
           <div>
             <div style={{ fontSize: _.fontSize.xs, color: _.muted, marginBottom: 2 }}>Margin %</div>
-            <input type="number" style={{ ...cellInput, width: "100%" }} value={lineMargin} data-row={idx} data-col={6} onChange={(e) => uI(cat, idx, "marginPct", toPositiveNumber(e.target.value, 0))} onKeyDown={(e) => handleKeyDown(e, 6)} />
+            <input type="number" style={{ ...cellInput, width: "100%" }} value={lineMargin} data-row={idx} data-col={3} onChange={(e) => uI(cat, idx, "marginPct", toPositiveNumber(e.target.value, 0))} onKeyDown={(e) => handleKeyDown(e, 3)} />
+          </div>
+        </div>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 6 }}>
+          <div style={{ fontSize: _.fontSize.sm, fontWeight: _.fontWeight.semi, color: _.ink, fontVariantNumeric: "tabular-nums" }}>
+            Total: ${sell.toFixed(2)}
           </div>
         </div>
       </div>
     );
   }
 
+  // Desktop: 5+1 columns — Description, Qty, Rate, Margin%, Total, Actions
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "minmax(220px,1fr) 130px 80px 90px 110px 120px 100px 96px", gap: 4, alignItems: "center", padding: "4px 0", borderBottom: `1px solid ${_.line}08`, minHeight: 36 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "minmax(180px,1fr) 70px 90px 70px 90px 72px", gap: 4, alignItems: "center", padding: "4px 0", borderBottom: `1px solid ${_.line}08`, minHeight: 44 }}>
       <input ref={descRef} style={{ ...cellInput }} value={item.item || ""} onChange={(e) => uI(cat, idx, "item", e.target.value)} data-row={idx} data-col={0} onKeyDown={(e) => handleKeyDown(e, 0)} placeholder="Description" />
-      <select style={{ ...cellInput, cursor: "pointer" }} value={item.type || "Labour"} data-row={idx} data-col={1} onChange={(e) => uI(cat, idx, "type", e.target.value)} onKeyDown={(e) => handleKeyDown(e, 1)}>
-        {LINE_ITEM_TYPES.map((t) => <option key={t}>{t}</option>)}
-      </select>
-      <input type="number" style={{ ...cellInput, textAlign: "right" }} value={item.qty} data-row={idx} data-col={2} onChange={(e) => uI(cat, idx, "qty", parseFloat(e.target.value) || 0)} onKeyDown={(e) => handleKeyDown(e, 2)} />
-      <select style={{ ...cellInput, cursor: "pointer", fontSize: _.fontSize.xs }} value={item.unit || "ea"} data-row={idx} data-col={3} onChange={(e) => uI(cat, idx, "unit", e.target.value)} onKeyDown={(e) => handleKeyDown(e, 3)}>
-        {UNIT_OPTIONS.map((u) => <option key={u}>{u}</option>)}
-      </select>
-      <input type="number" style={{ ...cellInput, textAlign: "right" }} value={item.rate} data-row={idx} data-col={4} onChange={(e) => uI(cat, idx, "rate", parseFloat(e.target.value) || 0)} onKeyDown={(e) => handleKeyDown(e, 4)} />
-      <input
-        type="number"
-        style={{ ...cellInput, textAlign: "right" }}
-        value={sell.toFixed(2)}
-        data-row={idx}
-        data-col={5}
-        onChange={(e) => {
-          const sellVal = toPositiveNumber(e.target.value, 0);
-          const qty = Number(item.qty) || 0;
-          const denom = 1 + (lineMargin / 100);
-          const nextRate = qty > 0 ? (sellVal / denom) / qty : 0;
-          uI(cat, idx, "rate", nextRate);
-        }}
-        onKeyDown={(e) => handleKeyDown(e, 5)}
-      />
-      <input type="number" style={{ ...cellInput, textAlign: "right" }} value={lineMargin} data-row={idx} data-col={6} onChange={(e) => uI(cat, idx, "marginPct", toPositiveNumber(e.target.value, 0))} onKeyDown={(e) => handleKeyDown(e, 6)} />
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 2 }}>
-        <button type="button" onClick={() => setDrawerItem({ cat, idx })} style={actionBtn} title="Advanced details">
+      <input type="number" style={{ ...cellInput, textAlign: "right" }} value={item.qty} data-row={idx} data-col={1} onChange={(e) => uI(cat, idx, "qty", parseFloat(e.target.value) || 0)} onKeyDown={(e) => handleKeyDown(e, 1)} />
+      <input type="number" style={{ ...cellInput, textAlign: "right" }} value={item.rate} data-row={idx} data-col={2} onChange={(e) => uI(cat, idx, "rate", parseFloat(e.target.value) || 0)} onKeyDown={(e) => handleKeyDown(e, 2)} />
+      <input type="number" style={{ ...cellInput, textAlign: "right" }} value={lineMargin} data-row={idx} data-col={3} onChange={(e) => uI(cat, idx, "marginPct", toPositiveNumber(e.target.value, 0))} onKeyDown={(e) => handleKeyDown(e, 3)} />
+      <div style={{ fontSize: _.fontSize.sm, fontWeight: _.fontWeight.semi, textAlign: "right", fontVariantNumeric: "tabular-nums", color: _.ink, padding: "0 4px" }}>
+        {sell.toFixed(0)}
+      </div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 0 }}>
+        <button type="button" onClick={() => setDrawerItem({ cat, idx })} style={actionBtnSm} title="More details">
           <SlidersHorizontal size={13} />
         </button>
-        <button type="button" onClick={() => duplicateItem(cat, idx)} style={actionBtn} title="Duplicate row">
+        <button type="button" onClick={() => duplicateItem(cat, idx)} style={actionBtnSm} title="Duplicate row">
           <Copy size={13} />
         </button>
-        <button type="button" onClick={() => delI(cat, idx)} style={{ ...actionBtn, color: _.red }} title="Delete row">
+        <button type="button" onClick={() => delI(cat, idx)} style={{ ...actionBtnSm, color: _.red }} title="Delete row">
           <Trash2 size={13} />
         </button>
       </div>
@@ -168,6 +123,20 @@ const actionBtn = {
   alignItems: "center",
   justifyContent: "center",
   width: 44,
+  height: 44,
+  borderRadius: _.rXs,
+};
+
+const actionBtnSm = {
+  background: "none",
+  border: "none",
+  cursor: "pointer",
+  padding: 2,
+  color: _.muted,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: 24,
   height: 44,
   borderRadius: _.rXs,
 };

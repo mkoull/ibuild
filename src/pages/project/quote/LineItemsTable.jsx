@@ -1,7 +1,6 @@
 import { useEffect, useRef } from "react";
 import _ from "../../../theme/tokens.js";
 import Card from "../../../components/ui/Card.jsx";
-import Button from "../../../components/ui/Button.jsx";
 import LineItemRow from "./LineItemRow.jsx";
 import { Plus } from "lucide-react";
 
@@ -25,7 +24,6 @@ export default function LineItemsTable({
     const saved = tableScrollMemoryRef?.current?.[cat];
     if (!saved) return;
     el.scrollTop = Number(saved.top) || 0;
-    el.scrollLeft = Number(saved.left) || 0;
   }, [cat, tableScrollMemoryRef]);
 
   return (
@@ -37,45 +35,37 @@ export default function LineItemsTable({
           if (!tableScrollMemoryRef?.current || !cat) return;
           tableScrollMemoryRef.current[cat] = {
             top: e.currentTarget.scrollTop,
-            left: e.currentTarget.scrollLeft,
           };
         }}
-        style={{ position: "relative", overflowX: "auto", overflowY: "auto", maxWidth: "100%", minWidth: 0, maxHeight: "62vh" }}
+        style={{ position: "relative", overflowY: "auto", maxWidth: "100%", minWidth: 0, maxHeight: "62vh" }}
       >
-        <div style={{ minWidth: mobile ? 760 : 980 }}>
-          {!mobile && (
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "minmax(220px,1fr) 130px 80px 90px 110px 120px 100px 96px",
-              gap: 4, borderBottom: `1px solid ${_.line}`, marginBottom: 4,
-            }}>
-              <div style={headerStyle}>Description</div>
-              <div style={headerStyle}>Type</div>
-              <div style={{ ...headerStyle, textAlign: "right" }}>Qty</div>
-              <div style={headerStyle}>Unit</div>
-              <div style={{ ...headerStyle, textAlign: "right" }}>Cost</div>
-              <div style={{ ...headerStyle, textAlign: "right" }}>Sell Price</div>
-              <div style={{ ...headerStyle, textAlign: "right" }}>Margin %</div>
-              <div style={headerStyle}>Actions</div>
-            </div>
-          )}
-
-          {items.map((item, idx) => (
-            <LineItemRow
-              key={item._id}
-              item={item} cat={cat} idx={idx}
-              descRef={(el) => { descInputRefs.current[`${cat}:${idx}`] = el; }}
-              uI={uI} getRowMargin={getRowMargin} getRowSell={getRowSell}
-              addLineItem={addLineItem} delI={delI}
-              duplicateItem={duplicateItem}
-              setDrawerItem={setDrawerItem}
-              mobile={mobile}
-            />
-          ))}
-        </div>
         {!mobile && (
-          <div style={{ position: "absolute", top: 0, right: 0, bottom: 0, width: 24, pointerEvents: "none", background: "linear-gradient(to right, rgba(255,255,255,0), rgba(255,255,255,0.94))" }} />
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "minmax(180px,1fr) 70px 90px 70px 90px 72px",
+            gap: 4, borderBottom: `1px solid ${_.line}`, marginBottom: 4,
+          }}>
+            <div style={headerStyle}>Description</div>
+            <div style={{ ...headerStyle, textAlign: "right" }}>Qty</div>
+            <div style={{ ...headerStyle, textAlign: "right" }}>Rate</div>
+            <div style={{ ...headerStyle, textAlign: "right" }}>Margin %</div>
+            <div style={{ ...headerStyle, textAlign: "right" }}>Total</div>
+            <div style={headerStyle}></div>
+          </div>
         )}
+
+        {items.map((item, idx) => (
+          <LineItemRow
+            key={item._id}
+            item={item} cat={cat} idx={idx}
+            descRef={(el) => { descInputRefs.current[`${cat}:${idx}`] = el; }}
+            uI={uI} getRowMargin={getRowMargin} getRowSell={getRowSell}
+            addLineItem={addLineItem} delI={delI}
+            duplicateItem={duplicateItem}
+            setDrawerItem={setDrawerItem}
+            mobile={mobile}
+          />
+        ))}
       </div>
 
       {items.length === 0 && (
@@ -101,7 +91,7 @@ export default function LineItemsTable({
           gap: 6, fontSize: _.fontSize.sm, color: _.ac,
           fontWeight: _.fontWeight.semi, fontFamily: "inherit",
           transition: `all ${_.tr}`,
-          minHeight: 44,
+          minHeight: 48,
         }}
         onMouseEnter={e => { e.currentTarget.style.background = `${_.ac}08`; e.currentTarget.style.borderColor = _.ac; }}
         onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = _.line2; }}

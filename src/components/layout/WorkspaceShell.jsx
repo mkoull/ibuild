@@ -15,8 +15,7 @@ import Button from "../ui/Button.jsx";
 const LIFECYCLE_STEPS = ["Lead", "Quoted", "Approved", "Active", "Complete"];
 const WORKSPACE_SECTIONS = [
   { key: "overview", label: "Overview", path: "overview", matches: ["overview"] },
-  { key: "estimate", label: "Estimate", path: "estimate", matches: ["estimate", "scope"] },
-  { key: "quote", label: "Quote", path: "quote", matches: ["quote", "quote-review"] },
+  { key: "costings", label: "Costings", path: "quote", matches: ["quote", "quote-review", "scope", "estimate", "costings", "pricing"] },
   { key: "build", label: "Build", path: "build", matches: ["build", "schedule", "procurement", "variations", "site-diary"] },
   { key: "financial", label: "Financial", path: "financial", matches: ["financial", "costs", "invoices"] },
   { key: "closeout", label: "Closeout", path: "closeout", matches: ["closeout", "defects", "documents"] },

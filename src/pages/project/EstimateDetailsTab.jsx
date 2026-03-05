@@ -1,16 +1,14 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useProject } from "../../context/ProjectContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
 import _ from "../../theme/tokens.js";
 import { ds, fmt } from "../../theme/styles.js";
 import { displayStage } from "../../config/workspaceTabs.js";
-import { ArrowRight, CheckCircle2, MapPin } from "lucide-react";
+import { ArrowRight, MapPin } from "lucide-react";
 import Button from "../../components/ui/Button.jsx";
 import { calculateTotals, normalizeCategories } from "../../lib/costEngine.js";
-import { ESTIMATE_TEMPLATE_OPTIONS, buildEstimateTemplate } from "../../lib/estimateTemplates.js";
 import { isRequiredText } from "../../lib/validation.js";
-import ScopePage from "./ScopePage.jsx";
 
 const CARD = { background: "#fff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 10, padding: 20 };
 const CARD_HEADER = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 };
@@ -20,9 +18,7 @@ const LBL = { fontSize: 12, color: _.muted, display: "block", marginBottom: 6 };
 const STEPS = [
   { id: "project", label: "Step 1: Project Details" },
   { id: "client", label: "Step 2: Client Details" },
-  { id: "estimate", label: "Step 3: Build Estimate" },
-  { id: "pricing", label: "Step 4: Pricing Review" },
-  { id: "quote", label: "Step 5: Generate Quote" },
+  { id: "pricing", label: "Step 3: Start Pricing" },
 ];
 
 function safeText(value) {
@@ -41,6 +37,7 @@ const inputStyle = {
   color: _.ink,
   fontFamily: "inherit",
   outline: "none",
+  minHeight: 40,
 };
 
 export default function EstimateDetailsTab() {
@@ -49,8 +46,6 @@ export default function EstimateDetailsTab() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [notes, setNotes] = useState(p.notes || "");
-  const [selectedTemplate, setSelectedTemplate] = useState(p.estimateTemplate || "custom");
-  const builderRef = useRef(null);
 
   const stage = p.stage || p.status || "Lead";
   const contact = client?.contacts?.[0];
@@ -87,39 +82,6 @@ export default function EstimateDetailsTab() {
     }
     if (!nextStep) return;
     gotoWorkflowStep(nextStep.id);
-    if (nextStep.id === "estimate") {
-      requestAnimationFrame(() => {
-        builderRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      });
-    }
-  };
-
-  const applyTemplate = (templateKey) => {
-    setSelectedTemplate(templateKey);
-    const categoriesFromTemplate = buildEstimateTemplate(templateKey);
-    if (templateKey === "custom") {
-      up((pr) => {
-        pr.costCategories = [];
-        pr.estimateTemplate = "custom";
-        pr.estimate = {
-          categories: [],
-          totals: calculateTotals([]),
-        };
-        return pr;
-      });
-      notify("Custom template selected");
-      return;
-    }
-    up((pr) => {
-      pr.costCategories = categoriesFromTemplate;
-      pr.estimateTemplate = templateKey;
-      pr.estimate = {
-        categories: normalizeCategories(categoriesFromTemplate),
-        totals: calculateTotals(categoriesFromTemplate),
-      };
-      return pr;
-    });
-    notify(`Template applied: ${templateKey}`);
   };
 
   return (
@@ -148,7 +110,7 @@ export default function EstimateDetailsTab() {
                   fontWeight: active ? 700 : 500,
                 }}
               >
-                {done ? "✓ " : ""}{step.label}
+                {done ? "\u2713 " : ""}{step.label}
               </button>
             );
           })}
@@ -236,66 +198,22 @@ export default function EstimateDetailsTab() {
         </div>
       )}
 
-      {activeStep === "estimate" && (
-        <div style={CARD}>
-          <h3 style={{ ...CARD_TITLE, marginBottom: 10 }}>Build Estimate</h3>
-          <div style={{ fontSize: 13, color: _.muted, marginBottom: 8 }}>
-            Build estimate categories and line items directly here.
-          </div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
-            {ESTIMATE_TEMPLATE_OPTIONS.map(({ id, label }) => (
-              <Button key={id} variant={selectedTemplate === id ? "primary" : "secondary"} size="sm" onClick={() => applyTemplate(id)}>
-                {label}
-              </Button>
-            ))}
-          </div>
-          <div style={{ ...CARD, background: _.bg, padding: 12 }}>
-            <div style={{ fontSize: 12, color: _.muted, marginBottom: 6 }}>Current Categories</div>
-            {(categories || []).length === 0 ? (
-              <div style={{ fontSize: 13, color: _.muted }}>No categories yet.</div>
-            ) : (
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                {categories.map((cat) => (
-                  <span key={cat.id} style={{ fontSize: 12, padding: "4px 8px", borderRadius: 999, background: _.surface, border: `1px solid ${_.line}`, color: _.body }}>
-                    {cat.name}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-          <div style={{ marginTop: 12, display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap" }}>
-            <Button onClick={goNext} icon={ArrowRight}>Continue to Pricing Review</Button>
-          </div>
-          <div ref={builderRef} style={{ marginTop: 16 }}>
-            <ScopePage />
-          </div>
-        </div>
-      )}
-
       {activeStep === "pricing" && (
         <div style={CARD}>
-          <h3 style={{ ...CARD_TITLE, marginBottom: 10 }}>Pricing Review</h3>
-          <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "repeat(4, 1fr)", gap: 10 }}>
-            <Metric label="Total Cost" value={fmt(totals.totalCost)} />
-            <Metric label="Total Sell" value={fmt(totals.totalSell)} />
-            <Metric label="Margin %" value={`${Number(totals.marginPercent || 0).toFixed(2)}%`} />
-            <Metric label="Margin $" value={fmt(totals.marginValue)} />
-          </div>
-          <div style={{ marginTop: 12, display: "flex", justifyContent: "flex-end" }}>
-            <Button onClick={goNext} icon={ArrowRight}>Next Step</Button>
-          </div>
-        </div>
-      )}
-
-      {activeStep === "quote" && (
-        <div style={CARD}>
-          <h3 style={{ ...CARD_TITLE, marginBottom: 10 }}>Generate Quote</h3>
+          <h3 style={{ ...CARD_TITLE, marginBottom: 10 }}>Start Pricing</h3>
           <div style={{ fontSize: 13, color: _.muted, marginBottom: 12 }}>
-            You are ready to generate and manage your quote document.
+            Your project and client details are set. Open the Costings workspace to build your quote.
           </div>
+          {totals.totalSell > 0 && (
+            <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "repeat(4, 1fr)", gap: 10, marginBottom: 16 }}>
+              <Metric label="Total Cost" value={fmt(totals.totalCost)} />
+              <Metric label="Total Sell" value={fmt(totals.totalSell)} />
+              <Metric label="Margin %" value={`${Number(totals.marginPercent || 0).toFixed(2)}%`} />
+              <Metric label="Margin $" value={fmt(totals.marginValue)} />
+            </div>
+          )}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-            <Button onClick={() => navigate("../quote?step=details")} icon={CheckCircle2}>Go to Quote Generator</Button>
-            <Button variant="secondary" onClick={() => gotoWorkflowStep("pricing")}>Back to Pricing Review</Button>
+            <Button onClick={() => navigate("../quote?step=pricing")} icon={ArrowRight}>Go to Costings</Button>
           </div>
         </div>
       )}

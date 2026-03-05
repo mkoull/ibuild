@@ -101,7 +101,7 @@ export default function CreateEstimateWizardPage() {
 
   const pricingRoute = (projectId) => {
     if (!projectId) return "/estimates";
-    return `/estimates/${projectId}/quote?step=scope`;
+    return `/estimates/${projectId}/quote?step=pricing`;
   };
 
   const goNext = () => {

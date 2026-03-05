@@ -3,7 +3,7 @@ import _ from "../../../theme/tokens.js";
 import { fmt } from "../../../theme/styles.js";
 import Button from "../../../components/ui/Button.jsx";
 import Modal from "../../../components/ui/Modal.jsx";
-import { ArrowLeft, ArrowRight, X } from "lucide-react";
+import { ArrowRight, X, ChevronDown } from "lucide-react";
 import useQuoteEditor from "./useQuoteEditor.js";
 import CategorySidebar from "./CategorySidebar.jsx";
 import RateLibrarySearch from "./RateLibrarySearch.jsx";
@@ -48,6 +48,87 @@ export default function QuoteEditor({ project, up, T, margin, contingency, mobil
     if (isDesktop) setShowSummarySheet(false);
   }, [isDesktop]);
 
+  // Toggle accordion: open a category (close others on tablet/mobile)
+  const toggleAccordion = (cat) => {
+    setSelectedCat((prev) => prev === cat ? "" : cat);
+  };
+
+  // Accordion view for tablet/mobile (and also used in desktop alongside sidebar)
+  const renderAccordion = () => (
+    <div>
+      {scopeCategories.length === 0 && (
+        <div style={{ padding: "28px 12px", textAlign: "center", color: _.muted }}>
+          No scope items yet. Add a category to start pricing.
+        </div>
+      )}
+      {scopeCategories.map((cat) => {
+        const catItems = safeScope[cat] || [];
+        const activeItems = catItems.filter((i) => i.on);
+        const catTotal = activeItems.reduce((t, i) => t + i.rate * i.qty, 0);
+        const isOpen = selectedCat === cat;
+        return (
+          <div key={cat} style={{ marginBottom: 8 }}>
+            {/* Accordion header */}
+            <div
+              onClick={() => toggleAccordion(cat)}
+              style={{
+                display: "flex", justifyContent: "space-between", alignItems: "center",
+                padding: "10px 14px", cursor: "pointer",
+                background: isOpen ? `${_.ac}08` : _.well,
+                border: `1px solid ${isOpen ? `${_.ac}33` : _.line}`,
+                borderRadius: isOpen ? `${_.rSm}px ${_.rSm}px 0 0` : _.rSm,
+                minHeight: 52,
+                transition: `all 0.15s ease`,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: _.s2 }}>
+                <ChevronDown size={14} color={_.muted} style={{ transform: isOpen ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 0.15s" }} />
+                <span style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.semi, color: _.ink }}>{cat}</span>
+                <span style={{ fontSize: _.fontSize.sm, color: _.muted }}>({catItems.length} items)</span>
+              </div>
+              <span style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.semi, color: _.ink, fontVariantNumeric: "tabular-nums" }}>
+                {fmt(catTotal)}
+              </span>
+            </div>
+            {/* Accordion body */}
+            {isOpen && (
+              <div style={{
+                border: `1px solid ${_.ac}33`,
+                borderTop: "none",
+                borderRadius: `0 0 ${_.rSm}px ${_.rSm}px`,
+                padding: "8px 0",
+              }}>
+                <div style={{ padding: "0 12px" }}>
+                  <RateLibrarySearch
+                    librarySearch={librarySearch}
+                    setLibrarySearch={setLibrarySearch}
+                    libraryMatches={libraryMatches}
+                    addFromLibrary={addFromLibrary}
+                    disabled={!selectedCat}
+                  />
+                </div>
+                <LineItemsTable
+                  items={catItems}
+                  cat={cat}
+                  descInputRefs={descInputRefs}
+                  uI={uI}
+                  getRowMargin={getRowMargin}
+                  getRowSell={getRowSell}
+                  addLineItem={addLineItem}
+                  delI={delI}
+                  duplicateItem={duplicateItem}
+                  setDrawerItem={setEditModalItem}
+                  tableScrollMemoryRef={tableScrollMemoryRef}
+                  mobile={isMobileBp}
+                />
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+
   return (
     <div style={{ overflowX: "hidden", maxWidth: "100%" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: _.s4 }}>
@@ -69,31 +150,22 @@ export default function QuoteEditor({ project, up, T, margin, contingency, mobil
           <Button size="sm" variant="secondary" onClick={() => setShowCategorySheet(true)}>
             Categories
           </Button>
-          <select
-            style={{ flex: 1, minHeight: 40, border: `1px solid ${_.line}`, borderRadius: _.rSm, background: _.surface, fontFamily: "inherit", padding: "0 10px" }}
-            value={selectedCat || ""}
-            onChange={(e) => setSelectedCat(e.target.value)}
-          >
-            {scopeCategories.length === 0 && <option value="">No categories</option>}
-            {scopeCategories.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
-          </select>
+          <div style={{ flex: 1, fontSize: _.fontSize.sm, color: _.muted, textAlign: "right" }}>
+            {scopeCategories.length} categories
+          </div>
         </div>
       )}
 
-      {/* Desktop 3-col / tablet 2-col / mobile stacked */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: isDesktop
-          ? "260px minmax(0,1fr) 360px"
-          : isTablet
-            ? "260px minmax(0,1fr)"
-            : "1fr",
-        gap: _.s3,
-        alignItems: "start",
-        maxWidth: "100%",
-        overflowX: "hidden",
-      }}>
-        {!isMobileBp && (
+      {/* Desktop: sidebar + accordion + summary | Tablet/Mobile: accordion only */}
+      {isDesktop ? (
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "220px minmax(0,1fr) 340px",
+          gap: _.s3,
+          alignItems: "start",
+          maxWidth: "100%",
+          overflowX: "hidden",
+        }}>
           <CategorySidebar
             scopeCategories={scopeCategories}
             scope={safeScope}
@@ -105,58 +177,18 @@ export default function QuoteEditor({ project, up, T, margin, contingency, mobil
             setDelCat={setDelCat}
             compact={compactCategories}
           />
-        )}
-        <div style={{ minWidth: 0, maxWidth: "100%" }}>
-          {selectedCat ? (
-            <>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: _.s2 }}>
-                <div style={{ fontSize: _.fontSize.lg, fontWeight: _.fontWeight.semi, color: _.ink }}>{selectedCat}</div>
-              </div>
-              <RateLibrarySearch
-                librarySearch={librarySearch}
-                setLibrarySearch={setLibrarySearch}
-                libraryMatches={libraryMatches}
-                addFromLibrary={addFromLibrary}
-                disabled={!selectedCat}
-              />
-              <LineItemsTable
-                items={items}
-                cat={selectedCat}
-                descInputRefs={descInputRefs}
-                uI={uI}
-                getRowMargin={getRowMargin}
-                getRowSell={getRowSell}
-                addLineItem={addLineItem}
-                delI={delI}
-                duplicateItem={duplicateItem}
-                setDrawerItem={setEditModalItem}
-                tableScrollMemoryRef={tableScrollMemoryRef}
-                mobile={isMobileBp}
-              />
-            </>
-          ) : (
-            <div style={{ padding: "28px 12px", textAlign: "center", color: _.muted }}>
-              {scopeCategories.length === 0
-                ? "No scope items yet. Add a category to start pricing."
-                : "Select a category to start adding line items."
-              }
-            </div>
-          )}
-        </div>
-
-        {/* Right: summary (desktop only) */}
-        {isDesktop && (
-          <div style={{ width: 360, minWidth: 360 }}>
+          <div style={{ minWidth: 0, maxWidth: "100%" }}>
+            {renderAccordion()}
+          </div>
+          <div style={{ minWidth: 340 }}>
             <QuoteSummaryCard T={T} margin={margin} contingency={contingency} mobile={false} sticky onReview={() => onNavigate("review")} />
           </div>
-        )}
-      </div>
-
-      {/* Step navigation */}
-      <div style={{ marginTop: _.s7, display: "flex", gap: _.s3 }}>
-        <Button variant="ghost" onClick={() => onNavigate("details")} icon={ArrowLeft}>Details</Button>
-        <Button onClick={() => onNavigate("extras")} icon={ArrowRight}>Continue to Extras</Button>
-      </div>
+        </div>
+      ) : (
+        <div style={{ minWidth: 0, maxWidth: "100%" }}>
+          {renderAccordion()}
+        </div>
+      )}
 
       {/* Undo toast */}
       {deletedItem && (
@@ -214,31 +246,47 @@ export default function QuoteEditor({ project, up, T, margin, contingency, mobil
         />
       )}
 
-      {/* Compact advanced modal (optional) */}
+      {/* Edit line item modal */}
       <Modal open={!!editModalItem} onClose={() => setEditModalItem(null)} title="Edit line item" width={720}>
-        {editModalItem && (
-          <div style={{ display: "grid", gap: 10 }}>
-            <div style={{ fontSize: _.fontSize.sm, color: _.muted }}>
-              Inline editing is the default. Use this for quick detail edits only.
+        {editModalItem && (() => {
+          const editItems = safeScope[editModalItem.cat] || [];
+          const editItem = editItems[editModalItem.idx];
+          if (!editItem) return null;
+          return (
+            <div style={{ display: "grid", gap: 10 }}>
+              <div style={{ fontSize: _.fontSize.sm, color: _.muted }}>
+                Edit details for this line item.
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                <input style={{ minHeight: 44, border: `1px solid ${_.line}`, borderRadius: _.rSm, padding: "0 10px", fontFamily: "inherit" }} value={editItem.item || ""} onChange={(e) => uI(editModalItem.cat, editModalItem.idx, "item", e.target.value)} placeholder="Description" />
+                <select style={{ minHeight: 44, border: `1px solid ${_.line}`, borderRadius: _.rSm, padding: "0 10px", fontFamily: "inherit" }} value={editItem.type || "Labour"} onChange={(e) => uI(editModalItem.cat, editModalItem.idx, "type", e.target.value)}>
+                  <option>Labour</option>
+                  <option>Material</option>
+                  <option>Subcontract</option>
+                  <option>Plant</option>
+                  <option>Other</option>
+                </select>
+                <input type="number" style={{ minHeight: 44, border: `1px solid ${_.line}`, borderRadius: _.rSm, padding: "0 10px", fontFamily: "inherit" }} value={editItem.qty || 0} onChange={(e) => uI(editModalItem.cat, editModalItem.idx, "qty", Number(e.target.value) || 0)} placeholder="Qty" />
+                <select style={{ minHeight: 44, border: `1px solid ${_.line}`, borderRadius: _.rSm, padding: "0 10px", fontFamily: "inherit" }} value={editItem.unit || "ea"} onChange={(e) => uI(editModalItem.cat, editModalItem.idx, "unit", e.target.value)}>
+                  <option>ea</option><option>m</option><option>m²</option><option>m³</option><option>hr</option><option>day</option><option>lm</option><option>item</option><option>lot</option><option>kg</option><option>t</option>
+                </select>
+                <input type="number" style={{ minHeight: 44, border: `1px solid ${_.line}`, borderRadius: _.rSm, padding: "0 10px", fontFamily: "inherit" }} value={editItem.rate || 0} onChange={(e) => uI(editModalItem.cat, editModalItem.idx, "rate", Number(e.target.value) || 0)} placeholder="Rate" />
+                <input type="number" style={{ minHeight: 44, border: `1px solid ${_.line}`, borderRadius: _.rSm, padding: "0 10px", fontFamily: "inherit" }} value={editItem.marginPct ?? margin} onChange={(e) => uI(editModalItem.cat, editModalItem.idx, "marginPct", Number(e.target.value) || 0)} placeholder="Margin %" />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, color: _.muted, display: "block", marginBottom: 4 }}>Notes</label>
+                <textarea style={{ width: "100%", minHeight: 60, border: `1px solid ${_.line}`, borderRadius: _.rSm, padding: 10, fontFamily: "inherit", fontSize: 14, resize: "vertical" }} value={editItem.notes || ""} onChange={(e) => uI(editModalItem.cat, editModalItem.idx, "notes", e.target.value)} placeholder="Item notes…" />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, color: _.muted, display: "block", marginBottom: 4 }}>Supplier</label>
+                <input style={{ width: "100%", minHeight: 44, border: `1px solid ${_.line}`, borderRadius: _.rSm, padding: "0 10px", fontFamily: "inherit" }} value={editItem.supplier || ""} onChange={(e) => uI(editModalItem.cat, editModalItem.idx, "supplier", e.target.value)} placeholder="Supplier name…" />
+              </div>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+                <Button variant="ghost" onClick={() => setEditModalItem(null)}>Close</Button>
+              </div>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-              <input style={{ minHeight: 44, border: `1px solid ${_.line}`, borderRadius: _.rSm, padding: "0 10px", fontFamily: "inherit" }} value={items[editModalItem.idx]?.item || ""} onChange={(e) => uI(editModalItem.cat, editModalItem.idx, "item", e.target.value)} placeholder="Description" />
-              <select style={{ minHeight: 44, border: `1px solid ${_.line}`, borderRadius: _.rSm, padding: "0 10px", fontFamily: "inherit" }} value={items[editModalItem.idx]?.type || "Labour"} onChange={(e) => uI(editModalItem.cat, editModalItem.idx, "type", e.target.value)}>
-                <option>Labour</option>
-                <option>Material</option>
-                <option>Subcontract</option>
-                <option>Plant</option>
-                <option>Other</option>
-              </select>
-              <input type="number" style={{ minHeight: 44, border: `1px solid ${_.line}`, borderRadius: _.rSm, padding: "0 10px", fontFamily: "inherit" }} value={items[editModalItem.idx]?.qty || 0} onChange={(e) => uI(editModalItem.cat, editModalItem.idx, "qty", Number(e.target.value) || 0)} placeholder="Qty" />
-              <input type="number" style={{ minHeight: 44, border: `1px solid ${_.line}`, borderRadius: _.rSm, padding: "0 10px", fontFamily: "inherit" }} value={items[editModalItem.idx]?.rate || 0} onChange={(e) => uI(editModalItem.cat, editModalItem.idx, "rate", Number(e.target.value) || 0)} placeholder="Cost" />
-            </div>
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-              <Button variant="ghost" onClick={() => setEditModalItem(null)}>Cancel</Button>
-              <Button onClick={() => setEditModalItem(null)}>Save</Button>
-            </div>
-          </div>
-        )}
+          );
+        })()}
       </Modal>
 
       {/* Delete category modal */}
