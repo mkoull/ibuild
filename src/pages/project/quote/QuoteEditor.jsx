@@ -8,7 +8,6 @@ import useQuoteEditor from "./useQuoteEditor.js";
 import CategorySidebar from "./CategorySidebar.jsx";
 import RateLibrarySearch from "./RateLibrarySearch.jsx";
 import LineItemsTable from "./LineItemsTable.jsx";
-import LineItemDrawer from "./LineItemDrawer.jsx";
 import QuoteSummaryCard from "./QuoteSummaryCard.jsx";
 
 export default function QuoteEditor({ project, up, T, margin, contingency, mobile, rateLibrary, notify, onNavigate }) {
@@ -16,11 +15,11 @@ export default function QuoteEditor({ project, up, T, margin, contingency, mobil
   const [viewportW, setViewportW] = useState(() => (typeof window !== "undefined" ? window.innerWidth : 1280));
   const [showSummarySheet, setShowSummarySheet] = useState(false);
   const [showCategorySheet, setShowCategorySheet] = useState(false);
+  const [editModalItem, setEditModalItem] = useState(null);
   const {
     selectedCat, setSelectedCat,
     newCat, setNewCat,
     librarySearch, setLibrarySearch,
-    drawerItem, setDrawerItem,
     deletedItem, undoDelete,
     delCat, setDelCat,
     tableScrollMemoryRef,
@@ -30,14 +29,13 @@ export default function QuoteEditor({ project, up, T, margin, contingency, mobil
     duplicateItem,
     addCategory, deleteCategory,
     libraryMatches, addFromLibrary,
-    filesToDataUrls,
   } = editor;
 
   const safeScope = project?.scope && typeof project.scope === "object" ? project.scope : {};
   const items = selectedCat ? (safeScope[selectedCat] || []) : [];
-  const isDesktop = viewportW >= 1100;
-  const isTablet = viewportW >= 900 && viewportW < 1100;
-  const isMobileBp = viewportW < 768;
+  const isDesktop = viewportW >= 1200;
+  const isTablet = viewportW >= 900 && viewportW < 1200;
+  const isMobileBp = viewportW < 900;
   const compactCategories = viewportW < 1180;
 
   useEffect(() => {
@@ -82,72 +80,76 @@ export default function QuoteEditor({ project, up, T, margin, contingency, mobil
         </div>
       )}
 
-      {/* 2-column desktop / responsive tablet-mobile */}
+      {/* Desktop 3-col / tablet 2-col / mobile stacked */}
       <div style={{
         display: "grid",
         gridTemplateColumns: isDesktop
-          ? "minmax(0,1fr) 340px"
-          : "1fr",
+          ? "280px minmax(0,1fr) 360px"
+          : isTablet
+            ? "260px minmax(0,1fr)"
+            : "1fr",
         gap: _.s3,
         alignItems: "start",
         maxWidth: "100%",
         overflowX: "hidden",
       }}>
-        {/* Left/editor surface */}
-        <div style={{ minWidth: 0, maxWidth: "100%" }}>
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: isMobileBp ? "1fr" : (isTablet ? "80px minmax(0,1fr)" : "240px minmax(0,1fr)"),
-            gap: _.s3,
-            minWidth: 0,
-            alignItems: "start",
-          }}>
-            {!isMobileBp && (
-              <CategorySidebar
-                scopeCategories={scopeCategories} scope={safeScope}
-                selectedCat={selectedCat} setSelectedCat={setSelectedCat}
-                newCat={newCat} setNewCat={setNewCat}
-                addCategory={addCategory} setDelCat={setDelCat}
-                compact={compactCategories}
-              />
-            )}
+        {/* Left: categories (desktop/tablet) */}
+        {!isMobileBp && (
+          <CategorySidebar
+            scopeCategories={scopeCategories}
+            scope={safeScope}
+            selectedCat={selectedCat}
+            setSelectedCat={setSelectedCat}
+            newCat={newCat}
+            setNewCat={setNewCat}
+            addCategory={addCategory}
+            setDelCat={setDelCat}
+            compact={compactCategories}
+          />
+        )}
 
-            <div style={{ minWidth: 0, maxWidth: "100%" }}>
-              {selectedCat ? (
-                <>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: _.s2 }}>
-                    <div style={{ fontSize: _.fontSize.lg, fontWeight: _.fontWeight.semi, color: _.ink }}>{selectedCat}</div>
-                  </div>
-                  <RateLibrarySearch
-                    librarySearch={librarySearch} setLibrarySearch={setLibrarySearch}
-                    libraryMatches={libraryMatches} addFromLibrary={addFromLibrary}
-                    disabled={!selectedCat}
-                  />
-                  <LineItemsTable
-                    items={items} cat={selectedCat} descInputRefs={descInputRefs}
-                    uI={uI} getRowMargin={getRowMargin} getRowSell={getRowSell}
-                    addLineItem={addLineItem} delI={delI}
-                    duplicateItem={duplicateItem}
-                    setDrawerItem={setDrawerItem}
-                    tableScrollMemoryRef={tableScrollMemoryRef}
-                    mobile={isMobileBp}
-                  />
-                </>
-              ) : (
-                <div style={{ padding: "28px 12px", textAlign: "center", color: _.muted }}>
-                  {scopeCategories.length === 0
-                    ? "Add a category to start building your quote."
-                    : "Select a category to start adding line items."
-                  }
-                </div>
-              )}
+        {/* Middle: editor */}
+        <div style={{ minWidth: 0, maxWidth: "100%" }}>
+          {selectedCat ? (
+            <>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: _.s2 }}>
+                <div style={{ fontSize: _.fontSize.lg, fontWeight: _.fontWeight.semi, color: _.ink }}>{selectedCat}</div>
+              </div>
+              <RateLibrarySearch
+                librarySearch={librarySearch}
+                setLibrarySearch={setLibrarySearch}
+                libraryMatches={libraryMatches}
+                addFromLibrary={addFromLibrary}
+                disabled={!selectedCat}
+              />
+              <LineItemsTable
+                items={items}
+                cat={selectedCat}
+                descInputRefs={descInputRefs}
+                uI={uI}
+                getRowMargin={getRowMargin}
+                getRowSell={getRowSell}
+                addLineItem={addLineItem}
+                delI={delI}
+                duplicateItem={duplicateItem}
+                setDrawerItem={setEditModalItem}
+                tableScrollMemoryRef={tableScrollMemoryRef}
+                mobile={isMobileBp}
+              />
+            </>
+          ) : (
+            <div style={{ padding: "28px 12px", textAlign: "center", color: _.muted }}>
+              {scopeCategories.length === 0
+                ? "No scope items yet. Add a category to start pricing."
+                : "Select a category to start adding line items."
+              }
             </div>
-          </div>
+          )}
         </div>
 
-        {/* Right: Quote summary (desktop) */}
+        {/* Right: summary (desktop only) */}
         {isDesktop && (
-          <div style={{ width: 340, minWidth: 340 }}>
+          <div style={{ width: 360, minWidth: 360 }}>
             <QuoteSummaryCard T={T} margin={margin} contingency={contingency} mobile={false} sticky onReview={() => onNavigate("review")} />
           </div>
         )}
@@ -215,16 +217,32 @@ export default function QuoteEditor({ project, up, T, margin, contingency, mobil
         />
       )}
 
-      {/* Line item drawer */}
-      <LineItemDrawer
-        open={!!drawerItem}
-        onClose={() => setDrawerItem(null)}
-        project={project}
-        cat={drawerItem?.cat}
-        idx={drawerItem?.idx}
-        uI={uI} delI={delI}
-        filesToDataUrls={filesToDataUrls} up={up}
-      />
+      {/* Compact advanced modal (optional) */}
+      <Modal open={!!editModalItem} onClose={() => setEditModalItem(null)} title="Edit line item" width={720}>
+        {editModalItem && (
+          <div style={{ display: "grid", gap: 10 }}>
+            <div style={{ fontSize: _.fontSize.sm, color: _.muted }}>
+              Inline editing is the default. Use this for quick detail edits only.
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              <input style={{ minHeight: 44, border: `1px solid ${_.line}`, borderRadius: _.rSm, padding: "0 10px", fontFamily: "inherit" }} value={items[editModalItem.idx]?.item || ""} onChange={(e) => uI(editModalItem.cat, editModalItem.idx, "item", e.target.value)} placeholder="Description" />
+              <select style={{ minHeight: 44, border: `1px solid ${_.line}`, borderRadius: _.rSm, padding: "0 10px", fontFamily: "inherit" }} value={items[editModalItem.idx]?.type || "Labour"} onChange={(e) => uI(editModalItem.cat, editModalItem.idx, "type", e.target.value)}>
+                <option>Labour</option>
+                <option>Material</option>
+                <option>Subcontract</option>
+                <option>Plant</option>
+                <option>Other</option>
+              </select>
+              <input type="number" style={{ minHeight: 44, border: `1px solid ${_.line}`, borderRadius: _.rSm, padding: "0 10px", fontFamily: "inherit" }} value={items[editModalItem.idx]?.qty || 0} onChange={(e) => uI(editModalItem.cat, editModalItem.idx, "qty", Number(e.target.value) || 0)} placeholder="Qty" />
+              <input type="number" style={{ minHeight: 44, border: `1px solid ${_.line}`, borderRadius: _.rSm, padding: "0 10px", fontFamily: "inherit" }} value={items[editModalItem.idx]?.rate || 0} onChange={(e) => uI(editModalItem.cat, editModalItem.idx, "rate", Number(e.target.value) || 0)} placeholder="Cost" />
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+              <Button variant="ghost" onClick={() => setEditModalItem(null)}>Cancel</Button>
+              <Button onClick={() => setEditModalItem(null)}>Save</Button>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {/* Delete category modal */}
       <Modal open={!!delCat} onClose={() => setDelCat(null)} title="Delete Category" width={400}>

@@ -167,8 +167,8 @@ const actionBtn = {
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  width: 28,
-  height: 28,
+  width: 44,
+  height: 44,
   borderRadius: _.rXs,
 };
 

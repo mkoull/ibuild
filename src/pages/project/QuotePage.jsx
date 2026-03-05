@@ -26,6 +26,8 @@ export default function QuotePage() {
   const { clients, clientsHook, rateLibrary, mobile, notify, settings, addNotification } = useApp();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [viewportW, setViewportW] = useState(() => (typeof window !== "undefined" ? window.innerWidth : 1280));
+  const [showSummarySheet, setShowSummarySheet] = useState(false);
 
   if (!p) {
     return (
@@ -38,11 +40,22 @@ export default function QuotePage() {
   }
 
   const currentStep = STEPS.includes(searchParams.get("step")) ? searchParams.get("step") : "details";
-  const setStep = useCallback((s) => {
-    const params = new URLSearchParams(searchParams);
-    params.set("step", s);
-    setSearchParams(params);
-  }, [searchParams, setSearchParams]);
+  const isNarrowLayout = viewportW < 1200;
+  const isMobileLayout = viewportW < 900;
+  const gotoStep = useCallback((step) => {
+    if (!STEPS.includes(step)) {
+      console.warn("[QuotePage] Invalid step requested:", step);
+      return;
+    }
+    setSearchParams((prev) => {
+      prev.set("step", step);
+      return prev;
+    }, { replace: true });
+    if (import.meta.env.DEV) {
+      console.log(`[QuotePage] step change: ${currentStep} -> ${step}`);
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [currentStep, setSearchParams]);
 
   const [clientOpen, setClientOpen] = useState(false);
   const [clientSearch, setClientSearch] = useState("");
@@ -100,6 +113,12 @@ export default function QuotePage() {
       return pr;
     });
   }, [up]);
+
+  useEffect(() => {
+    const onResize = () => setViewportW(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   const stage = p.stage || p.status;
   const margin = p.marginPct ?? p.margin ?? 0;
@@ -473,7 +492,7 @@ export default function QuotePage() {
           const done = stepDone[s];
           const active = s === currentStep;
           return (
-            <div key={s} onClick={() => setStep(s)} style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+            <div key={s} onClick={() => gotoStep(s)} style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", minHeight: 44 }}>
               <div style={{
                 width: 20, height: 20, borderRadius: 10,
                 background: done ? _.green : active ? _.ac : _.well,
@@ -488,6 +507,14 @@ export default function QuotePage() {
           );
         })}
       </div>
+
+      {isNarrowLayout && (
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: _.s3 }}>
+          <Button size="sm" variant="secondary" onClick={() => setShowSummarySheet(true)} style={{ minHeight: 44 }}>
+            Summary
+          </Button>
+        </div>
+      )}
 
       {/* Two-column: content + sidebar */}
       <div style={{ display: "grid", gridTemplateColumns: mobile || currentStep === "scope" ? "1fr" : "1fr 280px", gap: mobile ? 0 : 32, alignItems: "start" }}>
@@ -633,15 +660,17 @@ export default function QuotePage() {
               </div>
 
               {/* Continue to Scope */}
-              <div style={{ marginTop: _.s7, display: "flex", gap: _.s3 }}>
+              {!isNarrowLayout && (
+                <div style={{ marginTop: _.s7, display: "flex", gap: _.s3 }}>
                 <Button onClick={() => {
                   if (!isRequiredText(p.name)) {
                     notify("Project name is required", "error");
                     return;
                   }
-                  setStep("scope");
+                  gotoStep("scope");
                 }} icon={ArrowRight}>Continue to Scope</Button>
-              </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -651,7 +680,7 @@ export default function QuotePage() {
               project={p} up={up} T={T}
               margin={margin} contingency={contingency}
               mobile={mobile} rateLibrary={rateLibrary}
-              notify={notify} onNavigate={setStep}
+              notify={notify} onNavigate={gotoStep}
             />
           )}
 
@@ -809,10 +838,12 @@ export default function QuotePage() {
               </div>
 
               {/* Nav */}
-              <div style={{ marginTop: _.s7, display: "flex", gap: _.s3 }}>
-                <Button variant="ghost" onClick={() => setStep("scope")} icon={ArrowLeft}>Back to Scope</Button>
-                <Button onClick={() => setStep("review")} icon={ArrowRight}>Continue to Review</Button>
-              </div>
+              {!isNarrowLayout && (
+                <div style={{ marginTop: _.s7, display: "flex", gap: _.s3 }}>
+                  <Button variant="ghost" onClick={() => gotoStep("scope")} icon={ArrowLeft}>Back to Scope</Button>
+                  <Button onClick={() => gotoStep("review")} icon={ArrowRight}>Continue to Review</Button>
+                </div>
+              )}
             </div>
           )}
 
@@ -976,7 +1007,7 @@ export default function QuotePage() {
 
               {/* Primary CTA */}
               <div style={{ marginTop: _.s5, display: "flex", gap: _.s3, flexWrap: "wrap" }}>
-                <Button variant="ghost" onClick={() => setStep("extras")} icon={ArrowLeft}>Back to Extras</Button>
+                <Button variant="ghost" onClick={() => gotoStep("extras")} icon={ArrowLeft}>Back to Extras</Button>
                 {!quoteReady && <Button disabled>Complete details & scope first</Button>}
                 {quoteReady && !proposalGenerated && (
                   <Button onClick={generateProposal} icon={ArrowRight}>Generate Proposal</Button>
@@ -1033,6 +1064,75 @@ export default function QuotePage() {
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
           <Button variant="ghost" onClick={() => setNewClientModal(false)}>Cancel</Button>
           <Button onClick={createNewClient} icon={UserPlus}>Create & Select</Button>
+        </div>
+      </Modal>
+
+      {isNarrowLayout && (
+        <div style={{
+          position: "sticky",
+          bottom: "var(--mobile-bottom-total, 0px)",
+          marginTop: _.s4,
+          padding: "10px 0",
+          background: _.surface,
+          borderTop: `1px solid ${_.line}`,
+          zIndex: 8,
+        }}>
+          <div style={{ display: "flex", gap: _.s2, flexWrap: "wrap" }}>
+            {currentStep === "details" && (
+              <Button
+                onClick={() => {
+                  if (!isRequiredText(p.name)) {
+                    notify("Project name is required", "error");
+                    return;
+                  }
+                  gotoStep("scope");
+                }}
+                icon={ArrowRight}
+                style={{ minHeight: 44 }}
+              >
+                Continue to Scope
+              </Button>
+            )}
+            {currentStep === "scope" && (
+              <Button onClick={() => gotoStep("extras")} icon={ArrowRight} style={{ minHeight: 44 }}>
+                Continue to Extras
+              </Button>
+            )}
+            {currentStep === "extras" && (
+              <>
+                <Button variant="ghost" onClick={() => gotoStep("scope")} icon={ArrowLeft} style={{ minHeight: 44 }}>Back</Button>
+                <Button onClick={() => gotoStep("review")} icon={ArrowRight} style={{ minHeight: 44 }}>Continue to Review</Button>
+              </>
+            )}
+            {currentStep === "review" && (
+              <Button variant="ghost" onClick={() => gotoStep("extras")} icon={ArrowLeft} style={{ minHeight: 44 }}>
+                Back to Extras
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
+      <Modal
+        open={showSummarySheet}
+        onClose={() => setShowSummarySheet(false)}
+        title="Quote Summary"
+        width={isMobileLayout ? 420 : 520}
+      >
+        <div style={{ display: "grid", gap: 8 }}>
+          {[
+            ["Items", T.items],
+            ["Subtotal", fmt(T.sub)],
+            [`Margin ${margin}%`, fmt(T.mar)],
+            [`Contingency ${contingency}%`, fmt(T.con)],
+            ["GST", fmt(T.gst)],
+            ["Total", fmt(T.curr)],
+          ].map(([k, v]) => (
+            <div key={k} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", minHeight: 32 }}>
+              <span style={{ color: _.muted }}>{k}</span>
+              <strong style={{ fontVariantNumeric: "tabular-nums" }}>{v}</strong>
+            </div>
+          ))}
         </div>
       </Modal>
 
