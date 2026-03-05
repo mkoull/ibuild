@@ -38,7 +38,11 @@ export default function QuotePage() {
   }
 
   const currentStep = STEPS.includes(searchParams.get("step")) ? searchParams.get("step") : "details";
-  const setStep = useCallback((s) => setSearchParams({ step: s }, { replace: true }), [setSearchParams]);
+  const setStep = useCallback((s) => {
+    const params = new URLSearchParams(searchParams);
+    params.set("step", s);
+    setSearchParams(params);
+  }, [searchParams, setSearchParams]);
 
   const [clientOpen, setClientOpen] = useState(false);
   const [clientSearch, setClientSearch] = useState("");

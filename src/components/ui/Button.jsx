@@ -25,6 +25,7 @@ export default function Button({ variant = "primary", size = "md", icon: Icon, d
 
   return (
     <button
+      type="button"
       onClick={disabled ? undefined : onClick}
       disabled={disabled}
       style={s}
