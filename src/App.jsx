@@ -143,6 +143,8 @@ export default function App() {
                   <Route path="documents" element={<DocumentsPage />} />
                   <Route path="site-diary" element={<LockedTabGate><SiteDiaryPage /></LockedTabGate>} />
                   <Route path="defects" element={<LockedTabGate><DefectsPage /></LockedTabGate>} />
+                  {/* Shortcut routes */}
+                  <Route path="pricing" element={<Navigate to="../quote?step=scope" replace />} />
                   {/* Legacy estimate routes kept for compatibility */}
                   <Route path="plans" element={<PlansAIPage />} />
                   <Route path="quote-review" element={<QuotePage />} />

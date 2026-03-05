@@ -7,8 +7,11 @@ import { ESTIMATE_TEMPLATE_OPTIONS, buildEstimateTemplate } from "../../lib/esti
 import { calculateTotals, normalizeCategories } from "../../lib/costEngine.js";
 import Button from "../../components/ui/Button.jsx";
 import Card from "../../components/ui/Card.jsx";
+import { ArrowLeft, ArrowRight, Zap } from "lucide-react";
 
-const STEPS = ["client", "basics", "template", "confirm"];
+const STEPS = ["client_site", "template", "pricing"];
+const STEP_LABELS = { client_site: "Client & Site", template: "Template", pricing: "Pricing" };
+const BUILD_TYPES = ["New Build", "Extension", "Renovation", "Knockdown Rebuild", "Townhouse", "Duplex"];
 
 function toScopeFromCategories(categories) {
   const scope = {};
@@ -24,22 +27,39 @@ export default function CreateEstimateWizardPage() {
   const [loadError, setLoadError] = useState("");
   const [loading, setLoading] = useState(true);
   const [retryTick, setRetryTick] = useState(0);
-  const [step, setStep] = useState("client");
+  const [step, setStep] = useState("client_site");
+
+  // Step 1: Client + Site
   const [clientMode, setClientMode] = useState("existing");
   const [selectedClientId, setSelectedClientId] = useState("");
   const [newClient, setNewClient] = useState({ name: "", phone: "", email: "" });
-  const [projectBasics, setProjectBasics] = useState({
-    name: "",
-    buildType: "New Build",
-    address: "",
-  });
+  const [projectName, setProjectName] = useState("");
+  const [buildType, setBuildType] = useState("New Build");
+  const [address, setAddress] = useState("");
+
+  // Step 2: Template
   const [templateId, setTemplateId] = useState("basic_residential");
-  const safeClients = useMemo(() => (Array.isArray(clients) ? clients : []), [clients]);
+
+  // Step 3: Pricing prefs
   const safeSettings = useMemo(() => ((settings && typeof settings === "object") ? settings : {}), [settings]);
+  const [marginPct, setMarginPct] = useState(() => safeSettings.defaultMargin ?? 18);
+  const [contingencyPct, setContingencyPct] = useState(() => safeSettings.defaultContingency ?? 5);
+  const [depositPct, setDepositPct] = useState(() => safeSettings.defaultDeposit ?? 5);
+  const [validDays, setValidDays] = useState(() => safeSettings.defaultValidDays ?? 30);
+
+  const safeClients = useMemo(() => (Array.isArray(clients) ? clients : []), [clients]);
   const safeTemplateOptions = useMemo(
     () => (Array.isArray(ESTIMATE_TEMPLATE_OPTIONS) ? ESTIMATE_TEMPLATE_OPTIONS : []),
     [],
   );
+
+  // Sync pricing defaults when settings load
+  useEffect(() => {
+    if (safeSettings.defaultMargin != null) setMarginPct(safeSettings.defaultMargin);
+    if (safeSettings.defaultContingency != null) setContingencyPct(safeSettings.defaultContingency);
+    if (safeSettings.defaultDeposit != null) setDepositPct(safeSettings.defaultDeposit);
+    if (safeSettings.defaultValidDays != null) setValidDays(safeSettings.defaultValidDays);
+  }, [safeSettings]);
 
   useEffect(() => {
     let alive = true;
@@ -47,7 +67,6 @@ export default function CreateEstimateWizardPage() {
       setLoading(true);
       setLoadError("");
       try {
-        // Keep async wrapper so data loading can evolve safely (API/local fallback).
         await Promise.resolve();
         if (!Array.isArray(clients)) {
           console.error("CreateEstimate failed:", new Error("clients is not an array"));
@@ -79,15 +98,14 @@ export default function CreateEstimateWizardPage() {
     () => safeClients.find((c) => c.id === selectedClientId) || null,
     [safeClients, selectedClientId],
   );
-  const templateLabel = safeTemplateOptions.find((t) => t.id === templateId)?.label || "Custom (blank)";
 
-  const estimateEditorRoute = (projectId) => {
+  const pricingRoute = (projectId) => {
     if (!projectId) return "/estimates";
-    return `/estimates/${projectId}/overview?step=project`;
+    return `/estimates/${projectId}/quote?step=scope`;
   };
 
   const goNext = () => {
-    if (step === "client") {
+    if (step === "client_site") {
       if (clientMode === "existing" && !selectedClientId) {
         notify("Select an existing client or create a new one.", "error");
         return;
@@ -96,10 +114,10 @@ export default function CreateEstimateWizardPage() {
         notify("Client name is required.", "error");
         return;
       }
-    }
-    if (step === "basics" && !projectBasics.name.trim()) {
-      notify("Project name is required.", "error");
-      return;
+      if (!projectName.trim()) {
+        notify("Project name is required.", "error");
+        return;
+      }
     }
     const idx = STEPS.indexOf(step);
     if (idx < STEPS.length - 1) setStep(STEPS[idx + 1]);
@@ -110,16 +128,17 @@ export default function CreateEstimateWizardPage() {
     if (idx > 0) setStep(STEPS[idx - 1]);
   };
 
-  const createFromWizard = () => {
+  const createAndStartPricing = () => {
     try {
       const p = create({
-        name: projectBasics.name.trim(),
-        buildType: projectBasics.buildType,
-        type: projectBasics.buildType,
-        address: projectBasics.address.trim(),
-        marginPct: safeSettings.defaultMargin ?? 18,
-        contingencyPct: safeSettings.defaultContingency ?? 5,
-        validDays: safeSettings.defaultValidDays ?? 30,
+        name: projectName.trim(),
+        buildType,
+        type: buildType,
+        address: address.trim(),
+        marginPct: parseFloat(marginPct) || 18,
+        contingencyPct: parseFloat(contingencyPct) || 5,
+        depositPct: parseFloat(depositPct) || 5,
+        validDays: parseInt(validDays) || 30,
       });
 
       update(p.id, (pr) => {
@@ -161,8 +180,8 @@ export default function CreateEstimateWizardPage() {
         return pr;
       });
 
-      notify("Estimate created");
-      navigate(estimateEditorRoute(p?.id));
+      notify("Estimate created — start pricing");
+      navigate(pricingRoute(p?.id));
     } catch (err) {
       console.error("CreateEstimate failed:", err);
       notify("Could not create estimate. Please retry.", "error");
@@ -172,11 +191,12 @@ export default function CreateEstimateWizardPage() {
   const skipWizard = () => {
     try {
       const p = create({
-        marginPct: safeSettings.defaultMargin ?? 18,
-        contingencyPct: safeSettings.defaultContingency ?? 5,
-        validDays: safeSettings.defaultValidDays ?? 30,
+        marginPct: parseFloat(marginPct) || 18,
+        contingencyPct: parseFloat(contingencyPct) || 5,
+        depositPct: parseFloat(depositPct) || 5,
+        validDays: parseInt(validDays) || 30,
       });
-      navigate(estimateEditorRoute(p?.id));
+      navigate(pricingRoute(p?.id));
     } catch (err) {
       console.error("CreateEstimate failed:", err);
       notify("Could not create estimate. Please retry.", "error");
@@ -185,7 +205,7 @@ export default function CreateEstimateWizardPage() {
 
   if (loading) {
     return (
-      <Card title="Create Estimate Wizard" subtitle="Loading setup...">
+      <Card title="New Quote" subtitle="Loading setup...">
         <div style={{ fontSize: 14, color: _.muted }}>Preparing estimate setup.</div>
       </Card>
     );
@@ -193,7 +213,7 @@ export default function CreateEstimateWizardPage() {
 
   if (loadError) {
     return (
-      <Card title="Create Estimate Wizard" subtitle="Something went wrong while loading setup.">
+      <Card title="New Quote" subtitle="Something went wrong while loading setup.">
         <div style={{ display: "grid", gap: 12 }}>
           <div style={{ fontSize: 14, color: _.red }}>{loadError}</div>
           <div>
@@ -204,105 +224,155 @@ export default function CreateEstimateWizardPage() {
     );
   }
 
+  const stepIdx = STEPS.indexOf(step);
+
   return (
-    <div style={{ maxWidth: 980, margin: "0 auto", display: "grid", gap: 16 }}>
-      <Card title="Create Estimate Wizard" subtitle="Fast setup with sensible defaults.">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {STEPS.map((s, i) => (
-              <div
-                key={s}
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  padding: "6px 10px",
-                  borderRadius: 99,
-                  border: `1px solid ${step === s ? _.ac : _.line}`,
-                  color: step === s ? _.ac : _.muted,
-                  background: step === s ? `${_.ac}12` : _.surface,
-                }}
-              >
-                {`Step ${i + 1}: ${s[0].toUpperCase()}${s.slice(1)}`}
+    <div style={{ maxWidth: 720, margin: "0 auto", display: "grid", gap: 16 }}>
+      {/* Header with step indicators */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          {STEPS.map((s, i) => {
+            const done = i < stepIdx;
+            const active = s === step;
+            return (
+              <div key={s} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <div
+                  onClick={() => { if (i < stepIdx) setStep(s); }}
+                  style={{
+                    fontSize: 13, fontWeight: 600,
+                    padding: "6px 14px", borderRadius: 99,
+                    border: `1.5px solid ${active ? _.ac : done ? _.green : _.line}`,
+                    color: active ? _.ac : done ? _.green : _.muted,
+                    background: active ? `${_.ac}0A` : done ? `${_.green}0A` : "transparent",
+                    cursor: done ? "pointer" : "default",
+                    transition: `all ${_.tr}`,
+                  }}
+                >
+                  {done ? "\u2713" : i + 1}. {STEP_LABELS[s]}
+                </div>
+                {i < STEPS.length - 1 && (
+                  <div style={{ width: 20, height: 1.5, background: done ? _.green : _.line, margin: "0 2px" }} />
+                )}
               </div>
+            );
+          })}
+        </div>
+        <button type="button" onClick={skipWizard} style={{ border: "none", background: "transparent", color: _.ac, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
+          Skip wizard
+        </button>
+      </div>
+
+      {/* ─── Step 1: Client + Site ─── */}
+      {step === "client_site" && (
+        <Card title="Client & Site Details" subtitle="Who's the quote for and where's the job?">
+          <div style={{ display: "grid", gap: 14 }}>
+            {/* Client */}
+            <div>
+              <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                <Button size="sm" variant={clientMode === "existing" ? "primary" : "secondary"} onClick={() => setClientMode("existing")}>Existing Client</Button>
+                <Button size="sm" variant={clientMode === "new" ? "primary" : "secondary"} onClick={() => setClientMode("new")}>New Client</Button>
+              </div>
+              {clientMode === "existing" ? (
+                <select
+                  style={wizardInput}
+                  value={selectedClientId}
+                  onChange={(e) => setSelectedClientId(e.target.value)}
+                >
+                  <option value="">Select client...</option>
+                  {clientOptions.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+                </select>
+              ) : (
+                <div style={{ display: "grid", gap: 8 }}>
+                  <input style={wizardInput} placeholder="Client name *" value={newClient.name} onChange={(e) => setNewClient((v) => ({ ...v, name: e.target.value }))} autoFocus />
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    <input style={wizardInput} placeholder="Phone" value={newClient.phone} onChange={(e) => setNewClient((v) => ({ ...v, phone: e.target.value }))} />
+                    <input style={wizardInput} placeholder="Email" value={newClient.email} onChange={(e) => setNewClient((v) => ({ ...v, email: e.target.value }))} />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Divider */}
+            <div style={{ borderTop: `1px solid ${_.line}`, margin: "2px 0" }} />
+
+            {/* Site info */}
+            <div style={{ display: "grid", gap: 8 }}>
+              <input style={wizardInput} placeholder="Project name *" value={projectName} onChange={(e) => setProjectName(e.target.value)} />
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                <select style={wizardInput} value={buildType} onChange={(e) => setBuildType(e.target.value)}>
+                  {BUILD_TYPES.map((t) => <option key={t}>{t}</option>)}
+                </select>
+                <input style={wizardInput} placeholder="Site address" value={address} onChange={(e) => setAddress(e.target.value)} />
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* ─── Step 2: Template ─── */}
+      {step === "template" && (
+        <Card title="Estimate Template" subtitle="Pre-populate categories or start blank.">
+          <div style={{ display: "grid", gap: 10 }}>
+            {safeTemplateOptions.map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => setTemplateId(opt.id)}
+                style={templateId === opt.id ? templateActive : templateIdle}
+              >
+                <div style={{ fontSize: 14, fontWeight: 700, color: _.ink }}>{opt.label}</div>
+                <div style={{ fontSize: 12, color: _.muted, marginTop: 2 }}>
+                  {opt.id === "custom" ? "Start from scratch with an empty scope." : `Pre-populates ${opt.label.toLowerCase()} categories.`}
+                </div>
+              </button>
             ))}
           </div>
-          <button type="button" onClick={skipWizard} style={{ border: "none", background: "transparent", color: _.ac, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
-            Skip wizard (advanced)
-          </button>
-        </div>
-      </Card>
+        </Card>
+      )}
 
-      {step === "client" && (
-        <Card title="Step 1: Client">
-          <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-            <Button size="sm" variant={clientMode === "existing" ? "primary" : "secondary"} onClick={() => setClientMode("existing")}>Select Existing</Button>
-            <Button size="sm" variant={clientMode === "new" ? "primary" : "secondary"} onClick={() => setClientMode("new")}>Create New</Button>
-          </div>
-          {clientMode === "existing" ? (
-            <select
-              style={{ width: "100%", height: 40, border: `1px solid ${_.line}`, borderRadius: 8, background: _.well, padding: "0 10px", fontFamily: "inherit" }}
-              value={selectedClientId}
-              onChange={(e) => setSelectedClientId(e.target.value)}
-            >
-              <option value="">Select client...</option>
-              {clientOptions.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
-            </select>
-          ) : (
-            <div style={{ display: "grid", gap: 10 }}>
-              <input style={wizardInput} placeholder="Client name *" value={newClient.name} onChange={(e) => setNewClient((v) => ({ ...v, name: e.target.value }))} />
-              <input style={wizardInput} placeholder="Phone" value={newClient.phone} onChange={(e) => setNewClient((v) => ({ ...v, phone: e.target.value }))} />
-              <input style={wizardInput} placeholder="Email" value={newClient.email} onChange={(e) => setNewClient((v) => ({ ...v, email: e.target.value }))} />
+      {/* ─── Step 3: Pricing Preferences ─── */}
+      {step === "pricing" && (
+        <Card title="Pricing Preferences" subtitle="Set your default margins and terms. You can change these later.">
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div>
+              <label style={wizardLabel}>Margin %</label>
+              <input type="number" style={{ ...wizardInput, textAlign: "center", fontWeight: 600 }} value={marginPct} onChange={(e) => setMarginPct(e.target.value)} />
             </div>
-          )}
-        </Card>
-      )}
+            <div>
+              <label style={wizardLabel}>Contingency %</label>
+              <input type="number" style={{ ...wizardInput, textAlign: "center", fontWeight: 600 }} value={contingencyPct} onChange={(e) => setContingencyPct(e.target.value)} />
+            </div>
+            <div>
+              <label style={wizardLabel}>Deposit %</label>
+              <input type="number" style={{ ...wizardInput, textAlign: "center", fontWeight: 600 }} value={depositPct} onChange={(e) => setDepositPct(e.target.value)} />
+            </div>
+            <div>
+              <label style={wizardLabel}>Quote valid (days)</label>
+              <input type="number" style={{ ...wizardInput, textAlign: "center", fontWeight: 600 }} value={validDays} onChange={(e) => setValidDays(e.target.value)} />
+            </div>
+          </div>
 
-      {step === "basics" && (
-        <Card title="Step 2: Project Basics">
-          <div style={{ display: "grid", gap: 10 }}>
-            <input style={wizardInput} placeholder="Project name *" value={projectBasics.name} onChange={(e) => setProjectBasics((v) => ({ ...v, name: e.target.value }))} />
-            <select style={wizardInput} value={projectBasics.buildType} onChange={(e) => setProjectBasics((v) => ({ ...v, buildType: e.target.value }))}>
-              <option>New Build</option>
-              <option>Renovation</option>
-            </select>
-            <input style={wizardInput} placeholder="Site address" value={projectBasics.address} onChange={(e) => setProjectBasics((v) => ({ ...v, address: e.target.value }))} />
+          {/* Summary preview */}
+          <div style={{ marginTop: 16, padding: "12px 14px", background: _.well, borderRadius: _.rSm }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: _.muted, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>Summary</div>
+            <div style={{ display: "grid", gap: 4, fontSize: 14 }}>
+              <div><strong>Client:</strong> {clientMode === "existing" ? (selectedClient?.displayName || selectedClient?.companyName || "\u2014") : newClient.name || "\u2014"}</div>
+              <div><strong>Project:</strong> {projectName || "\u2014"}</div>
+              <div><strong>Type:</strong> {buildType} {address ? `\u00b7 ${address}` : ""}</div>
+              <div><strong>Template:</strong> {safeTemplateOptions.find((t) => t.id === templateId)?.label || "Custom"}</div>
+              <div><strong>Margin:</strong> {marginPct}% <strong style={{ marginLeft: 12 }}>Contingency:</strong> {contingencyPct}%</div>
+            </div>
           </div>
         </Card>
       )}
 
-      {step === "template" && (
-        <Card title="Step 3: Template">
-          <div style={{ display: "grid", gap: 10 }}>
-            <button type="button" onClick={() => setTemplateId("basic_residential")} style={templateId === "basic_residential" ? templateActive : templateIdle}>
-              <div style={{ fontSize: 14, fontWeight: 700 }}>Basic Residential</div>
-              <div style={{ fontSize: 12, color: _.muted }}>Pre-populates common categories and gets you quoting fast.</div>
-            </button>
-            <button type="button" onClick={() => setTemplateId("custom")} style={templateId === "custom" ? templateActive : templateIdle}>
-              <div style={{ fontSize: 14, fontWeight: 700 }}>Blank</div>
-              <div style={{ fontSize: 12, color: _.muted }}>Start from scratch.</div>
-            </button>
-          </div>
-        </Card>
-      )}
-
-      {step === "confirm" && (
-        <Card title="Step 4: Confirm">
-          <div style={{ display: "grid", gap: 8, fontSize: 14 }}>
-            <div><strong>Client:</strong> {clientMode === "existing" ? (selectedClient?.displayName || selectedClient?.companyName || "—") : newClient.name || "—"}</div>
-            <div><strong>Project:</strong> {projectBasics.name || "—"}</div>
-            <div><strong>Build Type:</strong> {projectBasics.buildType}</div>
-            <div><strong>Address:</strong> {projectBasics.address || "—"}</div>
-            <div><strong>Template:</strong> {templateLabel}</div>
-          </div>
-        </Card>
-      )}
-
+      {/* Navigation */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <Button variant="ghost" onClick={goBack} disabled={step === "client"}>Back</Button>
-        {step === "confirm" ? (
-          <Button onClick={createFromWizard}>Create Estimate</Button>
+        <Button variant="ghost" onClick={goBack} disabled={step === "client_site"} icon={ArrowLeft}>Back</Button>
+        {step === "pricing" ? (
+          <Button onClick={createAndStartPricing} icon={Zap}>Start Pricing</Button>
         ) : (
-          <Button onClick={goNext}>Continue</Button>
+          <Button onClick={goNext} icon={ArrowRight}>Continue</Button>
         )}
       </div>
     </div>
@@ -311,26 +381,37 @@ export default function CreateEstimateWizardPage() {
 
 const wizardInput = {
   width: "100%",
-  height: 40,
+  height: 44,
   border: `1px solid ${_.line}`,
   borderRadius: 8,
   background: _.well,
-  padding: "0 10px",
+  padding: "0 12px",
   fontFamily: "inherit",
   fontSize: 14,
 };
 
+const wizardLabel = {
+  display: "block",
+  fontSize: 12,
+  fontWeight: 600,
+  color: _.muted,
+  marginBottom: 4,
+  textTransform: "uppercase",
+  letterSpacing: "0.04em",
+};
+
 const templateIdle = {
   textAlign: "left",
-  border: `1px solid ${_.line}`,
+  border: `1.5px solid ${_.line}`,
   borderRadius: 10,
   background: _.surface,
-  padding: 12,
+  padding: "12px 14px",
   cursor: "pointer",
+  transition: `all ${_.tr}`,
 };
 
 const templateActive = {
   ...templateIdle,
-  border: `1px solid ${_.ac}`,
-  background: `${_.ac}10`,
+  border: `1.5px solid ${_.ac}`,
+  background: `${_.ac}08`,
 };
