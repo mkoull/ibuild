@@ -661,7 +661,7 @@ export default function QuotePage() {
 
               {/* Continue to Scope */}
               {!isNarrowLayout && (
-                <div style={{ marginTop: _.s7, display: "flex", gap: _.s3 }}>
+                <div style={{ marginTop: _.s7, display: "flex", gap: _.s3, position: "relative", zIndex: 10, pointerEvents: "auto" }}>
                 <Button onClick={() => {
                   if (!isRequiredText(p.name)) {
                     notify("Project name is required", "error");
@@ -1076,6 +1076,7 @@ export default function QuotePage() {
           background: _.surface,
           borderTop: `1px solid ${_.line}`,
           zIndex: 8,
+          pointerEvents: "auto",
         }}>
           <div style={{ display: "flex", gap: _.s2, flexWrap: "wrap" }}>
             {currentStep === "details" && (

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useApp } from "../../context/AppContext.jsx";
+import { useMobile } from "../../hooks/useMobile.js";
 import { isJob } from "../../lib/lifecycle.js";
 import { applyConvertToJobBaseline } from "../../lib/costEngine.js";
 import _ from "../../theme/tokens.js";
@@ -68,6 +69,7 @@ const PROJECT_MORE = [
 ];
 
 export default function MobileBottomTabs() {
+  const mobileViewport = useMobile(768);
   const location = useLocation();
   const navigate = useNavigate();
   const params = useParams();
@@ -204,6 +206,8 @@ export default function MobileBottomTabs() {
 
   const FAB_SIZE = 52;
 
+  if (!mobileViewport) return null;
+
   return (
     <>
       {(showCreate || showMore) && (
@@ -211,6 +215,7 @@ export default function MobileBottomTabs() {
           position: "fixed", inset: 0, zIndex: 49,
           background: "rgba(0,0,0,0.3)",
           animation: "fadeIn 0.15s ease",
+          pointerEvents: "auto",
         }} />
       )}
 
