@@ -25,9 +25,9 @@ export default function RateLibrarySearch({ librarySearch, setLibrarySearch, lib
       </div>
       {librarySearch.trim() && !disabled && (
         <div style={{
-          position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 20,
+          position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 50,
           background: _.surface, border: `1px solid ${_.line}`, borderRadius: _.rSm,
-          boxShadow: _.sh2, maxHeight: 220, overflowY: "auto",
+          boxShadow: "0 8px 24px rgba(0,0,0,0.15)", maxHeight: 240, overflowY: "auto",
         }}>
           {libraryMatches.length === 0 ? (
             <div style={{ padding: "10px 12px", fontSize: _.fontSize.sm, color: _.muted }}>No matching library items</div>
