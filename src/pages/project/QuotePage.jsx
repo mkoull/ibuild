@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useCallback } from "react";
+import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useProject } from "../../context/ProjectContext.jsx";
 import { useApp } from "../../context/AppContext.jsx";
@@ -27,6 +27,16 @@ export default function QuotePage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
+  if (!p) {
+    return (
+      <Card title="Quote unavailable" subtitle="Project data is missing for this route.">
+        <div style={{ display: "flex", gap: 8 }}>
+          <Button onClick={() => navigate("/projects")}>Back to Projects</Button>
+        </div>
+      </Card>
+    );
+  }
+
   const currentStep = STEPS.includes(searchParams.get("step")) ? searchParams.get("step") : "details";
   const setStep = useCallback((s) => setSearchParams({ step: s }, { replace: true }), [setSearchParams]);
 
@@ -43,6 +53,49 @@ export default function QuotePage() {
   const [pcInput, setPcInput] = useState({ description: "", amount: "" });
   const [qualInput, setQualInput] = useState("");
   const [termInput, setTermInput] = useState("");
+  const safeClients = Array.isArray(clients) ? clients : [];
+  const safeScope = p.scope && typeof p.scope === "object" ? p.scope : {};
+  const exclusions = Array.isArray(p.exclusions) ? p.exclusions : [];
+  const allowances = Array.isArray(p.allowances) ? p.allowances : [];
+  const pcItems = Array.isArray(p.pcItems) ? p.pcItems : [];
+  const qualifications = Array.isArray(p.qualifications) ? p.qualifications : [];
+  const terms = Array.isArray(p.terms) ? p.terms : [];
+  const safeEstimateCategories = normalizeCategories((p?.estimate && p.estimate.categories) || p.costCategories || []);
+
+  useEffect(() => {
+    up((pr) => {
+      let dirty = false;
+      if (!pr.scope || typeof pr.scope !== "object") {
+        pr.scope = {};
+        dirty = true;
+      }
+      if (!Array.isArray(pr.exclusions)) {
+        pr.exclusions = [];
+        dirty = true;
+      }
+      if (!Array.isArray(pr.allowances)) {
+        pr.allowances = [];
+        dirty = true;
+      }
+      if (!Array.isArray(pr.pcItems)) {
+        pr.pcItems = [];
+        dirty = true;
+      }
+      if (!Array.isArray(pr.qualifications)) {
+        pr.qualifications = [];
+        dirty = true;
+      }
+      if (!Array.isArray(pr.terms)) {
+        pr.terms = [];
+        dirty = true;
+      }
+      if (!Array.isArray(pr.proposals)) {
+        pr.proposals = [];
+        dirty = true;
+      }
+      return pr;
+    });
+  }, [up]);
 
   const stage = p.stage || p.status;
   const margin = p.marginPct ?? p.margin ?? 0;
@@ -54,8 +107,7 @@ export default function QuotePage() {
   const quoteReady = clientName && hasScope;
   const proposalGenerated = p.proposal && p.proposal.status === "Generated";
   const quoteDoc = p.quoteDocument || null;
-  const estimateCategories = normalizeCategories((p?.estimate && p.estimate.categories) || p.costCategories || []);
-  const estimateTotals = calculateTotals(estimateCategories);
+  const estimateTotals = calculateTotals(safeEstimateCategories);
   usePageBottomBar(mobile && T.curr > 0 ? (currentStep === "scope" ? 74 : 64) : 0);
 
   // Step completeness
@@ -68,12 +120,12 @@ export default function QuotePage() {
   // ─── Client picker ───
   const filteredClients = useMemo(() => {
     const q = clientSearch.toLowerCase().trim();
-    if (!q) return clients.slice(0, 20);
-    return clients.filter(c =>
+    if (!q) return safeClients.slice(0, 20);
+    return safeClients.filter(c =>
       (c.displayName || "").toLowerCase().includes(q) ||
       (c.companyName || "").toLowerCase().includes(q)
     ).slice(0, 20);
-  }, [clients, clientSearch]);
+  }, [safeClients, clientSearch]);
 
   const selectClient = (c) => {
     up(pr => {
@@ -610,13 +662,13 @@ export default function QuotePage() {
                   <div style={{ display: "flex", alignItems: "center", gap: _.s2 }}>
                     <span style={{ transform: extrasExp.exclusions ? "rotate(90deg)" : "none", display: "inline-flex", transition: "transform 0.15s" }}><ChevronRight size={13} color={_.muted} /></span>
                     <span style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.semi, color: _.ink }}>Exclusions</span>
-                    {p.exclusions.length > 0 && <span style={{ fontSize: _.fontSize.caption, fontWeight: _.fontWeight.semi, color: _.ac }}>{p.exclusions.length}</span>}
+                    {exclusions.length > 0 && <span style={{ fontSize: _.fontSize.caption, fontWeight: _.fontWeight.semi, color: _.ac }}>{exclusions.length}</span>}
                   </div>
                   <span onClick={e => { e.stopPropagation(); loadDefaultExclusions(); }} style={{ fontSize: _.fontSize.sm, color: _.ac, fontWeight: _.fontWeight.semi, cursor: "pointer" }}>Load defaults</span>
                 </div>
                 {extrasExp.exclusions && (
                   <div style={{ padding: "8px 14px 12px" }}>
-                    {p.exclusions.map((item, idx) => (
+                    {exclusions.map((item, idx) => (
                       <div key={item._id} style={{ display: "flex", alignItems: "center", gap: _.s2, padding: "5px 0", borderBottom: `1px solid ${_.line}08` }}>
                         <span style={{ flex: 1, fontSize: _.fontSize.base, color: _.ink }}>• {item.text}</span>
                         <div onClick={() => delExclusion(idx)} style={{ cursor: "pointer", color: _.faint, flexShrink: 0, padding: 2 }}
@@ -638,13 +690,13 @@ export default function QuotePage() {
                   <div style={{ display: "flex", alignItems: "center", gap: _.s2 }}>
                     <span style={{ transform: extrasExp.allowances ? "rotate(90deg)" : "none", display: "inline-flex", transition: "transform 0.15s" }}><ChevronRight size={13} color={_.muted} /></span>
                     <span style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.semi, color: _.ink }}>Allowances / Provisional Sums</span>
-                    {p.allowances.length > 0 && <span style={{ fontSize: _.fontSize.caption, fontWeight: _.fontWeight.semi, color: _.ac }}>{p.allowances.length}</span>}
+                    {allowances.length > 0 && <span style={{ fontSize: _.fontSize.caption, fontWeight: _.fontWeight.semi, color: _.ac }}>{allowances.length}</span>}
                   </div>
                   <span onClick={e => { e.stopPropagation(); loadDefaultAllowances(); }} style={{ fontSize: _.fontSize.sm, color: _.ac, fontWeight: _.fontWeight.semi, cursor: "pointer" }}>Load defaults</span>
                 </div>
                 {extrasExp.allowances && (
                   <div style={{ padding: "8px 14px 12px" }}>
-                    {p.allowances.map((item, idx) => (
+                    {allowances.map((item, idx) => (
                       <div key={item._id} style={{ display: "flex", alignItems: "center", gap: _.s2, padding: "5px 0", borderBottom: `1px solid ${_.line}08` }}>
                         <span style={{ flex: 1, fontSize: _.fontSize.base, color: _.ink }}>{item.description}</span>
                         <span style={{ fontSize: _.fontSize.base, fontWeight: _.fontWeight.semi, color: _.ink, fontVariantNumeric: "tabular-nums", minWidth: 72, textAlign: "right" }}>{fmt(item.amount)}</span>
@@ -668,13 +720,13 @@ export default function QuotePage() {
                   <div style={{ display: "flex", alignItems: "center", gap: _.s2 }}>
                     <span style={{ transform: extrasExp.pcItems ? "rotate(90deg)" : "none", display: "inline-flex", transition: "transform 0.15s" }}><ChevronRight size={13} color={_.muted} /></span>
                     <span style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.semi, color: _.ink }}>Prime Cost Items</span>
-                    {p.pcItems.length > 0 && <span style={{ fontSize: _.fontSize.caption, fontWeight: _.fontWeight.semi, color: _.ac }}>{p.pcItems.length}</span>}
+                    {pcItems.length > 0 && <span style={{ fontSize: _.fontSize.caption, fontWeight: _.fontWeight.semi, color: _.ac }}>{pcItems.length}</span>}
                   </div>
                   <span onClick={e => { e.stopPropagation(); loadDefaultPcItems(); }} style={{ fontSize: _.fontSize.sm, color: _.ac, fontWeight: _.fontWeight.semi, cursor: "pointer" }}>Load defaults</span>
                 </div>
                 {extrasExp.pcItems && (
                   <div style={{ padding: "8px 14px 12px" }}>
-                    {p.pcItems.map((item, idx) => (
+                    {pcItems.map((item, idx) => (
                       <div key={item._id} style={{ display: "flex", alignItems: "center", gap: _.s2, padding: "5px 0", borderBottom: `1px solid ${_.line}08` }}>
                         <span style={{ flex: 1, fontSize: _.fontSize.base, color: _.ink }}>{item.description}</span>
                         <span style={{ fontSize: _.fontSize.base, fontWeight: _.fontWeight.semi, color: _.ink, fontVariantNumeric: "tabular-nums", minWidth: 72, textAlign: "right" }}>{fmt(item.amount)}</span>
@@ -698,13 +750,13 @@ export default function QuotePage() {
                   <div style={{ display: "flex", alignItems: "center", gap: _.s2 }}>
                     <span style={{ transform: extrasExp.qualifications ? "rotate(90deg)" : "none", display: "inline-flex", transition: "transform 0.15s" }}><ChevronRight size={13} color={_.muted} /></span>
                     <span style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.semi, color: _.ink }}>Qualifications & Assumptions</span>
-                    {p.qualifications.length > 0 && <span style={{ fontSize: _.fontSize.caption, fontWeight: _.fontWeight.semi, color: _.ac }}>{p.qualifications.length}</span>}
+                    {qualifications.length > 0 && <span style={{ fontSize: _.fontSize.caption, fontWeight: _.fontWeight.semi, color: _.ac }}>{qualifications.length}</span>}
                   </div>
                   <span onClick={e => { e.stopPropagation(); loadDefaultQualifications(); }} style={{ fontSize: _.fontSize.sm, color: _.ac, fontWeight: _.fontWeight.semi, cursor: "pointer" }}>Load defaults</span>
                 </div>
                 {extrasExp.qualifications && (
                   <div style={{ padding: "8px 14px 12px" }}>
-                    {p.qualifications.map((item, idx) => (
+                    {qualifications.map((item, idx) => (
                       <div key={item._id} style={{ display: "flex", alignItems: "center", gap: _.s2, padding: "5px 0", borderBottom: `1px solid ${_.line}08` }}>
                         <span style={{ flex: 1, fontSize: _.fontSize.base, color: _.ink }}>• {item.text}</span>
                         <div onClick={() => delQualification(idx)} style={{ cursor: "pointer", color: _.faint, flexShrink: 0, padding: 2 }}
@@ -726,16 +778,16 @@ export default function QuotePage() {
                   <div style={{ display: "flex", alignItems: "center", gap: _.s2 }}>
                     <span style={{ transform: extrasExp.terms ? "rotate(90deg)" : "none", display: "inline-flex", transition: "transform 0.15s" }}><ChevronRight size={13} color={_.muted} /></span>
                     <span style={{ fontSize: _.fontSize.md, fontWeight: _.fontWeight.semi, color: _.ink }}>Terms & Conditions</span>
-                    {p.terms.length > 0 && <span style={{ fontSize: _.fontSize.caption, fontWeight: _.fontWeight.semi, color: _.ac }}>{p.terms.length}</span>}
+                    {terms.length > 0 && <span style={{ fontSize: _.fontSize.caption, fontWeight: _.fontWeight.semi, color: _.ac }}>{terms.length}</span>}
                   </div>
                   <span onClick={e => { e.stopPropagation(); loadDefaultTerms(); }} style={{ fontSize: _.fontSize.sm, color: _.ac, fontWeight: _.fontWeight.semi, cursor: "pointer" }}>Load defaults</span>
                 </div>
                 {extrasExp.terms && (
                   <div style={{ padding: "8px 14px 12px" }}>
-                    {p.terms.length === 0 && (
+                    {terms.length === 0 && (
                       <div style={{ fontSize: _.fontSize.sm, color: _.muted, padding: "8px 0" }}>No terms added yet. Click "Load defaults" for standard builder terms.</div>
                     )}
-                    {p.terms.map((item, idx) => (
+                    {terms.map((item, idx) => (
                       <div key={item._id} style={{ display: "flex", alignItems: "flex-start", gap: _.s2, padding: "5px 0", borderBottom: `1px solid ${_.line}08` }}>
                         <input style={{ flex: 1, fontSize: _.fontSize.base, color: _.ink, background: "transparent", border: "none", outline: "none", fontFamily: "inherit", padding: "2px 0" }}
                           value={item.text} onChange={e => updateTerm(idx, e.target.value)} />
@@ -775,11 +827,11 @@ export default function QuotePage() {
 
                   <div>
                     <div style={{ fontSize: _.fontSize.xs, color: _.muted, fontWeight: _.fontWeight.semi, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: _.s2 }}>Scope Summary</div>
-                    {(quoteDoc?.categories || estimateCategories.map((cat) => ({ id: cat.id, name: cat.name, itemCount: (cat.items || []).length }))).length === 0 ? (
+                    {(quoteDoc?.categories || safeEstimateCategories.map((cat) => ({ id: cat.id, name: cat.name, itemCount: (cat.items || []).length }))).length === 0 ? (
                       <div style={{ fontSize: _.fontSize.sm, color: _.muted }}>No estimate categories yet.</div>
                     ) : (
                       <div style={{ display: "grid", gap: 4 }}>
-                        {(quoteDoc?.categories || estimateCategories.map((cat) => ({ id: cat.id, name: cat.name, itemCount: (cat.items || []).length }))).map((cat) => (
+                        {(quoteDoc?.categories || safeEstimateCategories.map((cat) => ({ id: cat.id, name: cat.name, itemCount: (cat.items || []).length }))).map((cat) => (
                           <div key={cat.id} style={{ display: "flex", justifyContent: "space-between", fontSize: _.fontSize.base, color: _.body }}>
                             <span>{cat.name}</span>
                             <span style={{ color: _.muted }}>{cat.itemCount} items</span>
@@ -830,7 +882,7 @@ export default function QuotePage() {
               )}
 
               {/* Scope breakdown */}
-              {Object.entries(p.scope).filter(([, items]) => items.some(i => i.on)).map(([cat, items]) => {
+              {Object.entries(safeScope).filter(([, items]) => Array.isArray(items) && items.some(i => i.on)).map(([cat, items]) => {
                 const catItems = items.filter(i => i.on);
                 const catTotal = catItems.reduce((t, i) => t + i.rate * i.qty, 0);
                 return (
@@ -857,42 +909,42 @@ export default function QuotePage() {
               )}
 
               {/* Extras summaries */}
-              {p.exclusions.filter(e => e.on).length > 0 && (
+              {exclusions.filter(e => e.on).length > 0 && (
                 <div style={{ marginBottom: 16, padding: "10px 14px", background: _.well, borderRadius: _.rSm }}>
                   <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: 4 }}>Exclusions</div>
-                  {p.exclusions.filter(e => e.on).map((e, i) => <div key={i} style={{ fontSize: _.fontSize.sm, color: _.body, lineHeight: _.lineHeight.body }}>• {e.text}</div>)}
+                  {exclusions.filter(e => e.on).map((e, i) => <div key={i} style={{ fontSize: _.fontSize.sm, color: _.body, lineHeight: _.lineHeight.body }}>• {e.text}</div>)}
                 </div>
               )}
-              {p.allowances.filter(e => e.on).length > 0 && (
+              {allowances.filter(e => e.on).length > 0 && (
                 <div style={{ marginBottom: 16, padding: "10px 14px", background: _.well, borderRadius: _.rSm }}>
                   <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: 4 }}>Allowances / Provisional Sums</div>
-                  {p.allowances.filter(e => e.on).map((a, i) => (
+                  {allowances.filter(e => e.on).map((a, i) => (
                     <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: _.fontSize.sm, color: _.body, padding: "2px 0" }}>
                       <span>{a.description}</span><span style={{ fontVariantNumeric: "tabular-nums", fontWeight: _.fontWeight.semi }}>{fmt(a.amount)}</span>
                     </div>
                   ))}
                 </div>
               )}
-              {p.pcItems.filter(e => e.on).length > 0 && (
+              {pcItems.filter(e => e.on).length > 0 && (
                 <div style={{ marginBottom: 16, padding: "10px 14px", background: _.well, borderRadius: _.rSm }}>
                   <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: 4 }}>Prime Cost Items</div>
-                  {p.pcItems.filter(e => e.on).map((pc, i) => (
+                  {pcItems.filter(e => e.on).map((pc, i) => (
                     <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: _.fontSize.sm, color: _.body, padding: "2px 0" }}>
                       <span>{pc.description}</span><span style={{ fontVariantNumeric: "tabular-nums", fontWeight: _.fontWeight.semi }}>{fmt(pc.amount)}</span>
                     </div>
                   ))}
                 </div>
               )}
-              {p.qualifications.filter(e => e.on).length > 0 && (
+              {qualifications.filter(e => e.on).length > 0 && (
                 <div style={{ marginBottom: 16, padding: "10px 14px", background: _.well, borderRadius: _.rSm }}>
                   <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: 4 }}>Qualifications & Assumptions</div>
-                  {p.qualifications.filter(e => e.on).map((q, i) => <div key={i} style={{ fontSize: _.fontSize.sm, color: _.body, lineHeight: _.lineHeight.body }}>• {q.text}</div>)}
+                  {qualifications.filter(e => e.on).map((q, i) => <div key={i} style={{ fontSize: _.fontSize.sm, color: _.body, lineHeight: _.lineHeight.body }}>• {q.text}</div>)}
                 </div>
               )}
-              {p.terms.filter(e => e.on).length > 0 && (
+              {terms.filter(e => e.on).length > 0 && (
                 <div style={{ marginBottom: 16, padding: "10px 14px", background: _.well, borderRadius: _.rSm }}>
                   <div style={{ fontSize: _.fontSize.xs, fontWeight: _.fontWeight.semi, color: _.muted, letterSpacing: _.letterSpacing.wide, textTransform: "uppercase", marginBottom: 4 }}>Terms & Conditions</div>
-                  {p.terms.filter(e => e.on).map((t, i) => <div key={i} style={{ fontSize: _.fontSize.sm, color: _.body, lineHeight: _.lineHeight.body }}>• {t.text}</div>)}
+                  {terms.filter(e => e.on).map((t, i) => <div key={i} style={{ fontSize: _.fontSize.sm, color: _.body, lineHeight: _.lineHeight.body }}>• {t.text}</div>)}
                 </div>
               )}
 

@@ -35,6 +35,7 @@ export default class ErrorBoundary extends Component {
 
     const isDev = import.meta.env.DEV;
     const level = this.props.level || "app";
+    const errorMessage = this.state.error?.message || this.state.error?.toString?.() || "Unknown error";
 
     return (
       <div style={{
@@ -86,6 +87,28 @@ export default class ErrorBoundary extends Component {
               : "The application encountered an unexpected error."}
           </p>
 
+          <div style={{
+            textAlign: "left",
+            background: _.well,
+            borderRadius: _.rSm,
+            padding: _.s3,
+            marginBottom: _.s4,
+          }}>
+            <div style={{
+              fontSize: _.fontSize.xs,
+              fontWeight: _.fontWeight.semi,
+              color: _.muted,
+              marginBottom: _.s1,
+              letterSpacing: _.letterSpacing.wide,
+              textTransform: "uppercase",
+            }}>
+              Error Message
+            </div>
+            <div style={{ fontSize: _.fontSize.sm, color: _.body, wordBreak: "break-word" }}>
+              {errorMessage}
+            </div>
+          </div>
+
           {isDev && this.state.error && (
             <div style={{
               textAlign: "left",
@@ -113,6 +136,8 @@ export default class ErrorBoundary extends Component {
                 fontFamily: "monospace",
               }}>
                 {this.state.error.toString()}
+                {"\n"}
+                {this.state.error.stack}
                 {this.state.errorInfo?.componentStack}
               </pre>
             </div>

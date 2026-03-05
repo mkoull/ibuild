@@ -139,7 +139,13 @@ export default function TopBar() {
   };
 
   const handleNewEstimate = () => {
-    navigate("/estimates/new");
+    try {
+      navigate("/estimates/new");
+    } catch (err) {
+      console.error("CreateEstimate failed:", err);
+      notify("Could not open estimate wizard. Retrying...", "error");
+      navigate("/projects");
+    }
     setShowCreate(false);
   };
 

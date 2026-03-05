@@ -1,3 +1,4 @@
+import { memo } from "react";
 import _ from "../../../theme/tokens.js";
 import { input } from "../../../theme/styles.js";
 import { toPositiveNumber } from "../../../lib/validation.js";

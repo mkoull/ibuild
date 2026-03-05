@@ -15,7 +15,7 @@ export default function QuoteEditor({ project, up, T, margin, contingency, mobil
   const editor = useQuoteEditor({ project, up, margin, rateLibrary, notify });
   const [viewportW, setViewportW] = useState(() => (typeof window !== "undefined" ? window.innerWidth : 1280));
   const [showSummarySheet, setShowSummarySheet] = useState(false);
-  const [mobileCategoriesOpen, setMobileCategoriesOpen] = useState(true);
+  const [showCategorySheet, setShowCategorySheet] = useState(false);
   const {
     selectedCat, setSelectedCat,
     newCat, setNewCat,
@@ -33,10 +33,12 @@ export default function QuoteEditor({ project, up, T, margin, contingency, mobil
     filesToDataUrls,
   } = editor;
 
-  const items = selectedCat ? (project.scope[selectedCat] || []) : [];
-  const isDesktop = viewportW >= 1024;
+  const safeScope = project?.scope && typeof project.scope === "object" ? project.scope : {};
+  const items = selectedCat ? (safeScope[selectedCat] || []) : [];
+  const isDesktop = viewportW >= 1100;
+  const isTablet = viewportW >= 900 && viewportW < 1100;
   const isMobileBp = viewportW < 768;
-  const compactCategories = !isDesktop;
+  const compactCategories = viewportW < 1180;
 
   useEffect(() => {
     const onResize = () => setViewportW(window.innerWidth);
@@ -58,74 +60,89 @@ export default function QuoteEditor({ project, up, T, margin, contingency, mobil
           {T.items > 0 && <span style={{ fontSize: _.fontSize.md, color: _.body }}>{T.items} items · {fmt(T.sub)}</span>}
           {!isDesktop && (
             <Button size="sm" variant="secondary" onClick={() => setShowSummarySheet(true)} aria-label="Open quote summary">
-              Summary
+              {isMobileBp ? "View Summary" : "Summary"}
             </Button>
           )}
         </div>
       </div>
 
       {isMobileBp && (
-        <div style={{ marginBottom: _.s3 }}>
-          <Button size="sm" variant="secondary" onClick={() => setMobileCategoriesOpen((v) => !v)}>
-            {mobileCategoriesOpen ? "Hide Categories" : "Show Categories"}
+        <div style={{ display: "flex", gap: _.s2, alignItems: "center", marginBottom: _.s3 }}>
+          <Button size="sm" variant="secondary" onClick={() => setShowCategorySheet(true)}>
+            Categories
           </Button>
+          <select
+            style={{ flex: 1, minHeight: 40, border: `1px solid ${_.line}`, borderRadius: _.rSm, background: _.surface, fontFamily: "inherit", padding: "0 10px" }}
+            value={selectedCat || ""}
+            onChange={(e) => setSelectedCat(e.target.value)}
+          >
+            {scopeCategories.length === 0 && <option value="">No categories</option>}
+            {scopeCategories.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
+          </select>
         </div>
       )}
 
-      {/* 3-column desktop / responsive tablet-mobile */}
+      {/* 2-column desktop / responsive tablet-mobile */}
       <div style={{
         display: "grid",
         gridTemplateColumns: isDesktop
-          ? "260px minmax(0,1fr) 340px"
-          : isMobileBp
-            ? "1fr"
-            : "84px minmax(0,1fr)",
+          ? "minmax(0,1fr) 340px"
+          : "1fr",
         gap: _.s3,
         alignItems: "start",
         maxWidth: "100%",
         overflowX: "hidden",
       }}>
-        {/* Left: Category sidebar */}
-        {(isDesktop || !isMobileBp || mobileCategoriesOpen) && (
-          <CategorySidebar
-            scopeCategories={scopeCategories} scope={project.scope}
-            selectedCat={selectedCat} setSelectedCat={setSelectedCat}
-            newCat={newCat} setNewCat={setNewCat}
-            addCategory={addCategory} setDelCat={setDelCat}
-            compact={compactCategories}
-          />
-        )}
-
-        {/* Center: search + table */}
+        {/* Left/editor surface */}
         <div style={{ minWidth: 0, maxWidth: "100%" }}>
-          {selectedCat ? (
-            <>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: _.s2 }}>
-                <div style={{ fontSize: _.fontSize.lg, fontWeight: _.fontWeight.semi, color: _.ink }}>{selectedCat}</div>
-              </div>
-              <RateLibrarySearch
-                librarySearch={librarySearch} setLibrarySearch={setLibrarySearch}
-                libraryMatches={libraryMatches} addFromLibrary={addFromLibrary}
-                disabled={!selectedCat}
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: isMobileBp ? "1fr" : (isTablet ? "80px minmax(0,1fr)" : "240px minmax(0,1fr)"),
+            gap: _.s3,
+            minWidth: 0,
+            alignItems: "start",
+          }}>
+            {!isMobileBp && (
+              <CategorySidebar
+                scopeCategories={scopeCategories} scope={safeScope}
+                selectedCat={selectedCat} setSelectedCat={setSelectedCat}
+                newCat={newCat} setNewCat={setNewCat}
+                addCategory={addCategory} setDelCat={setDelCat}
+                compact={compactCategories}
               />
-              <LineItemsTable
-                items={items} cat={selectedCat} descInputRefs={descInputRefs}
-                uI={uI} getRowMargin={getRowMargin} getRowSell={getRowSell}
-                addLineItem={addLineItem} delI={delI}
-                duplicateItem={duplicateItem}
-                setDrawerItem={setDrawerItem}
-                tableScrollMemoryRef={tableScrollMemoryRef}
-                mobile={mobile}
-              />
-            </>
-          ) : (
-            <div style={{ padding: "28px 12px", textAlign: "center", color: _.muted }}>
-              {scopeCategories.length === 0
-                ? "Add a category to start building your quote."
-                : "Select a category to start adding line items."
-              }
+            )}
+
+            <div style={{ minWidth: 0, maxWidth: "100%" }}>
+              {selectedCat ? (
+                <>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: _.s2 }}>
+                    <div style={{ fontSize: _.fontSize.lg, fontWeight: _.fontWeight.semi, color: _.ink }}>{selectedCat}</div>
+                  </div>
+                  <RateLibrarySearch
+                    librarySearch={librarySearch} setLibrarySearch={setLibrarySearch}
+                    libraryMatches={libraryMatches} addFromLibrary={addFromLibrary}
+                    disabled={!selectedCat}
+                  />
+                  <LineItemsTable
+                    items={items} cat={selectedCat} descInputRefs={descInputRefs}
+                    uI={uI} getRowMargin={getRowMargin} getRowSell={getRowSell}
+                    addLineItem={addLineItem} delI={delI}
+                    duplicateItem={duplicateItem}
+                    setDrawerItem={setDrawerItem}
+                    tableScrollMemoryRef={tableScrollMemoryRef}
+                    mobile={isMobileBp}
+                  />
+                </>
+              ) : (
+                <div style={{ padding: "28px 12px", textAlign: "center", color: _.muted }}>
+                  {scopeCategories.length === 0
+                    ? "Add a category to start building your quote."
+                    : "Select a category to start adding line items."
+                  }
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
 
         {/* Right: Quote summary (desktop) */}
@@ -180,6 +197,22 @@ export default function QuoteEditor({ project, up, T, margin, contingency, mobil
             <QuoteSummaryCard T={T} margin={margin} contingency={contingency} mobile={false} sticky={false} onReview={() => { setShowSummarySheet(false); onNavigate("review"); }} />
           </div>
         </>
+      )}
+
+      {/* Mobile category drawer */}
+      {isMobileBp && showCategorySheet && (
+        <CategorySidebar
+          scopeCategories={scopeCategories}
+          scope={safeScope}
+          selectedCat={selectedCat}
+          setSelectedCat={setSelectedCat}
+          newCat={newCat}
+          setNewCat={setNewCat}
+          addCategory={addCategory}
+          setDelCat={setDelCat}
+          asSlideover
+          onClose={() => setShowCategorySheet(false)}
+        />
       )}
 
       {/* Line item drawer */}

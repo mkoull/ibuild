@@ -77,7 +77,14 @@ export default function App() {
                 <Route path="portal" element={<SubcontractorPortalPage />} />
                 <Route path="projects" element={<ProjectsListPage />} />
                 <Route path="estimates" element={<QuotesListPage />} />
-                <Route path="estimates/new" element={<CreateEstimateWizardPage />} />
+                <Route
+                  path="estimates/new"
+                  element={(
+                    <ErrorBoundary level="project">
+                      <CreateEstimateWizardPage />
+                    </ErrorBoundary>
+                  )}
+                />
                 <Route path="jobs" element={<JobsListPage />} />
                 <Route path="pipeline" element={<PipelineShell />}>
                   <Route index element={<Navigate to="clients" replace />} />
