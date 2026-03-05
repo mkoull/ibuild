@@ -10,7 +10,6 @@ import { canTransition, isQuote, isJob, needsQuoteToJobConversion } from "../../
 import { usePageBottomBar } from "../../hooks/usePageBottomBar.js";
 import { applyConvertToJobBaseline, calculateTotals, normalizeCategories } from "../../lib/costEngine.js";
 import { exportPrintPdf } from "../../lib/pdfExport.js";
-import { isRequiredText } from "../../lib/validation.js";
 import Card from "../../components/ui/Card.jsx";
 import Modal from "../../components/ui/Modal.jsx";
 import Button from "../../components/ui/Button.jsx";
@@ -659,14 +658,16 @@ export default function QuotePage() {
 
               {/* Continue to Scope */}
               {!isNarrowLayout && (
-                <div style={{ marginTop: _.s7, display: "flex", gap: _.s3, position: "relative", zIndex: 10, pointerEvents: "auto" }}>
-                <Button onClick={() => {
-                  if (!isRequiredText(p.name)) {
-                    notify("Project name is required", "error");
-                    return;
-                  }
-                  gotoStep("scope");
-                }} icon={ArrowRight}>Continue to Scope</Button>
+                <div style={{ marginTop: _.s7, display: "flex", gap: _.s3, position: "relative", zIndex: 30, pointerEvents: "auto" }}>
+                  <Button
+                    onClick={() => {
+                      setClientOpen(false);
+                      gotoStep("scope");
+                    }}
+                    icon={ArrowRight}
+                  >
+                    Continue to Scope
+                  </Button>
                 </div>
               )}
             </div>
@@ -1080,10 +1081,7 @@ export default function QuotePage() {
             {currentStep === "details" && (
               <Button
                 onClick={() => {
-                  if (!isRequiredText(p.name)) {
-                    notify("Project name is required", "error");
-                    return;
-                  }
+                  setClientOpen(false);
                   gotoStep("scope");
                 }}
                 icon={ArrowRight}

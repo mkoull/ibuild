@@ -87,6 +87,11 @@ export default function EstimateDetailsTab() {
     }
     if (!nextStep) return;
     gotoWorkflowStep(nextStep.id);
+    if (nextStep.id === "estimate") {
+      requestAnimationFrame(() => {
+        builderRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
   };
 
   const applyTemplate = (templateKey) => {
@@ -259,13 +264,7 @@ export default function EstimateDetailsTab() {
             )}
           </div>
           <div style={{ marginTop: 12, display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap" }}>
-            <Button
-              variant="secondary"
-              onClick={() => builderRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
-            >
-              Open Cost Builder
-            </Button>
-            <Button onClick={goNext} icon={ArrowRight}>Next Step</Button>
+            <Button onClick={goNext} icon={ArrowRight}>Continue to Pricing Review</Button>
           </div>
           <div ref={builderRef} style={{ marginTop: 16 }}>
             <ScopePage />
